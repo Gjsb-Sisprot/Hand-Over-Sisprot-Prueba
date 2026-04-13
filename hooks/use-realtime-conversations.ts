@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { MCPConversation, MCPListConversationsResponse, MCPPaginationInfo } from "@/types/mcp";
 import { createClient } from "@/lib/supabase/client";
+import { getConversationsPaginated } from "@/lib/actions/conversations";
 
 interface UseRealtimeConversationsOptions {
   initialData?: MCPConversation[];
@@ -58,11 +59,9 @@ export function useRealtimeConversations({
       try {
         if (isFilterChange) setIsLoading(true);
 
-        // Usamos nuestro cliente de mcp-client.ts que ya habla con Supabase
-        const { mcpClient } = await import("@/lib/mcp-client");
-        const data = await mcpClient.listConversations({
+        // Usamos la Server Action para evitar problemas de Service Role en el navegador
+        const data = await getConversationsPaginated({
           status,
-          agentEmail,
           includeAll,
           pageSize: 100,
         });
