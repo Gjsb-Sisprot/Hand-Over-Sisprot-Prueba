@@ -93,6 +93,92 @@ export type Database = {
           },
         ]
       }
+      conversations: {
+        Row: {
+          id: string
+          session_id: string
+          status: string
+          identification: string | null
+          contract: string | null
+          summary: string | null
+          specialist_name: string | null
+          agent_email: string | null
+          glpi_ticket_id: string | null
+          notification_sent: boolean
+          created_at: string
+          updated_at: string
+          closed_at: string | null
+        }
+        Insert: {
+          id?: string
+          session_id: string
+          status?: string
+          identification?: string | null
+          contract?: string | null
+          summary?: string | null
+          specialist_name?: string | null
+          agent_email?: string | null
+          glpi_ticket_id?: string | null
+          notification_sent?: boolean
+          created_at?: string
+          updated_at?: string
+          closed_at?: string | null
+        }
+        Update: {
+          id?: string
+          session_id?: string
+          status?: string
+          identification?: string | null
+          contract?: string | null
+          summary?: string | null
+          specialist_name?: string | null
+          agent_email?: string | null
+          glpi_ticket_id?: string | null
+          notification_sent?: boolean
+          created_at?: string
+          updated_at?: string
+          closed_at?: string | null
+        }
+        Relationships: []
+      }
+      chat_logs: {
+        Row: {
+          id: number
+          conversation_id: string
+          role: string
+          content: string
+          author_name: string | null
+          created_at: string
+          attachments: Json | null
+        }
+        Insert: {
+          id?: number
+          conversation_id: string
+          role: string
+          content: string
+          author_name?: string | null
+          created_at?: string
+          attachments?: Json | null
+        }
+        Update: {
+          id?: number
+          conversation_id?: string
+          role?: string
+          content?: string
+          author_name?: string | null
+          created_at?: string
+          attachments?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_logs_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
