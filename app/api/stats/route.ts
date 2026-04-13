@@ -1,44 +1,27 @@
 import { NextResponse } from "next/server";
-import { mcpClient } from "@/lib/mcp-client";
+import { Client } from "pg";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
-  // Limpieza extrema de variables para evitar cualquier carácter invisible
-  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-  const rawKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  // Configuración directa de la base de datos (Pooler de Supabase)
+  // El usuario de la BD DEBE incluir el ID del proyecto en el Transaction Pooler
+  const DB_URI = "postgresql://postgres.mkluqieffbwelhkxbovk:Sisprot.2025@aws-0-us-east-1.pooler.supabase.com:6543/postgres";
   
-  const supabaseUrl = rawUrl.replace(/[\r\n\t ]/g, "").trim();
-  const supabaseServiceRoleKey = rawKey.replace(/[\r\n\t ]/g, "").trim();
-  
-  try {
-    // URL limpia sin barras dobles al final
-    const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.slice(0, -1) : supabaseUrl;
-    const restUrl = `${baseUrl}/rest/v1/conversations?select=status`;
-    
-    // Simplificación de Headers: Solo apikey (a veces Bearer causa conflicto si no es JWT exacto)
-    const response = await fetch(restUrl, {
-      method: 'GET',
-      headers: {
-        'apikey': supabaseServiceRoleKey,
-        'Authorization': `Bearer ${supabaseServiceRoleKey}`,
-        'Content-Type': 'application/json'
-      },
-      cache: 'no-store'
-    });
-
-    let errorBody = null;
-    if (!response.ok) {
-      try {
-        errorBody = await response.json();
-      } catch (e) {
-        errorBody = await response.text();
-      }
-      throw new Error(`Supabase Reject: ${response.status}`);
+  const client = new Client({
+    connectionString: DB_URI,
+    ssl: {
+      rejectUnauthorized: false // Requerido para conexiones externas a Supabase sin el certificado root
     }
+  });
 
-    const data = await response.json();
+  try {
+    await client.connect();
+    
+    // Consulta directa a la base de datos
+    const res = await client.query('SELECT status FROM conversations');
+    const data = res.rows;
     
     return NextResponse.json({
       active: data.filter((c: any) => c.status === "active").length,
@@ -47,15 +30,13 @@ export async function GET() {
       closed: data.filter((c: any) => c.status === "closed").length,
       total: data.length,
       debug: {
-        method: "REST_DIRECT_CLEAN",
-        url_check: baseUrl.slice(-10),
-        key_check: supabaseServiceRoleKey.slice(-5),
-        status: response.status,
+        method: "NATIVE_POSTGRES_POOLER",
         timestamp: new Date().toISOString()
       }
     });
+
   } catch (error: any) {
-    console.error("[STATS_ERROR]", error);
+    console.error("[STATS_DB_ERROR]", error);
     return NextResponse.json(
       {
         active: 0,
@@ -65,10 +46,12 @@ export async function GET() {
         total: 0,
         error: error.message,
         debug: {
-          method: "REST_DIRECT_FAIL",
+          method: "DB_DIRECT_FAIL",
           timestamp: new Date().toISOString()
         }
       }
     );
+  } finally {
+    await client.end();
   }
 }
