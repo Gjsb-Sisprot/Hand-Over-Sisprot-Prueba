@@ -279,12 +279,14 @@ export async function updateSummary(
   return { success: !error };
 }
 
-export async function getConversationStats(): Promise<MCPConversationStats> {
+export async function getConversationStats(): Promise<MCPConversationStats & { error?: any }> {
   const { data, error } = await supabaseAdmin
     .from("conversations")
     .select("status");
 
-  if (error) return { total: 0, active: 0, waiting_agent: 0, handed_over: 0, closed: 0 };
+  if (error) {
+    return { total: 0, active: 0, waiting_agent: 0, handed_over: 0, closed: 0, error };
+  }
 
   return {
     total: data.length,
