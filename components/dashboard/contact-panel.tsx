@@ -165,7 +165,7 @@ export function ContactPanel({
                     <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Escalada</p>
                     <p className="text-sm font-medium flex items-center gap-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />
-                      {formatDateTime(timestamps.escalatedAt)}
+                      {formatDateTime(new Date(timestamps.escalatedAt))}
                     </p>
                   </div>
                 )}
