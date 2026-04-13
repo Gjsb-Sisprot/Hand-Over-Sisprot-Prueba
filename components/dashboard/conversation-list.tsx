@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MCPConversation, MCPChatMessage } from "@/types/mcp";
+import { MCPConversation, MCPChatMessage } from "../../types/mcp";
 import { 
   getConversations, 
   takeoverConversation, 
@@ -17,11 +17,11 @@ import { PauseDialog } from "./pause-dialog";
 import { toast } from "sonner";
 import { useRealtimeMessages } from "../../hooks/use-realtime-messages";
 import { useRealtimeConversations } from "../../hooks/use-realtime-conversations";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Badge } from "../ui/badge";
+import { ScrollArea } from "../ui/scroll-area";
 import { Loader2, Inbox, Clock, CheckCircle2, Search, MessageSquareX } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Input } from "../ui/input";
 
 interface ConversationListProps {
   initialConversations: MCPConversation[];
