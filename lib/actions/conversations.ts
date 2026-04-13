@@ -19,13 +19,27 @@ async function getCurrentAgent(): Promise<{
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data: agent } = await supabase
+  // 1. Intentar por ID (UUID de Auth)
+  const { data: agentById } = await supabase
     .from("agents")
     .select("id, email, name, role")
     .eq("id", user.id)
-    .single();
+    .maybeSingle();
 
-  return agent;
+  if (agentById) return agentById;
+
+  // 2. Intentar por Email (Respaldo por si el ID no coincide)
+  if (user.email) {
+    const { data: agentByEmail } = await supabase
+      .from("agents")
+      .select("id, email, name, role")
+      .eq("email", user.email)
+      .maybeSingle();
+      
+    return agentByEmail;
+  }
+
+  return null;
 }
 
 function filterConversationsByPermissions(
