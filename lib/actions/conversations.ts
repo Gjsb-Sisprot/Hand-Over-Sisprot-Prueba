@@ -441,3 +441,39 @@ export async function markAllNotificationsRead() {
 
   return { success: true };
 }
+
+export async function sendMessage(sessionId: string, content: string) {
+  const agent = await getCurrentAgent();
+  if (!agent) {
+    return { error: "No autenticado" };
+  }
+
+  try {
+    const supabase = await createClient();
+    
+    // Buscar UUID de la conversación
+    const { data: conv } = await supabase
+      .from("conversations")
+      .select("id")
+      .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
+      .maybeSingle();
+
+    if (!conv) return { error: "Conversación no encontrada" };
+
+    const { error } = await supabase
+      .from("chat_logs")
+      .insert({
+        conversation_id: conv.id,
+        role: "agent",
+        content: content,
+        author_name: agent.name || agent.email
+      });
+
+    if (error) throw error;
+
+    return { success: true };
+  } catch (error) {
+    console.error("[SEND_MESSAGE_ERROR]", error);
+    return { error: "Error al enviar el mensaje" };
+  }
+}
