@@ -9,7 +9,7 @@ import {
   SheetTitle, 
   SheetDescription 
 } from "@/components/ui/sheet";
-import { Button } from "@/components/ui/badge"; // Note: Check if badge is correct here or button
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
