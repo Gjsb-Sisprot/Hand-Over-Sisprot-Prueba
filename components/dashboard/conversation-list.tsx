@@ -200,7 +200,6 @@ export function ConversationList({
       optimisticUpdate(conversationToTake.sessionId, { glpiTicketId: result.glpiTicketId });
     }
 
-    const messages = await getChatHistory(conversationToTake.sessionId);
     setChatMessages(messages);
 
     const updatedConversation: MCPConversation = {
