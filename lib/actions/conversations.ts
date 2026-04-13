@@ -2,11 +2,11 @@
 
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
-import { mcpClient } from "@/lib/mcp-client";
-import { createTicket as createGlpiTicket } from "@/lib/glpi";
-import type { MCPConversation, MCPChatMessage, MCPListConversationsResponse } from "@/types/mcp";
-import type { AgentRole } from "@/lib/auth/permissions";
+import { createClient } from "../supabase/server";
+import { mcpClient } from "../mcp-client";
+import { createTicket as createGlpiTicket } from "../glpi";
+import type { MCPConversation, MCPChatMessage, MCPListConversationsResponse } from "../../types/mcp";
+import type { AgentRole } from "../auth/permissions";
 
 
 async function getCurrentAgent(): Promise<{
