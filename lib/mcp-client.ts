@@ -292,7 +292,7 @@ export async function getConversationStats(): Promise<MCPConversationStats> {
   return {
     total: data.length,
     active: data.filter(c => c.status === "active").length,
-    waiting_agent: data.filter(c => c.status === "waiting_specialist").length,
+    waiting_agent: data.filter(c => c.status === "waiting_specialist" || c.status === "active").length, // Incluimos active en waiting por ahora si queremos visibilidad
     handed_over: data.filter(c => c.status === "handed_over").length,
     closed: data.filter(c => c.status === "closed").length,
   };
