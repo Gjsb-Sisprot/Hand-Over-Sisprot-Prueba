@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { MCPChatMessage } from "@/types/mcp";
 import { getChatHistory } from "@/lib/actions/conversations";
+import { createClient } from "@/lib/supabase/client";
 
 interface UseRealtimeMessagesOptions {
     sessionId: string | null;
@@ -14,7 +15,7 @@ interface UseRealtimeMessagesOptions {
 export function useRealtimeMessages({
   sessionId,
   initialMessages = [],
-  pollingInterval = 5000,
+  pollingInterval = 30000,
   isActive = true,
 }: UseRealtimeMessagesOptions) {
   const [messages, setMessages] = useState<MCPChatMessage[]>(initialMessages);
@@ -33,7 +34,7 @@ export function useRealtimeMessages({
     try {
       const newMessages = await getChatHistory(sessionId);
 
-      if (newMessages.length > messagesCountRef.current) {
+      if (newMessages.length !== messagesCountRef.current) {
         setMessages(newMessages);
         messagesCountRef.current = newMessages.length;
       }
@@ -42,6 +43,33 @@ export function useRealtimeMessages({
       isPollingRef.current = false;
     }
   }, [sessionId]);
+
+  // Suscripción de tiempo real a la tabla chat_logs
+  useEffect(() => {
+    if (!sessionId || !isActive) return;
+
+    const supabase = createClient();
+    
+    const channel = supabase
+      .channel(`rt-messages-${sessionId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "chat_logs"
+        },
+        async (payload) => {
+          // Recargamos mensajes cuando hay uno nuevo
+          fetchMessages();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [sessionId, isActive, fetchMessages]);
 
   useEffect(() => {
     if (!sessionId || !isActive) return;
@@ -52,28 +80,6 @@ export function useRealtimeMessages({
 
     return () => clearInterval(interval);
   }, [sessionId, isActive, pollingInterval, fetchMessages]);
-
-  useEffect(() => {
-    if (!sessionId || !isActive) return;
-    let es: EventSource | null = null;
-    try {
-      es = new EventSource(`/api/mcp/conversations/events`);
-      const handler = (e: MessageEvent) => {
-        try {
-          const data = JSON.parse(e.data);
-          if (data.sessionId === sessionId) {
-            fetchMessages();
-          }
-        } catch {
-        }
-      };
-      es.addEventListener("status_changed", handler);
-      es.addEventListener("new_message", handler);
-      es.onerror = () => { };
-    } catch {
-    }
-    return () => { es?.close(); };
-  }, [sessionId, isActive, fetchMessages]);
 
   return {
     messages,
