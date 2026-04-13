@@ -4,6 +4,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { mcpClient } from "@/lib/mcp-client";
+import { createTicket as createGlpiTicket } from "@/lib/glpi";
 import type { MCPConversation, MCPChatMessage, MCPListConversationsResponse } from "@/types/mcp";
 import type { AgentRole } from "@/lib/auth/permissions";
 
@@ -130,8 +131,10 @@ export async function getConversationBySessionId(
   sessionId: string
 ): Promise<MCPConversation | null> {
   try {
-    const agent = await getCurrentAgent();
-    if (!agent) {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
       return null;
     }
 
@@ -178,19 +181,43 @@ export async function takeoverConversation(
 
 
   try {
+    const conversation = await getConversationBySessionId(sessionId);
+    let glpiTicketId: number | undefined;
+
+    if (options?.createTicket !== false && conversation) {
+      const clientName = conversation.client?.name || "Cliente";
+      const contract = conversation.client?.contract || "S/N";
+      const reason = options?.reason || "Especialista toma control";
+
+      const glpiResult = await createGlpiTicket({
+        name: `Toma de control - Contrato ${contract} - ${clientName}`,
+        content: `Observación: ${reason}\n\nCliente: ${clientName}\nContrato: ${contract}\nEspecialista: ${agent.name || agent.email}`,
+        urgency: options?.urgency || 3,
+      });
+
+      if (glpiResult.success) {
+        glpiTicketId = glpiResult.ticketId;
+      }
+    }
+
     const result = await mcpClient.takeoverConversation(
       sessionId,
       agent?.email || "agente@sisprot.com",
       agent?.name || agent?.email || "Agente",
       {
-        createTicket: options?.createTicket ?? true,
-        ticketTypeId: options?.ticketTypeId,
-        ticketTypeName: options?.ticketTypeName,
-        ticketSummary: options?.ticketSummary,
-        urgency: options?.urgency,
-        reason: options?.reason,
+        ...options,
+        glpiTicketId, // Pasar el ID del ticket si se creó
       }
     );
+
+    // Actualizar ticket ID en Supabase si se creó
+    if (glpiTicketId) {
+      const supabase = await createClient();
+      await supabase
+        .from("conversations")
+        .update({ glpi_ticket_id: glpiTicketId })
+        .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
+    }
 
     if (agent) {
       const supabase = await createClient();
@@ -201,7 +228,7 @@ export async function takeoverConversation(
     }
 
     revalidatePath("/dashboard/conversations");
-    return { success: true, glpiTicketId: result.glpiTicketId };
+    return { success: true, glpiTicketId: glpiTicketId || result.glpiTicketId };
   } catch (error) {
     return { error: "Error al tomar la conversación" };
   }
@@ -225,6 +252,24 @@ export async function pauseConversation(
 
 
   try {
+    const conversation = await getConversationBySessionId(sessionId);
+    let glpiTicketId: number | undefined;
+
+    if (options?.createTicket !== false && conversation) {
+      const clientName = conversation.client?.name || "Cliente";
+      const contract = conversation.client?.contract || "S/N";
+
+      const glpiResult = await createGlpiTicket({
+        name: `Pausa - Contrato ${contract} - ${clientName}`,
+        content: `Mótivo de pausa: ${reason}\n\nCliente: ${clientName}\nContrato: ${contract}\nEspecialista: ${agent.name || agent.email}`,
+        urgency: options?.urgency || 3,
+      });
+
+      if (glpiResult.success) {
+        glpiTicketId = glpiResult.ticketId;
+      }
+    }
+
     await mcpClient.pauseConversation(sessionId, reason, {
       ...options,
       specialistName: agent.name || undefined,
@@ -232,13 +277,24 @@ export async function pauseConversation(
     });
 
     const supabase = await createClient();
+    const updateData: any = { 
+      status: "paused",
+      last_active_at: new Date().toISOString() 
+    };
+    if (glpiTicketId) updateData.glpi_ticket_id = glpiTicketId;
+
+    await supabase
+      .from("conversations")
+      .update(updateData)
+      .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
+
     await supabase
       .from("agents")
       .update({ last_active_at: new Date().toISOString() })
       .eq("id", agent.id);
 
     revalidatePath("/dashboard/conversations");
-    return { success: true };
+    return { success: true, glpiTicketId };
   } catch (error) {
     return { error: "Error al pausar la conversación" };
   }
@@ -262,6 +318,25 @@ export async function closeConversation(
 
 
   try {
+    const conversation = await getConversationBySessionId(sessionId);
+    let glpiTicketId: number | undefined;
+
+    // Solo crear si no tiene ya un ticket previo
+    if (options?.createTicket !== false && conversation && !conversation.glpiTicketId) {
+      const clientName = conversation.client?.name || "Cliente";
+      const contract = conversation.client?.contract || "S/N";
+
+      const glpiResult = await createGlpiTicket({
+        name: `Resolución - Contrato ${contract} - ${clientName}`,
+        content: `Resolución: ${resolution}\n\nCliente: ${clientName}\nContrato: ${contract}\nEspecialista: ${agent.name || agent.email}`,
+        urgency: 3,
+      });
+
+      if (glpiResult.success) {
+        glpiTicketId = glpiResult.ticketId;
+      }
+    }
+
     await mcpClient.closeConversation(sessionId, resolution, {
       closedBy: options?.closedBy ?? "agent",
       createTicket: options?.createTicket ?? true,
@@ -273,13 +348,25 @@ export async function closeConversation(
     });
 
     const supabase = await createClient();
+    const updateData: any = { 
+      status: "closed",
+      closed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    if (glpiTicketId) updateData.glpi_ticket_id = glpiTicketId;
+
+    await supabase
+      .from("conversations")
+      .update(updateData)
+      .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
+
     await supabase
       .from("agents")
       .update({ last_active_at: new Date().toISOString() })
       .eq("id", agent.id);
 
     revalidatePath("/dashboard/conversations");
-    return { success: true };
+    return { success: true, glpiTicketId };
   } catch (error) {
     return { error: "Error al cerrar la conversación" };
   }
