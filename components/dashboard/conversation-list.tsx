@@ -17,11 +17,11 @@ import { PauseDialog } from "./pause-dialog";
 import { toast } from "sonner";
 import { useRealtimeMessages } from "../../hooks/use-realtime-messages";
 import { useRealtimeConversations } from "../../hooks/use-realtime-conversations";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
-import { Loader2, Inbox, Clock, CheckCircle2, Search, MessageSquareX } from "lucide-react";
+import { Loader2, Inbox, Clock, CheckCircle2, Search, MessageSquareX, Bot, User } from "lucide-react";
 import { Input } from "../ui/input";
+import { cn } from "../../lib/utils";
 
 interface ConversationListProps {
   initialConversations: MCPConversation[];
@@ -32,10 +32,13 @@ interface ConversationListProps {
   };
 }
 
+type TabType = "escalated" | "active" | "mine" | "paused";
+
 export function ConversationList({ 
   initialConversations,
   agent 
 }: ConversationListProps) {
+  const [activeTab, setActiveTab] = useState<TabType>("escalated");
   const [activeConversation, setActiveConversation] = useState<MCPConversation | null>(null);
   const [chatMessages, setChatMessages] = useState<MCPChatMessage[]>([]);
   const [conversationToTake, setConversationToTake] = useState<MCPConversation | null>(null);
@@ -224,9 +227,32 @@ export function ConversationList({
   const inAttendence = filteredConversations.filter(c => c.status === "handed_over");
   const paused = filteredConversations.filter(c => c.status === "paused");
 
+  const renderTabTrigger = (id: TabType, label: string, icon: React.ReactNode, count: number) => (
+    <button
+      onClick={() => setActiveTab(id)}
+      className={cn(
+        "flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all border-b-2",
+        activeTab === id 
+          ? "border-primary text-primary bg-primary/5" 
+          : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+      )}
+    >
+      {icon}
+      <span>{label}</span>
+      {count > 0 && (
+        <Badge 
+          variant={id === "escalated" ? "destructive" : "secondary"} 
+          className="ml-1 h-5 min-w-[20px] justify-center px-1"
+        >
+          {count}
+        </Badge>
+      )}
+    </button>
+  );
+
   return (
     <div className="flex flex-col h-full bg-background">
-      <div className="p-4 border-b space-y-4">
+      <div className="p-4 border-b space-y-4 shrink-0">
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold">Panel de Conversaciones</h2>
           <Badge variant="outline" className="font-mono">
@@ -245,49 +271,50 @@ export function ConversationList({
         </div>
       </div>
 
-      <Tabs defaultValue="escalated" className="flex-1 flex flex-col min-h-0">
-        <div className="px-4 border-b bg-muted/20">
-          <TabsList className="h-12 w-full justify-start bg-transparent p-0 gap-6">
-            <TabsTrigger value="escalated" className="relative h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2">
-              <Inbox className="h-4 w-4 mr-2" />
-              Esperando
-              {waitingEscalation.length > 0 && <Badge variant="destructive" className="ml-2 px-1.5 h-5 min-w-[20px] justify-center">{waitingEscalation.length}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="active" className="relative h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2">
-              <Clock className="h-4 w-4 mr-2" />
-              IA Activa
-              {activeIA.length > 0 && <Badge variant="secondary" className="ml-2 px-1.5 h-5 min-w-[20px] justify-center">{activeIA.length}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="mine" className="relative h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2">
-              <User className="h-4 w-4 mr-2" />
-              En atención
-              {inAttendence.length > 0 && <Badge variant="default" className="ml-2 px-1.5 h-5 min-w-[20px] justify-center bg-blue-600">{inAttendence.length}</Badge>}
-            </TabsTrigger>
-            <TabsTrigger value="paused" className="relative h-12 rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent px-2">
-              <MessageSquareX className="h-4 w-4 mr-2" />
-              Pausadas
-            </TabsTrigger>
-          </TabsList>
+      <div className="flex border-b bg-muted/20 overflow-x-auto no-scrollbar shrink-0">
+        {renderTabTrigger("escalated", "Esperando", <Inbox className="h-4 w-4" />, waitingEscalation.length)}
+        {renderTabTrigger("active", "IA Activa", <Clock className="h-4 w-4" />, activeIA.length)}
+        {renderTabTrigger("mine", "En atención", <User className="h-4 w-4" />, inAttendence.length)}
+        {renderTabTrigger("paused", "Pausadas", <MessageSquareX className="h-4 w-4" />, paused.length)}
+      </div>
+
+      <ScrollArea className="flex-1">
+        <div className="p-4">
+          {activeTab === "escalated" && (
+            <div className="space-y-4">
+              {waitingEscalation.length === 0 
+                ? <EmptyState icon={<Inbox className="h-12 w-12 text-muted-foreground/30" />} title="No hay mensajes esperando" description="Las conversaciones escaladas aparecerán aquí." /> 
+                : waitingEscalation.map(c => <ConversationCard key={c.sessionId} conversation={c} onClick={() => handleConversationClick(c)} onTakeover={() => setConversationToTake(c)} />)}
+            </div>
+          )}
+
+          {activeTab === "active" && (
+            <div className="space-y-4">
+              {activeIA.length === 0 
+                ? <EmptyState icon={<Bot className="h-12 w-12 text-muted-foreground/30" />} title="No hay IA activa" description="Las conversaciones siendo atendidas por Susana aparecerán aquí." /> 
+                : activeIA.map(c => <ConversationCard key={c.sessionId} conversation={c} onClick={() => handleConversationClick(c)} onTakeover={() => setConversationToTake(c)} />)}
+            </div>
+          )}
+
+          {activeTab === "mine" && (
+            <div className="space-y-4">
+              {inAttendence.length === 0 
+                ? <EmptyState icon={<User className="h-12 w-12 text-muted-foreground/30" />} title="No tienes atenciones activas" description="Las conversaciones que tomes aparecerán aquí." /> 
+                : inAttendence.map(c => <ConversationCard key={c.sessionId} conversation={c} onClick={() => handleConversationClick(c)} onTakeover={() => setConversationToTake(c)} />)}
+            </div>
+          )}
+
+          {activeTab === "paused" && (
+            <div className="space-y-4">
+              {paused.length === 0 
+                ? <EmptyState icon={<MessageSquareX className="h-12 w-12 text-muted-foreground/30" />} title="No hay pausas" description="Aquí verás los casos que quedaron pendientes." /> 
+                : paused.map(c => <ConversationCard key={c.sessionId} conversation={c} onClick={() => handleConversationClick(c)} onTakeover={() => setConversationToTake(c)} />)}
+            </div>
+          )}
         </div>
+      </ScrollArea>
 
-        <ScrollArea className="flex-1">
-          <div className="p-4">
-            <TabsContent value="escalated" className="m-0 space-y-4">
-              {waitingEscalation.length === 0 ? <EmptyState icon={<Inbox className="h-12 w-12 text-muted-foreground/30" />} title="No hay mensajes esperando" description="Las conversaciones escaladas aparecerán aquí." /> : waitingEscalation.map(c => <ConversationCard key={c.sessionId} conversation={c} onClick={() => handleConversationClick(c)} onTakeover={() => setConversationToTake(c)} />)}
-            </TabsContent>
-            <TabsContent value="active" className="m-0 space-y-4">
-              {activeIA.length === 0 ? <EmptyState icon={<Bot className="h-12 w-12 text-muted-foreground/30" />} title="No hay IA activa" description="Las conversaciones siendo atendidas por Susana aparecerán aquí." /> : activeIA.map(c => <ConversationCard key={c.sessionId} conversation={c} onClick={() => handleConversationClick(c)} onTakeover={() => setConversationToTake(c)} />)}
-            </TabsContent>
-            <TabsContent value="mine" className="m-0 space-y-4">
-              {inAttendence.length === 0 ? <EmptyState icon={<User className="h-12 w-12 text-muted-foreground/30" />} title="No tienes atenciones activas" description="Las conversaciones que tomes aparecerán aquí." /> : inAttendence.map(c => <ConversationCard key={c.sessionId} conversation={c} onClick={() => handleConversationClick(c)} onTakeover={() => setConversationToTake(c)} />)}
-            </TabsContent>
-            <TabsContent value="paused" className="m-0 space-y-4">
-              {paused.length === 0 ? <EmptyState icon={<MessageSquareX className="h-12 w-12 text-muted-foreground/30" />} title="No hay pausas" description="Aquí verás los casos que quedaron pendientes." /> : paused.map(c => <ConversationCard key={c.sessionId} conversation={c} onClick={() => handleConversationClick(c)} onTakeover={() => setConversationToTake(c)} />)}
-            </TabsContent>
-          </div>
-        </ScrollArea>
-      </Tabs>
-
+      {/* Diálogos y Paneles permanecen igual */}
       {activeConversation && (
         <ContactPanel
           conversation={activeConversation}
