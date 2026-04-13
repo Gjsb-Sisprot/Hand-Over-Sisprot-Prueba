@@ -448,6 +448,53 @@ export async function searchConversations(params: {
   }
 }
 
+/**
+ * Busca la conversación activa en el sistema Pay-Fast para un cliente.
+ */
+export async function getPayFastConversation(identification: string) {
+  const supabase = await createClient();
+  
+  const { data, error } = await supabase
+    .from("conversations")
+    .select("id, session_id, status, updated_at")
+    .eq("identification", identification)
+    .order("updated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) return { error: "Error al buscar sesión de Pay-Fast" };
+  return { success: true, conversation: data };
+}
+
+/**
+ * Envía un mensaje como especialista a una conversación de Pay-Fast.
+ */
+export async function sendPayFastBridgeMessage(conversationId: string, content: string) {
+  const agent = await getCurrentAgent();
+  if (!agent) return { error: "No autenticado" };
+
+  const supabase = await createClient();
+  
+  const { error } = await supabase
+    .from("chat_logs")
+    .insert({
+      conversation_id: conversationId,
+      role: "model", // En Pay-Fast, el rol del agente se ve como 'model' (asistente) para el cliente
+      content: content,
+      author_name: agent.name || agent.email
+    });
+
+  if (error) return { error: "Error al enviar el mensaje" };
+  
+  // Actualizar status de la conversación para que el asistente no responda automáticamente
+  await supabase
+    .from("conversations")
+    .update({ status: "handed_over", updated_at: new Date().toISOString() })
+    .eq("id", conversationId);
+
+  return { success: true };
+}
+
 
 export async function checkMCPStatus(): Promise<boolean> {
   return mcpClient.checkMCPHealth();
