@@ -281,6 +281,7 @@ export async function getConversationStats() {
     const stats = await mcpClient.getConversationStats();
 
     return {
+      active: stats.active,
       waitingAgent: stats.waiting_agent,
       handedOver: stats.handed_over,
       closed: stats.closed,
