@@ -1,24 +1,22 @@
 import { NextResponse } from "next/server";
-import { Client } from "pg";
+import { createClient } from "@supabase/supabase-js";
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
-  const client = new Client({
-    user: "postgres.mkluqieffbwelhkxbovk",
-    password: "Sisprot.2025",
-    host: "aws-0-us-east-1.pooler.supabase.com",
-    port: 6543,
-    database: "postgres",
-    ssl: { rejectUnauthorized: false }
-  });
+  const supabaseUrl = "https://mkluqieffbwelhkxbovk.supabase.co";
+  const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1rbHVxaWVmZmJ3ZWxoa3hib3ZrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2NzgwMjU2MywiZXhwIjoyMDgzMzc4NTYzfQ.GgZfYL4w2gJggzUZmLhO4ifN3Qbnga4yuLqmx6ygITs";
+  
+  const supabase = createClient(supabaseUrl, supabaseKey);
 
   try {
-    await client.connect();
-    const res = await client.query("SELECT status FROM conversations");
-    const data = res.rows;
-    
+    const { data, error } = await supabase
+      .from('conversations')
+      .select('status');
+
+    if (error) throw error;
+
     return NextResponse.json({
       active: data.filter((c: any) => c.status === "active").length,
       waitingAgent: data.filter((c: any) => c.status === "waiting_specialist").length,
@@ -31,7 +29,5 @@ export async function GET() {
       active: 0, waitingAgent: 0, handedOver: 0, closed: 0, total: 0,
       error: error.message
     });
-  } finally {
-    await client.end();
   }
 }
