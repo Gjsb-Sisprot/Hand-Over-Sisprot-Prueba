@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { MCPConversation, MCPChatMessage } from "@/types/mcp";
 import {
   Sheet,
@@ -37,9 +38,12 @@ import {
   Bot,
   Pause,
   AlertCircle,
+  Send,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
+import { Input } from "@/components/ui/input";
+import { sendMessage } from "@/lib/actions/conversations";
 
 interface ContactPanelProps {
   conversation: MCPConversation;
@@ -58,6 +62,28 @@ export function ContactPanel({
   onCloseConversation,
   onPauseConversation,
 }: ContactPanelProps) {
+  const [newMessage, setNewMessage] = useState("");
+  const [isSending, setIsSending] = useState(false);
+
+  const handleSendMessage = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newMessage.trim() || isSending) return;
+
+    setIsSending(true);
+    try {
+      const result = await sendMessage(conversation.sessionId, newMessage);
+      if (result.success) {
+        setNewMessage("");
+      } else {
+        toast.error(result.error || "Error al enviar mensaje");
+      }
+    } catch (error) {
+      toast.error("Error inesperado al enviar mensaje");
+    } finally {
+      setIsSending(false);
+    }
+  };
+
   const metadata = conversation.metadata as { escalationReason?: string } | null;
   const escalationReason = metadata?.escalationReason;
   const client = conversation.client ?? { name: null, identification: null, contract: null, email: null, phone: null };
@@ -339,7 +365,22 @@ export function ContactPanel({
 
         {}
         {conversation.status !== "closed" && (
-          <div className="p-4 border-t bg-muted/30 shrink-0">
+          <div className="p-4 border-t bg-muted/30 shrink-0 space-y-4">
+            {conversation.status === "handed_over" && (
+              <form onSubmit={handleSendMessage} className="flex gap-2">
+                <Input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Escribe una respuesta interna o al cliente..."
+                  className="flex-1"
+                  disabled={isSending}
+                />
+                <Button type="submit" disabled={isSending || !newMessage.trim()}>
+                  {isSending ? "Enviando..." : "Enviar"}
+                </Button>
+              </form>
+            )}
+
             <div className="flex items-center justify-between gap-2">
               <p className="text-sm text-muted-foreground">
                 ¿Cliente atendido satisfactoriamente?
