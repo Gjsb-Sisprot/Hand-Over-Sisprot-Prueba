@@ -18,6 +18,7 @@ export async function GET() {
     }
 
     return NextResponse.json({
+      active: stats.active || 0,
       waitingAgent: stats.waiting_agent,
       handedOver: stats.handed_over,
       closed: stats.closed,
@@ -26,6 +27,7 @@ export async function GET() {
   } catch (error) {
     return NextResponse.json(
       {
+        active: 0,
         waitingAgent: 0,
         handedOver: 0,
         closed: 0,
