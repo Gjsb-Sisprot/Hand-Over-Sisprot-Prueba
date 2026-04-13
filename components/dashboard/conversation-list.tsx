@@ -25,11 +25,11 @@ import { cn } from "../../lib/utils";
 
 interface ConversationListProps {
   initialConversations: MCPConversation[];
-  agent?: {
+  agent: {
     id: string;
     email: string;
     name: string | null;
-  };
+  } | null;
 }
 
 type TabType = "escalated" | "active" | "mine" | "paused";
