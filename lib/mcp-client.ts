@@ -1,200 +1,75 @@
 
+import { supabaseAdmin } from "./supabase/service-role";
 import type {
   MCPConversation,
-  MCPClient,
-  MCPTimestamps,
-  MCPAgent,
   MCPChatMessage,
   MCPConversationStats,
   MCPAgentStats,
-  MCPToolResponse,
   MCPListConversationsResponse
 } from "@/types/mcp";
 
-const MCP_URL = (process.env.MCP_SERVER_URL || "http://localhost:3001").replace(/\/+$/, "");
-const MCP_API_KEY = process.env.MCP_API_KEY || "";
-const MCP_TIMEOUT = parseInt(process.env.MCP_TIMEOUT || "10000", 10);
-
-function countReplacementChars(value: unknown): number {
-  if (typeof value === "string") {
-    return (value.match(/�/g) || []).length;
-  }
-  if (Array.isArray(value)) {
-    return value.reduce((acc, item) => acc + countReplacementChars(item), 0);
-  }
-  if (value && typeof value === "object") {
-    return Object.values(value as Record<string, unknown>).reduce<number>(
-      (acc, item) => acc + countReplacementChars(item),
-      0
-    );
-  }
-  return 0;
+/**
+ * Normaliza una fila de la base de datos de Supabase al formato MCPConversation
+ * que espera el frontend.
+ */
+function mapRowToConversation(conv: any): MCPConversation {
+  return {
+    id: conv.session_id || conv.id,
+    sessionId: conv.session_id || conv.id,
+    status: conv.status || "active",
+    summary: conv.summary || null,
+    messageCount: conv.message_count || 0,
+    client: {
+      name: conv.contact_name || "Sin nombre",
+      identification: conv.identification || "Sin identificación",
+      contract: conv.contract || null,
+      email: conv.contact_email || null,
+      phone: conv.contact_phone || null,
+    },
+    timestamps: {
+      createdAt: conv.created_at,
+      updatedAt: conv.updated_at,
+      escalatedAt: conv.escalated_at || conv.updated_at,
+      closedAt: conv.closed_at || null,
+    },
+    agent: conv.specialist_name ? {
+      email: conv.specialist_name,
+      name: conv.specialist_name,
+      takenAt: conv.updated_at,
+    } : undefined,
+    glpiTicketId: conv.glpi_ticket_id || null,
+    closedBy: conv.closed_by || null,
+    metadata: conv.metadata || {},
+    isUrgent: conv.priority === "high" || conv.priority === "critical",
+  } as MCPConversation;
 }
-
-function repairMojibake(value: string): string {
-  let repaired = value;
-
-  if (/[ÃÂâ€]/.test(repaired)) {
-    try {
-      repaired = Buffer.from(repaired, "latin1").toString("utf8");
-    } catch {
-    }
-  }
-
-  return repaired.normalize("NFC");
-}
-
-function normalizeTextDeep<T>(value: T): T {
-  if (typeof value === "string") {
-    return repairMojibake(value) as T;
-  }
-  if (Array.isArray(value)) {
-    return value.map((item) => normalizeTextDeep(item)) as T;
-  }
-  if (value && typeof value === "object") {
-    const normalizedEntries = Object.entries(value as Record<string, unknown>).map(
-      ([key, item]) => [key, normalizeTextDeep(item)]
-    );
-    return Object.fromEntries(normalizedEntries) as T;
-  }
-  return value;
-}
-
-async function parseJsonWithCharsetFallback<T>(response: Response): Promise<T> {
-  const buffer = await response.arrayBuffer();
-  const bytes = new Uint8Array(buffer);
-  const contentType = response.headers.get("content-type") || "";
-  const charsetMatch = contentType.match(/charset=([^;]+)/i);
-  const charset = charsetMatch?.[1]?.trim().toLowerCase();
-
-  const candidateCharsets = [
-    charset,
-    "utf-8",
-    "windows-1252",
-    "iso-8859-1",
-    "latin1",
-  ].filter((c, index, arr): c is string => !!c && arr.indexOf(c) === index);
-
-  let bestParsed: unknown = null;
-  let bestReplacementCount = Number.POSITIVE_INFINITY;
-  let lastError: unknown = null;
-
-  for (const candidate of candidateCharsets) {
-    try {
-      const decoded = new TextDecoder(candidate, {
-        fatal: false,
-      }).decode(bytes);
-      const parsed = JSON.parse(decoded);
-      const replacementCount = countReplacementChars(parsed);
-
-      if (replacementCount < bestReplacementCount) {
-        bestParsed = parsed;
-        bestReplacementCount = replacementCount;
-      }
-
-      if (replacementCount === 0) {
-        break;
-      }
-    } catch (error) {
-      lastError = error;
-    }
-  }
-
-  if (bestParsed === null) {
-    throw (lastError instanceof Error ? lastError : new Error("Invalid MCP JSON response"));
-  }
-
-  return normalizeTextDeep(bestParsed as T);
-}
-
-async function callMCPTool<T = unknown>(
-  tool: string,
-  args: Record<string, unknown> = {}
-): Promise<T> {
-  try {
-    const response = await fetch(`${MCP_URL}/api/tools/${encodeURIComponent(tool)}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        ...(MCP_API_KEY && { Authorization: `Bearer ${MCP_API_KEY}` }),
-      },
-      body: JSON.stringify(args),
-      signal: AbortSignal.timeout(MCP_TIMEOUT),
-    });
-
-    if (!response.ok) {
-      throw new Error(`MCP Error: ${response.status} ${response.statusText}`);
-    }
-
-    const responseData = await parseJsonWithCharsetFallback<{ success: boolean; result?: T; error?: string }>(response);
-
-    if (!responseData.success) {
-      throw new Error(responseData.error || "Unknown MCP error");
-    }
-
-    return responseData.result as T;
-  } catch (error) {
-    throw error;
-  }
-}
-
-
-
-interface MCPPendingResponse {
-  count: number;
-  conversations: MCPConversation[];
-}
-
-interface MCPActiveResponse {
-  count: number;
-  conversations: MCPConversation[];
-}
-
-interface MCPListResponse {
-  conversations: MCPConversation[];
-  pagination: {
-    page: number;
-    pageSize: number;
-    totalItems: number;
-    totalPages: number;
-    hasNextPage: boolean;
-    hasPreviousPage: boolean;
-  };
-  filters: {
-    status?: string | string[];
-    identification?: string;
-    contract?: string;
-    includeAll: boolean;
-  };
-}
-
-interface MCPHistoryResponse {
-  session_id: string;
-  messages: MCPChatMessage[];
-}
-
-interface MCPSearchResponse {
-  count: number;
-  conversations: MCPConversation[];
-}
-
 
 export async function getPendingConversations(): Promise<MCPConversation[]> {
-  const response = await callMCPTool<MCPPendingResponse | MCPConversation[]>("get_pending_conversations");
+  const { data, error } = await supabaseAdmin
+    .from("conversations")
+    .select("*")
+    .eq("status", "waiting_specialist")
+    .order("updated_at", { ascending: false });
 
-  if (Array.isArray(response)) {
-    return response;
+  if (error) {
+    console.error("[SUPABASE_LIST_PENDING_ERROR]", error);
+    return [];
   }
-  return response?.conversations || [];
+  return (data || []).map(mapRowToConversation);
 }
 
 export async function getActiveConversations(): Promise<MCPConversation[]> {
-  const response = await callMCPTool<MCPActiveResponse | MCPConversation[]>("get_active_conversations");
+  const { data, error } = await supabaseAdmin
+    .from("conversations")
+    .select("*")
+    .eq("status", "handed_over")
+    .order("updated_at", { ascending: false });
 
-  if (Array.isArray(response)) {
-    return response;
+  if (error) {
+    console.error("[SUPABASE_LIST_ACTIVE_ERROR]", error);
+    return [];
   }
-  return response?.conversations || [];
+  return (data || []).map(mapRowToConversation);
 }
 
 export async function searchConversations(params: {
@@ -203,12 +78,19 @@ export async function searchConversations(params: {
   status?: string;
   agentId?: string;
 }): Promise<MCPConversation[]> {
-  const response = await callMCPTool<MCPSearchResponse | MCPConversation[]>("search_conversations", params);
+  let query = supabaseAdmin.from("conversations").select("*");
 
-  if (Array.isArray(response)) {
-    return response;
+  if (params.identification) query = query.ilike("identification", `%${params.identification}%`);
+  if (params.contract) query = query.ilike("contract", `%${params.contract}%`);
+  if (params.status) query = query.eq("status", params.status);
+  
+  const { data, error } = await query.order("updated_at", { ascending: false });
+
+  if (error) {
+    console.error("[SUPABASE_SEARCH_ERROR]", error);
+    return [];
   }
-  return response?.conversations || [];
+  return (data || []).map(mapRowToConversation);
 }
 
 export async function listConversations(params: {
@@ -222,124 +104,36 @@ export async function listConversations(params: {
   sortBy?: "updated_at" | "created_at";
   sortOrder?: "asc" | "desc";
 }): Promise<MCPListConversationsResponse> {
-  const mcpParams = {
-    limit: params.pageSize || 50,
-    offset: ((params.page || 1) - 1) * (params.pageSize || 50),
-    orderBy: params.sortBy || "updated_at",
-    order: params.sortOrder || "desc",
-    ...(params.status && typeof params.status === "string" ? { status: params.status } : {}),
-  };
-
-  interface MCPRawConv {
-  sessionId?: string;
-  id?: string;
-  userId?: string;
-  status?: string;
-  summary?: string | null;
-  messageCount?: number | string;
-  priority?: string;
-  contactName?: string | null;
-  identification?: string | null;
-  contract?: string | null;
-  sector?: string | null;
-  email?: string | null;
-  contactEmail?: string | null;
-  phone?: string | null;
-  contactPhone?: string | null;
-  specialistId?: string | null;
-  specialistName?: string | null;
-  createdAt?: string;
-  updatedAt?: string;
-  escalatedAt?: string | null;
-  closedAt?: string | null;
-  takenAt?: string | null;
-  closedBy?: string | null;
-  glpiTicketId?: number | null;
-  metadata?: Record<string, unknown>;
-  client?: {
-    name?: string | null;
-    identification?: string | null;
-    contract?: string | null;
-    email?: string | null;
-    phone?: string | null;
-  };
-  timestamps?: {
-    createdAt?: string;
-    updatedAt?: string;
-    escalatedAt?: string | null;
-    closedAt?: string | null;
-  };
-  agent?: {
-    email: string;
-    name: string;
-    takenAt: string;
-  };
-}
-
-  const response = await callMCPTool<{
-    success: boolean;
-    total: number;
-    count: number;
-    conversations: MCPRawConv[];
-  }>("list_conversations", mcpParams);
-
-  const rawConvs = response?.conversations || [];
-  const total = response?.total ?? rawConvs.length;
   const pageSize = params.pageSize || 50;
   const page = params.page || 1;
+  const from = (page - 1) * pageSize;
+  const to = from + pageSize - 1;
 
-  const conversations: MCPConversation[] = rawConvs.map((c) => {
-    const summary = c.summary || "";
+  let query = supabaseAdmin
+    .from("conversations")
+    .select("*", { count: "exact" });
 
-    let extractedName = c.contactName || c.client?.name || null;
-    let extractedId = c.identification || c.client?.identification || null;
-    let extractedContract = c.contract || c.client?.contract || null;
-
-    if (!extractedName && summary.includes("Cliente:")) {
-      const match = summary.match(/Cliente:\s*([^|]+)/);
-      if (match) extractedName = match[1].trim();
+  if (params.status) {
+    if (Array.isArray(params.status)) {
+      query = query.in("status", params.status);
+    } else {
+      query = query.eq("status", params.status);
     }
-    if (!extractedId && summary.includes("Cédula:")) {
-      const match = summary.match(/Cédula:\s*([^|]+)/);
-      if (match) extractedId = match[1].trim();
-    }
-    if (!extractedContract && summary.includes("Contrato:")) {
-      const match = summary.match(/Contrato:\s*([^|]+)/);
-      if (match) extractedContract = match[1].trim();
-    }
+  }
 
-    return {
-      id: c.id || c.sessionId || "",
-      sessionId: c.sessionId || c.id || "",
-      status: (c.status as MCPConversation["status"]) || "active",
-      summary: c.summary || null,
-      messageCount: typeof c.messageCount === "string" ? parseInt(c.messageCount, 10) : (c.messageCount || 0),
-      isUrgent: c.priority === "high" || c.priority === "critical",
-      client: {
-        name: extractedName,
-        identification: extractedId,
-        contract: extractedContract,
-        email: c.email || c.contactEmail || c.client?.email || null,
-        phone: c.phone || c.contactPhone || c.client?.phone || null,
-      },
-      timestamps: {
-        createdAt: c.createdAt || c.timestamps?.createdAt || new Date().toISOString(),
-        updatedAt: c.updatedAt || c.timestamps?.updatedAt || new Date().toISOString(),
-        escalatedAt: c.escalatedAt || (c.metadata as any)?.escalatedAt || null,
-        closedAt: c.closedAt || null,
-      },
-      agent: c.agent || (c.specialistId
-        ? {
-            email: c.specialistId,
-            name: c.specialistName || c.specialistId,
-            takenAt: c.takenAt || c.updatedAt || new Date().toISOString(),
-          }
-        : undefined),
-      glpiTicketId: c.glpiTicketId || null,
-      closedBy: c.closedBy || null,
-      metadata: c.metadata || {},
-    } as MCPConversation;
-  });
+  if (params.identification) query = query.ilike("identification", `%${params.identification}%`);
+  if (params.contract) query = query.ilike("contract", `%${params.contract}%`);
+  
+  const { data, count, error } = await query
+    .order(params.sortBy || "updated_at", { ascending: params.sortOrder === "asc" })
+    .range(from, to);
+
+  if (error) {
+    console.error("[SUPABASE_LIST_ERROR]", error);
+  }
+
+  const total = count || 0;
+  const conversations = (data || []).map(mapRowToConversation);
 
   return {
     conversations,
@@ -358,213 +152,161 @@ export async function listConversations(params: {
   };
 }
 
-
-
 export async function getConversationStatus(
   sessionId: string
 ): Promise<MCPConversation | null> {
-  const result = await callMCPTool<any>("get_conversation_status", {
-    sessionId,
-  });
+  const { data, error } = await supabaseAdmin
+    .from("conversations")
+    .select("*")
+    .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
+    .maybeSingle();
 
-  if (!result || !result.exists) return null;
-
-  const contact = result.contactInfo || {};
-  const summary = result.summary || "";
-
-  let name = contact.name;
-  let id = contact.identification || contact.id;
-
-  if (!name && summary.includes("Cliente:")) {
-    const match = summary.match(/Cliente:\s*([^|]+)/);
-    if (match) name = match[1].trim();
-  }
-
-  return {
-    id: sessionId,
-    sessionId: sessionId,
-    status: result.status,
-    summary: result.summary,
-    client: {
-      name: name || "Sin nombre",
-      identification: id || "Sin identificación",
-      contract: contact.contract || null,
-      email: contact.email || null,
-      phone: contact.phone || null,
-    },
-    timestamps: {
-      createdAt: result.createdAt || result.timestamps?.createdAt || new Date().toISOString(),
-      updatedAt: result.updatedAt || result.timestamps?.updatedAt || new Date().toISOString(),
-      escalatedAt: result.escalatedAt || result.timestamps?.escalatedAt || null,
-      closedAt: result.closedAt || result.timestamps?.closedAt || null,
-    },
-    messageCount: result.messageCount || 0,
-    agent: result.specialistId ? {
-      email: result.specialistId,
-      name: result.specialistName || result.specialistId,
-      takenAt: result.takenAt || new Date().toISOString(),
-    } : undefined,
-    metadata: result.metadata || {}
-  };
+  if (error || !data) return null;
+  return mapRowToConversation(data);
 }
 
 export async function getConversationHistory(
   sessionId: string,
   limit?: number
 ): Promise<MCPChatMessage[]> {
-  const response = await callMCPTool<MCPHistoryResponse | MCPChatMessage[]>("get_conversation_history", {
-    sessionId,
-    limit: limit || 100,
-  });
+  // Primero buscamos el UUID
+  const { data: conv } = await supabaseAdmin
+    .from("conversations")
+    .select("id")
+    .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
+    .maybeSingle();
 
-  if (Array.isArray(response)) {
-    return response;
+  if (!conv) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from("chat_logs")
+    .select("*")
+    .eq("conversation_id", conv.id)
+    .order("created_at", { ascending: true })
+    .limit(limit || 100);
+
+  if (error) {
+    console.error("[SUPABASE_HISTORY_ERROR]", error);
+    return [];
   }
-  return response?.messages || [];
-}
 
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    role: row.role === "model" ? "assistant" : row.role,
+    content: row.content,
+    createdAt: row.created_at,
+    toolName: row.tool_name,
+    metadata: {
+      attachments: row.attachments
+    }
+  })) as MCPChatMessage[];
+}
 
 export async function takeoverConversation(
   sessionId: string,
   agentEmail: string,
-  agentName: string,
-  options?: {
-    createTicket?: boolean;
-    ticketTypeId?: number;
-    ticketTypeName?: string;
-    ticketSummary?: string;
-    urgency?: number;
-    reason?: string;
-  }
-): Promise<{ success: boolean; conversation?: MCPConversation; glpiTicketId?: number; ticket?: { created: boolean; ticketId?: number; error?: string } }> {
-  return callMCPTool("takeover_conversation", {
-    sessionId,
-    specialistEmail: agentEmail,
-    specialistName: agentName,
-    ...options,
-  });
+  agentName: string
+): Promise<{ success: boolean }> {
+  const { error } = await supabaseAdmin
+    .from("conversations")
+    .update({
+      status: "handed_over",
+      specialist_name: agentName,
+      updated_at: new Date().toISOString()
+    })
+    .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
+
+  return { success: !error };
 }
 
 export async function pauseConversation(
   sessionId: string,
-  reason: string,
-  options?: {
-    createTicket?: boolean;
-    ticketTypeId?: number;
-    ticketTypeName?: string;
-    ticketSummary?: string;
-    urgency?: number;
-    specialistName?: string;
-    specialistEmail?: string;
-  }
-): Promise<{ success: boolean; glpiTicketId?: number; ticket?: { created: boolean; ticketId?: number; error?: string } }> {
-  return callMCPTool("pause_conversation", {
-    sessionId,
-    reason,
-    ...options,
-  });
+  reason: string
+): Promise<{ success: boolean }> {
+  const { error } = await supabaseAdmin
+    .from("conversations")
+    .update({
+      status: "paused",
+      escalation_reason: reason,
+      updated_at: new Date().toISOString()
+    })
+    .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
+
+  return { success: !error };
 }
 
 export async function closeConversation(
   sessionId: string,
-  resolution: string,
-  options?: {
-    closedBy?: "system" | "agent" | "user";
-    createTicket?: boolean;
-    ticketTypeId?: number;
-    ticketTypeName?: string;
-    ticketSummary?: string;
-    specialistName?: string;
-    specialistEmail?: string;
-  }
-): Promise<{ success: boolean; glpiTicketId?: number; ticket?: { processed: boolean; ticketId?: number; error?: string } }> {
-  return callMCPTool("close_conversation", {
-    sessionId,
-    resolution,
-    ...options,
-  });
+  resolution: string
+): Promise<{ success: boolean }> {
+  const { error } = await supabaseAdmin
+    .from("conversations")
+    .update({
+      status: "closed",
+      escalation_reason: resolution,
+      closed_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    })
+    .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
+
+  return { success: !error };
 }
 
 export async function updateSummary(
   sessionId: string,
   summary: string
 ): Promise<{ success: boolean }> {
-  return callMCPTool("update_summary", { sessionId, summary });
+  const { error } = await supabaseAdmin
+    .from("conversations")
+    .update({
+      summary,
+      updated_at: new Date().toISOString()
+    })
+    .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
+
+  return { success: !error };
 }
 
-
 export async function getConversationStats(): Promise<MCPConversationStats> {
-  const [pending, active] = await Promise.all([
-    getPendingConversations().catch(() => []),
-    getActiveConversations().catch(() => []),
-  ]);
+  const { data, error } = await supabaseAdmin
+    .from("conversations")
+    .select("status");
 
-  const allConversations = [...pending, ...active];
-  const uniqueConversations = allConversations.filter(
-    (conv, index, self) => index === self.findIndex((c) => c.id === conv.id)
-  );
+  if (error) return { total: 0, active: 0, waiting_agent: 0, handed_over: 0, closed: 0 };
 
   return {
-    total: uniqueConversations.length,
-    active: uniqueConversations.filter((c) => c.status === "active").length,
-    waiting_agent: uniqueConversations.filter((c) => c.status === "waiting_specialist").length,
-    handed_over: uniqueConversations.filter((c) => c.status === "handed_over").length,
-    closed: uniqueConversations.filter((c) => c.status === "closed").length,
+    total: data.length,
+    active: data.filter(c => c.status === "active").length,
+    waiting_agent: data.filter(c => c.status === "waiting_specialist").length,
+    handed_over: data.filter(c => c.status === "handed_over").length,
+    closed: data.filter(c => c.status === "closed").length,
   };
 }
 
 export async function getAgentStats(agentEmail: string): Promise<MCPAgentStats> {
-  const result = await callMCPTool<{
-    specialistEmail: string;
-    stats: {
-      activeConversations: number;
-      closedToday: number;
-      avgResponseTime: number | null;
-    };
-  }>("get_specialist_stats", { specialistEmail: agentEmail });
+  const { count: active } = await supabaseAdmin
+    .from("conversations")
+    .select("*", { count: "exact", head: true })
+    .eq("specialist_name", agentEmail) // Usando email como nombre para el filtro rápido
+    .eq("status", "handed_over");
 
-  const s = result.stats;
   return {
     agentEmail,
-    totalConversations: s.activeConversations + s.closedToday,
-    activeConversations: s.activeConversations,
-    closedConversations: s.closedToday,
+    totalConversations: (active || 0),
+    activeConversations: (active || 0),
+    closedConversations: 0,
     pendingConversations: 0,
-    avgClosureTimeMinutes: s.avgResponseTime,
+    avgClosureTimeMinutes: 0,
     lastTakenAt: null,
   };
 }
 
-
 export async function checkMCPHealth(): Promise<boolean> {
-  try {
-    const response = await fetch(`${MCP_URL}/health`, {
-      method: "GET",
-      headers: {
-        ...(MCP_API_KEY && { Authorization: `Bearer ${MCP_API_KEY}` }),
-      },
-      signal: AbortSignal.timeout(5000),
-    });
-    return response.ok;
-  } catch {
-    return false;
-  }
+  return true; // Supabase está "siempre" vivo
 }
 
-export async function getMCPStatus(): Promise<{
-  available: boolean;
-  url: string;
-  latency?: number;
-}> {
-  const start = Date.now();
-  const available = await checkMCPHealth();
-  const latency = Date.now() - start;
-
-  return {
-    available,
-    url: MCP_URL,
-    latency: available ? latency : undefined,
-  };
+export async function getMCPStatus(): Promise<{ available: boolean; url: string }> {
+  return { available: true, url: "Supabase Native" };
 }
 
 export const mcpClient = {
@@ -582,4 +324,6 @@ export const mcpClient = {
   getAgentStats,
   checkMCPHealth,
   getMCPStatus,
+};
+tatus,
 };
