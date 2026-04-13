@@ -5,52 +5,53 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
-  let supabaseError = null;
+  const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/[\r\n\t ]/g, "").trim();
+  const supabaseServiceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").replace(/[\r\n\t ]/g, "").trim();
+  
   try {
-    // Verificación de salud de variables de entorno (sin exponer valores)
-    const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/[\r\n\t ]/g, "").trim();
-    const supabaseServiceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").replace(/[\r\n\t ]/g, "").trim();
-    const hasUrl = !!supabaseUrl;
-    const hasKey = !!supabaseServiceRoleKey;
+    // Conexión NATIVA vía REST (emulando CURL) para evitar bugs de la librería en Vercel
+    const restUrl = `${supabaseUrl}/rest/v1/conversations?select=status`;
     
-    if (!hasUrl || !hasKey) {
-      console.error("[STATS_ERROR] Missing Environment Variables in Vercel:", { hasUrl, hasKey });
+    const response = await fetch(restUrl, {
+      method: 'GET',
+      headers: {
+        'apikey': supabaseServiceRoleKey,
+        'Authorization': `Bearer ${supabaseServiceRoleKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'count=exact'
+      },
+      cache: 'no-store'
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP Error ${response.status}`);
     }
 
-    let stats;
-    try {
-      const response = await mcpClient.getConversationStats();
-      stats = response;
-      // @ts-ignore - Guardamos el error de supabase si existe en una propiedad extendida
-      if (response.error) supabaseError = response.error;
-    } catch (mcpError: any) {
-      console.error("[STATS_ERROR] MCP Client failed:", mcpError);
-      supabaseError = mcpError.message;
-      stats = {
-        waiting_agent: 0,
-        handed_over: 0,
-        closed: 0,
-        total: 0,
-        active: 0,
-      };
-    }
+    const data = await response.json();
+    
+    const stats = {
+      total: data.length,
+      active: data.filter((c: any) => c.status === "active").length,
+      waiting_agent: data.filter((c: any) => c.status === "waiting_specialist").length,
+      handed_over: data.filter((c: any) => c.status === "handed_over").length,
+      closed: data.filter((c: any) => c.status === "closed").length,
+    };
 
     return NextResponse.json({
-      active: stats.active || 0,
+      active: stats.active,
       waitingAgent: stats.waiting_agent,
       handedOver: stats.handed_over,
       closed: stats.closed,
       total: stats.total,
       debug: {
-        env_url: hasUrl,
-        env_key: hasKey,
-        url_end: supabaseUrl.slice(-7), // Vemos el final del dominio
-        key_end: supabaseServiceRoleKey.slice(-5), // Vemos el final de la llave
-        error: supabaseError,
+        method: "NATIVE_REST",
+        url_end: supabaseUrl.slice(-7),
+        key_end: supabaseServiceRoleKey.slice(-5),
         timestamp: new Date().toISOString()
       }
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("[STATS_CRITICAL_ERROR]", error);
     return NextResponse.json(
       {
@@ -59,7 +60,11 @@ export async function GET() {
         handedOver: 0,
         closed: 0,
         total: 0,
-        error: "Critical Failure"
+        error: error.message,
+        debug: {
+          method: "NATIVE_REST_FAIL",
+          timestamp: new Date().toISOString()
+        }
       }
     );
   }
