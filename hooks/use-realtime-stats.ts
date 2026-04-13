@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 
 interface ConversationStats {
+  active: number;
   waitingAgent: number;
   handedOver: number;
   closed: number;
