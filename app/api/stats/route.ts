@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { mcpClient } from "@/lib/mcp-client";
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET() {
+  let supabaseError = null;
   try {
     // Verificación de salud de variables de entorno (sin exponer valores)
     const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -13,9 +17,13 @@ export async function GET() {
 
     let stats;
     try {
-      stats = await mcpClient.getConversationStats();
-    } catch (mcpError) {
+      const response = await mcpClient.getConversationStats();
+      stats = response;
+      // @ts-ignore - Guardamos el error de supabase si existe en una propiedad extendida
+      if (response.error) supabaseError = response.error;
+    } catch (mcpError: any) {
       console.error("[STATS_ERROR] MCP Client failed:", mcpError);
+      supabaseError = mcpError.message;
       stats = {
         waiting_agent: 0,
         handed_over: 0,
@@ -33,7 +41,9 @@ export async function GET() {
       total: stats.total,
       debug: {
         env_url: hasUrl,
-        env_key: hasKey
+        env_key: hasKey,
+        error: supabaseError,
+        timestamp: new Date().toISOString()
       }
     });
   } catch (error) {
