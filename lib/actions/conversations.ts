@@ -8,10 +8,6 @@ import type { MCPConversation, MCPChatMessage, MCPListConversationsResponse } fr
 import type { AgentRole } from "@/lib/auth/permissions";
 
 
-/**
- * Ya no dependemos de Supabase Auth ya que estaba dando problemas de sesión.
- * Ahora simplemente buscamos al agente en la base de datos si es necesario.
- */
 async function getCurrentAgent(): Promise<{
   id: string;
   email: string;
@@ -23,23 +19,38 @@ async function getCurrentAgent(): Promise<{
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Intentar encontrar al agente por el ID de Auth
-  const { data: agent } = await supabase
+  // 1. Intentar por ID (UUID de Auth)
+  const { data: agentById } = await supabase
     .from("agents")
     .select("id, email, name, role")
     .eq("id", user.id)
     .maybeSingle();
 
-  return agent;
+  if (agentById) return agentById;
+
+  // 2. Intentar por Email (Respaldo por si el ID no coincide)
+  if (user.email) {
+    const { data: agentByEmail } = await supabase
+      .from("agents")
+      .select("id, email, name, role")
+      .eq("email", user.email)
+      .maybeSingle();
+      
+    return agentByEmail;
+  }
+
+  return null;
 }
 
 function filterConversationsByPermissions(
   conversations: MCPConversation[],
-  agentEmail: string,
-  role: AgentRole
+  agentEmail?: string,
+  role?: AgentRole
 ): MCPConversation[] {
-  void agentEmail;
-  void role;
+  // Si no hay correo o rol (no se detectó agente), permitimos ver todo por ahora
+  if (!agentEmail || !role) return conversations;
+  
+  // En el futuro aquí irían reglas granulares por departamento/rol
   return conversations;
 }
 
@@ -50,10 +61,8 @@ export async function getConversations(
 ): Promise<MCPConversation[]> {
   try {
     const agent = await getCurrentAgent();
-    if (!agent) {
-      return [];
-    }
-
+    
+    // Ya no bloqueamos la carga de datos si no hay agente
     const response = await mcpClient.listConversations({
       status,
       includeAll: includeAll || false,
@@ -62,8 +71,8 @@ export async function getConversations(
 
     const filteredConversations = filterConversationsByPermissions(
       response.conversations,
-      agent.email,
-      agent.role
+      agent?.email,
+      agent?.role
     );
 
     return filteredConversations;
