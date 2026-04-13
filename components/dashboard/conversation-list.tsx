@@ -52,7 +52,7 @@ export function ConversationList({
     refresh, 
     optimisticUpdate 
   } = useRealtimeConversations({
-    initialConversations
+    initialData: initialConversations
   });
 
   const { messages: realtimeMessages } = useRealtimeMessages({
@@ -284,7 +284,15 @@ export function ConversationList({
             <div className="space-y-4">
               {waitingEscalation.length === 0 
                 ? <EmptyState icon={<Inbox className="h-12 w-12 text-muted-foreground/30" />} title="No hay mensajes esperando" description="Las conversaciones escaladas aparecerán aquí." /> 
-                : waitingEscalation.map(c => <ConversationCard key={c.sessionId} conversation={c} onClick={() => handleConversationClick(c)} onTakeover={() => setConversationToTake(c)} />)}
+                : waitingEscalation.map(c => (
+                  <ConversationCard 
+                    key={c.sessionId} 
+                    conversation={c} 
+                    onClick={() => handleConversationClick(c)} 
+                    onTakeover={() => setConversationToTake(c)}
+                    isSelected={activeConversation?.sessionId === c.sessionId}
+                  />
+                ))}
             </div>
           )}
 
@@ -292,7 +300,15 @@ export function ConversationList({
             <div className="space-y-4">
               {activeIA.length === 0 
                 ? <EmptyState icon={<Bot className="h-12 w-12 text-muted-foreground/30" />} title="No hay IA activa" description="Las conversaciones siendo atendidas por Susana aparecerán aquí." /> 
-                : activeIA.map(c => <ConversationCard key={c.sessionId} conversation={c} onClick={() => handleConversationClick(c)} onTakeover={() => setConversationToTake(c)} />)}
+                : activeIA.map(c => (
+                  <ConversationCard 
+                    key={c.sessionId} 
+                    conversation={c} 
+                    onClick={() => handleConversationClick(c)} 
+                    onTakeover={() => setConversationToTake(c)}
+                    isSelected={activeConversation?.sessionId === c.sessionId}
+                  />
+                ))}
             </div>
           )}
 
@@ -300,7 +316,14 @@ export function ConversationList({
             <div className="space-y-4">
               {inAttendence.length === 0 
                 ? <EmptyState icon={<User className="h-12 w-12 text-muted-foreground/30" />} title="No tienes atenciones activas" description="Las conversaciones que tomes aparecerán aquí." /> 
-                : inAttendence.map(c => <ConversationCard key={c.sessionId} conversation={c} onClick={() => handleConversationClick(c)} onTakeover={() => setConversationToTake(c)} />)}
+                : inAttendence.map(c => (
+                  <ConversationCard 
+                    key={c.sessionId} 
+                    conversation={c} 
+                    onClick={() => handleConversationClick(c)} 
+                    isSelected={activeConversation?.sessionId === c.sessionId}
+                  />
+                ))}
             </div>
           )}
 
@@ -308,13 +331,20 @@ export function ConversationList({
             <div className="space-y-4">
               {paused.length === 0 
                 ? <EmptyState icon={<MessageSquareX className="h-12 w-12 text-muted-foreground/30" />} title="No hay pausas" description="Aquí verás los casos que quedaron pendientes." /> 
-                : paused.map(c => <ConversationCard key={c.sessionId} conversation={c} onClick={() => handleConversationClick(c)} onTakeover={() => setConversationToTake(c)} />)}
+                : paused.map(c => (
+                  <ConversationCard 
+                    key={c.sessionId} 
+                    conversation={c} 
+                    onClick={() => handleConversationClick(c)} 
+                    onTakeover={() => setConversationToTake(c)}
+                    isSelected={activeConversation?.sessionId === c.sessionId}
+                  />
+                ))}
             </div>
           )}
         </div>
       </ScrollArea>
 
-      {/* Diálogos y Paneles permanecen igual */}
       {activeConversation && (
         <ContactPanel
           conversation={activeConversation}
@@ -338,6 +368,7 @@ export function ConversationList({
           onClose={() => setConversationToTake(null)}
           onConfirm={handleConfirmTakeover}
           conversation={conversationToTake}
+          agentName={agent?.name || undefined}
         />
       )}
 
