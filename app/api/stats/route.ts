@@ -5,54 +5,57 @@ export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
 export async function GET() {
-  const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/[\r\n\t ]/g, "").trim();
-  const supabaseServiceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").replace(/[\r\n\t ]/g, "").trim();
+  // Limpieza extrema de variables para evitar cualquier carácter invisible
+  const rawUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+  const rawKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+  
+  const supabaseUrl = rawUrl.replace(/[\r\n\t ]/g, "").trim();
+  const supabaseServiceRoleKey = rawKey.replace(/[\r\n\t ]/g, "").trim();
   
   try {
-    // Conexión NATIVA vía REST (emulando CURL) para evitar bugs de la librería en Vercel
-    const restUrl = `${supabaseUrl}/rest/v1/conversations?select=status`;
+    // URL limpia sin barras dobles al final
+    const baseUrl = supabaseUrl.endsWith('/') ? supabaseUrl.slice(0, -1) : supabaseUrl;
+    const restUrl = `${baseUrl}/rest/v1/conversations?select=status`;
     
+    // Simplificación de Headers: Solo apikey (a veces Bearer causa conflicto si no es JWT exacto)
     const response = await fetch(restUrl, {
       method: 'GET',
       headers: {
         'apikey': supabaseServiceRoleKey,
         'Authorization': `Bearer ${supabaseServiceRoleKey}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'count=exact'
+        'Content-Type': 'application/json'
       },
       cache: 'no-store'
     });
 
+    let errorBody = null;
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || `HTTP Error ${response.status}`);
+      try {
+        errorBody = await response.json();
+      } catch (e) {
+        errorBody = await response.text();
+      }
+      throw new Error(`Supabase Reject: ${response.status}`);
     }
 
     const data = await response.json();
     
-    const stats = {
-      total: data.length,
-      active: data.filter((c: any) => c.status === "active").length,
-      waiting_agent: data.filter((c: any) => c.status === "waiting_specialist").length,
-      handed_over: data.filter((c: any) => c.status === "handed_over").length,
-      closed: data.filter((c: any) => c.status === "closed").length,
-    };
-
     return NextResponse.json({
-      active: stats.active,
-      waitingAgent: stats.waiting_agent,
-      handedOver: stats.handed_over,
-      closed: stats.closed,
-      total: stats.total,
+      active: data.filter((c: any) => c.status === "active").length,
+      waitingAgent: data.filter((c: any) => c.status === "waiting_specialist").length,
+      handedOver: data.filter((c: any) => c.status === "handed_over").length,
+      closed: data.filter((c: any) => c.status === "closed").length,
+      total: data.length,
       debug: {
-        method: "NATIVE_REST",
-        url_end: supabaseUrl.slice(-7),
-        key_end: supabaseServiceRoleKey.slice(-5),
+        method: "REST_DIRECT_CLEAN",
+        url_check: baseUrl.slice(-10),
+        key_check: supabaseServiceRoleKey.slice(-5),
+        status: response.status,
         timestamp: new Date().toISOString()
       }
     });
   } catch (error: any) {
-    console.error("[STATS_CRITICAL_ERROR]", error);
+    console.error("[STATS_ERROR]", error);
     return NextResponse.json(
       {
         active: 0,
@@ -62,7 +65,7 @@ export async function GET() {
         total: 0,
         error: error.message,
         debug: {
-          method: "NATIVE_REST_FAIL",
+          method: "REST_DIRECT_FAIL",
           timestamp: new Date().toISOString()
         }
       }
