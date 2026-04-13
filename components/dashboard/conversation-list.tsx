@@ -172,15 +172,22 @@ export function ConversationList({
       },
     });
 
+    const messages = await getChatHistory(conversationToTake.sessionId);
+    const transcript = messages
+      .map((m) => `${m.role === "user" ? "Cliente" : "IA"}: ${m.content}`)
+      .join("\n");
+
     const metadata = (conversationToTake.metadata || {}) as {
       escalationReason?: string;
     };
-    const inferredSummary = conversationToTake.summary || metadata.escalationReason;
+    
+    const baseSummary = conversationToTake.summary || metadata.escalationReason || "Sin resumen";
+    const fullSummary = `${baseSummary}\n\n--- TRANSCRIPCIÓN ---\n${transcript}`.trim();
 
     const result = await takeoverConversation(conversationToTake.sessionId, {
       createTicket: true,
       reason: metadata.escalationReason,
-      ticketSummary: inferredSummary,
+      ticketSummary: fullSummary,
     });
 
     if (result.error) {
@@ -236,12 +243,19 @@ export function ConversationList({
     setConversationToClose(null);
     toast.success("Conversación cerrada exitosamente");
 
+    const currentMessages = await getChatHistory(conversationId);
+    const transcript = currentMessages
+      .map((m) => `${m.role === "user" ? "Cliente" : "IA"}: ${m.content}`)
+      .join("\n");
+    
+    const fullSummary = `${resolution}\n\n--- TRANSCRIPCIÓN ---\n${transcript}`.trim();
+
     const result = await closeConversation(conversationId, resolution, {
       closedBy: "agent",
       createTicket: options?.createTicket ?? true,
       ticketTypeId: options?.ticketTypeId,
       ticketTypeName: options?.ticketTypeName,
-      ticketSummary: options?.ticketSummary,
+      ticketSummary: fullSummary,
     });
 
     if (result.error) {
@@ -266,11 +280,18 @@ export function ConversationList({
     setConversationToPause(null);
     toast.success("Conversación pausada exitosamente");
 
+    const currentMessages = await getChatHistory(conversationId);
+    const transcript = currentMessages
+      .map((m) => `${m.role === "user" ? "Cliente" : "IA"}: ${m.content}`)
+      .join("\n");
+      
+    const fullSummary = `${reason}\n\n--- TRANSCRIPCIÓN ---\n${transcript}`.trim();
+
     const result = await pauseConversation(conversationId, reason, {
       createTicket: options?.createTicket ?? true,
       ticketTypeId: options?.ticketTypeId,
       ticketTypeName: options?.ticketTypeName,
-      ticketSummary: options?.ticketSummary,
+      ticketSummary: fullSummary,
     });
 
     if (result.error) {
