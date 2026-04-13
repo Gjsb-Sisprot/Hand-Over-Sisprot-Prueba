@@ -13,15 +13,18 @@ import type {
  * que espera el frontend.
  */
 function mapRowToConversation(conv: any): MCPConversation {
+  // Aseguramos que tenemos un ID válido
+  const id = conv.session_id || conv.id;
+  
   return {
-    id: conv.session_id || conv.id,
-    sessionId: conv.session_id || conv.id,
+    id: id,
+    sessionId: conv.session_id || id,
     status: conv.status || "active",
     summary: conv.summary || null,
     messageCount: conv.message_count || 0,
     client: {
-      name: conv.contact_name || "Sin nombre",
-      identification: conv.identification || "Sin identificación",
+      name: conv.contact_name || "Cliente",
+      identification: conv.identification || "Sin ID",
       contract: conv.contract || null,
       email: conv.contact_email || null,
       phone: conv.contact_phone || null,
@@ -119,6 +122,9 @@ export async function listConversations(params: {
     } else {
       query = query.eq("status", params.status);
     }
+  } else if (!params.includeAll) {
+    // Si no se pide todo y no hay status específico, ocultamos las cerradas por defecto
+    query = query.neq("status", "closed");
   }
 
   if (params.identification) query = query.ilike("identification", `%${params.identification}%`);
