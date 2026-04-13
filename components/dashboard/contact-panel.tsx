@@ -1,18 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { MCPConversation, MCPChatMessage } from "@/types/mcp";
+import { MCPConversation, MCPChatMessage } from "../../types/mcp";
 import { 
   Sheet, 
   SheetContent, 
   SheetHeader, 
   SheetTitle, 
   SheetDescription 
-} from "@/components/ui/sheet";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+} from "../ui/sheet";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
+import { Avatar, AvatarFallback } from "../ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { 
   Phone, 
   Mail, 
@@ -28,9 +28,9 @@ import {
   IdCard,
   History
 } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn } from "../../lib/utils";
 import ReactMarkdown from "react-markdown";
-import { Input } from "@/components/ui/input";
+import { Input } from "../ui/input";
 import { sendMessage } from "@/lib/actions/conversations";
 import { toast } from "sonner";
 import { formatDateTime, formatTime } from "@/lib/date-utils";
