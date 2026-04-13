@@ -21,6 +21,7 @@ import { MCPConversation } from "@/types/mcp";
 interface DashboardStatsProps {
   agent: Agent | null;
   stats: {
+    active: number;
     waitingAgent: number;
     handedOver: number;
     closed: number;
@@ -67,32 +68,37 @@ export function DashboardStats({
       </div>
 
       {}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card className="border-destructive/20">
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border-green-500/20 bg-green-50/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">
-              Esperando Agente
-            </CardTitle>
+            <CardTitle className="text-sm font-medium">Atendidas por IA</CardTitle>
+            <TrendingUp className="h-4 w-4 text-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.active}</div>
+            <p className="text-xs text-muted-foreground">Conversaciones activas con el bot</p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-destructive/20 bg-destructive/5">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Esperando Agente</CardTitle>
             <AlertCircle className="h-4 w-4 text-destructive" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.waitingAgent}</div>
-            <p className="text-xs text-muted-foreground">
-              Conversaciones que necesitan atención
-            </p>
+            <p className="text-xs text-muted-foreground">Necesitan intervención humana</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="border-blue-500/20 bg-blue-50/10">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">En Atención</CardTitle>
             <Users className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{stats.handedOver}</div>
-            <p className="text-xs text-muted-foreground">
-              Siendo atendidas por agentes
-            </p>
+            <p className="text-xs text-muted-foreground">Atendidas por especialistas</p>
           </CardContent>
         </Card>
       </div>
@@ -120,7 +126,7 @@ export function DashboardStats({
           <CardContent>
             <div className="space-y-4">
               {pendingConversations
-                .filter((c) => c.status === "waiting_specialist")
+                .filter((c) => c.status === "active" || c.status === "waiting_specialist")
                 .slice(0, 3)
                 .map((conv) => {
                   return (
