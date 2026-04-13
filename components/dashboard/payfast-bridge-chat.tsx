@@ -89,6 +89,10 @@ export function PayFastBridgeChat({ identification, clientName, onClose }: PayFa
     const res = await sendPayFastBridgeMessage(conversationId, input);
     if (res.success) {
       setInput("");
+      // Si el estado no era handed_over, lo actualizamos localmente
+      if (status !== "handed_over") {
+        setStatus("handed_over");
+      }
     }
     setIsLoading(false);
   };
@@ -102,13 +106,34 @@ export function PayFastBridgeChat({ identification, clientName, onClose }: PayFa
             SF
           </div>
           <div>
-            <h3 className="text-sm font-bold truncate max-w-[200px]">{clientName}</h3>
-            <p className="text-[10px] text-blue-300 uppercase tracking-wider">Puente Pay-Fast • {status}</p>
+            <h3 className="text-sm font-bold truncate max-w-[150px]">{clientName}</h3>
+            <p className="text-[10px] text-blue-300 uppercase tracking-wider">
+              {status === "handed_over" ? "🤝 Puente Activo" : `🤖 IA: ${status}`}
+            </p>
           </div>
         </div>
-        <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full transition-colors">
-          <X size={18} />
-        </button>
+        
+        <div className="flex items-center gap-2">
+          {status !== "handed_over" && status !== "closed" && (
+            <Button 
+              size="sm" 
+              variant="outline" 
+              onClick={async () => {
+                if (!conversationId) return;
+                setIsLoading(true);
+                const res = await sendPayFastBridgeMessage(conversationId, "--- Agente ha tomado el control del puente ---");
+                if (res.success) setStatus("handed_over");
+                setIsLoading(false);
+              }}
+              className="h-7 px-2 text-[10px] bg-blue-600 border-none hover:bg-blue-700 text-white font-bold"
+            >
+              TOMAR CONTROL
+            </Button>
+          )}
+          <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full transition-colors ml-1">
+            <X size={18} />
+          </button>
+        </div>
       </div>
 
       {/* Messages Area */}
