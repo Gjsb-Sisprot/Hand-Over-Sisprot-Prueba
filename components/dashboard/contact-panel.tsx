@@ -9,6 +9,12 @@ import {
   SheetTitle, 
   SheetDescription 
 } from "../ui/sheet";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
 import { Avatar, AvatarFallback } from "../ui/avatar";
@@ -26,7 +32,10 @@ import {
   Clock,
   Building,
   IdCard,
-  History
+  History,
+  ExternalLink,
+  CreditCard,
+  SendHorizontal
 } from "lucide-react";
 import { cn } from "../../lib/utils";
 import ReactMarkdown from "react-markdown";
@@ -127,9 +136,42 @@ export function ContactPanel({
                     En atención humana
                   </Badge>
                 )}
-                <span className="text-xs text-muted-foreground">
+                <span className="text-xs text-muted-foreground mr-auto">
                   ID: {conversation.sessionId}
                 </span>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-7 px-2 text-[10px] bg-primary/5 hover:bg-primary/10 border-primary/20">
+                      <ExternalLink className="h-3 w-3 mr-1" />
+                      Contactar
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem asChild>
+                      <a 
+                        href={`https://wa.me/${client.phone?.replace(/\D/g, "")}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <MessageCircle className="h-4 w-4 text-green-600" />
+                        <span>WhatsApp</span>
+                      </a>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <a 
+                        href={`https://payfast.sisprot.com/?search=${client.contract || client.identification}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 cursor-pointer"
+                      >
+                        <CreditCard className="h-4 w-4 text-blue-600" />
+                        <span>Pay Fast</span>
+                      </a>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </SheetDescription>
             </div>
           </div>
