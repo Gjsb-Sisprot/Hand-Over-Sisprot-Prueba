@@ -31,7 +31,7 @@ export interface MCPConversation {
   timestamps: MCPTimestamps;
   isUrgent?: boolean;
   agent?: MCPAgent;
-    glpiTicketId?: number | null;
+    glpiTicketId?: number | string | null;
     closedBy?: string | null;
   metadata?: Record<string, unknown>;
 }
