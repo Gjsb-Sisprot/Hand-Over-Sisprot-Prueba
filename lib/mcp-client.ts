@@ -290,10 +290,10 @@ export async function getConversationStats(): Promise<MCPConversationStats & { e
 
   return {
     total: data.length,
-    active: data.filter(c => c.status === "active").length,
-    waiting_agent: data.filter(c => c.status === "waiting_specialist").length,
-    handed_over: data.filter(c => c.status === "handed_over").length,
-    closed: data.filter(c => c.status === "closed").length,
+    active: data.filter((c: any) => c.status === "active").length,
+    waiting_agent: data.filter((c: any) => c.status === "waiting_specialist").length,
+    handed_over: data.filter((c: any) => c.status === "handed_over").length,
+    closed: data.filter((c: any) => c.status === "closed").length,
   };
 }
 
