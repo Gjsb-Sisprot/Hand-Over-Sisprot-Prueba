@@ -79,14 +79,13 @@ export async function getConversationsPaginated(params: {
   includeAll?: boolean;
 }): Promise<MCPListConversationsResponse> {
   try {
+    const agent = await getCurrentAgent();
     const response = await mcpClient.listConversations(params);
 
     // Permitimos ver sin filtrar por ahora si no hay agente detectado
     if (!agent) {
       return response;
     }
-
-    const response = await mcpClient.listConversations(params);
 
     const filteredConversations = filterConversationsByPermissions(
       response.conversations,
