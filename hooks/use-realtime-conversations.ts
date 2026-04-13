@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { MCPConversation, MCPListConversationsResponse, MCPPaginationInfo } from "@/types/mcp";
+import { createClient } from "@/lib/supabase/client";
 
 interface UseRealtimeConversationsOptions {
   initialData?: MCPConversation[];
@@ -18,7 +19,7 @@ export function useRealtimeConversations({
   status,
   agentEmail,
   includeAll = false,
-  pollingInterval = 10000,
+  pollingInterval = 30000, // Polling más lento como fallback
   onNewConversation,
   onConversationUpdated,
 }: UseRealtimeConversationsOptions = {}) {
@@ -52,29 +53,20 @@ export function useRealtimeConversations({
   useEffect(() => { onNewRef.current = onNewConversation; }, [onNewConversation]);
   useEffect(() => { onUpdatedRef.current = onConversationUpdated; }, [onConversationUpdated]);
 
-  const buildUrl = useCallback(() => {
-    const params = new URLSearchParams();
-    if (status) {
-      const statusValue = Array.isArray(status) ? status.join(",") : status;
-      params.set("status", statusValue);
-    }
-    if (agentEmail) params.set("agentEmail", agentEmail);
-    if (includeAll) params.set("includeAll", "true");
-    const queryString = params.toString();
-    return `/api/mcp/conversations${queryString ? `?${queryString}` : ""}`;
-  }, [status, agentEmail, includeAll]);
-
   const fetchConversations = useCallback(
     async (isFilterChange = false) => {
       try {
         if (isFilterChange) setIsLoading(true);
 
-        const url = buildUrl();
-        const response = await fetch(url);
-
-        if (!response.ok) throw new Error("Error fetching conversations");
-
-        const data: MCPListConversationsResponse = await response.json();
+        // Usamos nuestro cliente de mcp-client.ts que ya habla con Supabase
+        const { mcpClient } = await import("@/lib/mcp-client");
+        const data = await mcpClient.listConversations({
+          status,
+          agentEmail,
+          includeAll,
+          pageSize: 100,
+        });
+        
         const convs = data.conversations || [];
 
         if (!isFilterChange) {
@@ -109,7 +101,7 @@ export function useRealtimeConversations({
         setIsLoading(false);
       }
     },
-    [buildUrl]
+    [status, agentEmail, includeAll]
   );
 
   useEffect(() => {
@@ -124,8 +116,39 @@ export function useRealtimeConversations({
     }
 
     previousFilterRef.current = currentFilter;
-  }, [status, agentEmail, includeAll, initialData.length]);
+  }, [status, agentEmail, includeAll, initialData.length, fetchConversations, hasInitialData]);
 
+  // suscripción de tiempo real nativa de Supabase
+  useEffect(() => {
+    const supabase = createClient();
+    
+    const channel = supabase
+      .channel("realtime-conversations")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "conversations",
+        },
+        async (payload) => {
+          // Cuando algo cambia, forzamos un refresh ligero o actualizamos localmente
+          // Por simplicidad y consistencia, hacemos fetch de nuevo pero sin loading
+          if (!isLoadingRef.current) {
+            fetchConversations(false);
+          }
+        }
+      )
+      .subscribe((status) => {
+        setIsConnected(status === "SUBSCRIBED");
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchConversations]);
+
+  // Fallback de polling
   useEffect(() => {
     const interval = setInterval(() => {
       if (!isLoadingRef.current) {
@@ -135,50 +158,6 @@ export function useRealtimeConversations({
 
     return () => clearInterval(interval);
   }, [pollingInterval, fetchConversations]);
-
-  useEffect(() => {
-    let es: EventSource | null = null;
-    try {
-      es = new EventSource("/api/mcp/conversations/events");
-
-      es.addEventListener("status_changed", (e: MessageEvent) => {
-        try {
-          const data = JSON.parse(e.data);
-          const { sessionId: evtSessionId, status: newStatus } = data;
-
-          if (evtSessionId && newStatus) {
-            setConversations((prev) => {
-              const idx = prev.findIndex(
-                (c) => c.sessionId === evtSessionId || c.id === evtSessionId
-              );
-              if (idx === -1) {
-                if (!isLoadingRef.current) fetchConversations(false);
-                return prev;
-              }
-              const updated = [...prev];
-              updated[idx] = {
-                ...updated[idx],
-                status: newStatus as MCPConversation["status"],
-                timestamps: {
-                  ...updated[idx].timestamps,
-                  updatedAt: new Date().toISOString(),
-                },
-              };
-              conversationsRef.current = updated;
-              return updated;
-            });
-          }
-        } catch {
-          if (!isLoadingRef.current) fetchConversations(false);
-        }
-      });
-
-      es.onerror = () => {
-      };
-    } catch {
-    }
-    return () => { es?.close(); };
-  }, [fetchConversations]);
 
     const optimisticUpdate = useCallback(
     (sessionId: string, updates: Partial<MCPConversation>) => {
