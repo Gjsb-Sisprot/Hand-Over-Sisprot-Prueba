@@ -43,6 +43,7 @@ import { Input } from "../ui/input";
 import { sendMessage } from "@/lib/actions/conversations";
 import { toast } from "sonner";
 import { formatDateTime, formatTime } from "@/lib/date-utils";
+import { PayFastBridgeChat } from "./payfast-bridge-chat";
 
 interface ContactPanelProps {
   conversation: MCPConversation;
@@ -63,6 +64,7 @@ export function ContactPanel({
 }: ContactPanelProps) {
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [showPayFastBridge, setShowPayFastBridge] = useState(false);
 
   const client = conversation.client ?? {
     name: null,
@@ -106,6 +108,7 @@ export function ContactPanel({
   };
 
   return (
+    <>
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-2xl p-0 flex flex-col h-full overflow-hidden">
         <SheetHeader className="p-6 pb-4 border-b shrink-0">
@@ -159,6 +162,13 @@ export function ContactPanel({
                         <span>WhatsApp</span>
                       </a>
                     </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      className="flex items-center gap-2 cursor-pointer"
+                      onClick={() => setShowPayFastBridge(true)}
+                    >
+                      <CreditCard className="h-4 w-4 text-blue-600" />
+                      <span>Chat Pay Fast</span>
+                    </DropdownMenuItem>
                     <DropdownMenuItem asChild>
                       <a 
                         href={`https://payfast.sisprot.com/?search=${client.contract || client.identification}`} 
@@ -166,8 +176,8 @@ export function ContactPanel({
                         rel="noopener noreferrer"
                         className="flex items-center gap-2 cursor-pointer"
                       >
-                        <CreditCard className="h-4 w-4 text-blue-600" />
-                        <span>Pay Fast</span>
+                        <ExternalLink className="h-4 w-4 text-blue-600" />
+                        <span>Abrir Portal Externo</span>
                       </a>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -347,5 +357,17 @@ export function ContactPanel({
         </div>
       </SheetContent>
     </Sheet>
+    
+    {/* Puente de Chat Pay-Fast */}
+    {showPayFastBridge && client.identification && (
+      <div className="fixed bottom-6 right-6 z-[60]">
+        <PayFastBridgeChat 
+          identification={client.identification}
+          clientName={client.name || "Cliente"}
+          onClose={() => setShowPayFastBridge(false)}
+        />
+      </div>
+    )}
+    </>
   );
 }
