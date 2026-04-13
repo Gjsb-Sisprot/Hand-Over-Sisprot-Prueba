@@ -8,8 +8,10 @@ export async function GET() {
   let supabaseError = null;
   try {
     // Verificación de salud de variables de entorno (sin exponer valores)
-    const hasUrl = !!process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const hasKey = !!process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseUrl = (process.env.NEXT_PUBLIC_SUPABASE_URL || "").replace(/[\r\n\t ]/g, "").trim();
+    const supabaseServiceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").replace(/[\r\n\t ]/g, "").trim();
+    const hasUrl = !!supabaseUrl;
+    const hasKey = !!supabaseServiceRoleKey;
     
     if (!hasUrl || !hasKey) {
       console.error("[STATS_ERROR] Missing Environment Variables in Vercel:", { hasUrl, hasKey });
@@ -42,6 +44,8 @@ export async function GET() {
       debug: {
         env_url: hasUrl,
         env_key: hasKey,
+        url_end: supabaseUrl.slice(-7), // Vemos el final del dominio
+        key_end: supabaseServiceRoleKey.slice(-5), // Vemos el final de la llave
         error: supabaseError,
         timestamp: new Date().toISOString()
       }
