@@ -16,6 +16,11 @@ function mapRowToConversation(conv: any): MCPConversation {
   // Aseguramos que tenemos un ID válido
   const id = conv.session_id || conv.id;
   
+  // Para que el dashboard fascine, si no hay nombre usamos la identificación o contrato
+  const displayName = conv.contact_name || conv.name || 
+                     (conv.identification ? `Cliente ${conv.identification}` : null) || 
+                     (conv.contract ? `Contrato ${conv.contract}` : "Cliente Nuevo");
+
   return {
     id: id,
     sessionId: conv.session_id || id,
@@ -23,11 +28,11 @@ function mapRowToConversation(conv: any): MCPConversation {
     summary: conv.summary || null,
     messageCount: conv.message_count || 0,
     client: {
-      name: conv.contact_name || "Cliente",
+      name: displayName,
       identification: conv.identification || "Sin ID",
       contract: conv.contract || null,
-      email: conv.contact_email || null,
-      phone: conv.contact_phone || null,
+      email: conv.contact_email || conv.email || null,
+      phone: conv.contact_phone || conv.phone || null,
     },
     timestamps: {
       createdAt: conv.created_at,
