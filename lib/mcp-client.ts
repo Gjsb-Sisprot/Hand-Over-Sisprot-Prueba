@@ -205,12 +205,15 @@ export async function getConversationHistory(
 export async function takeoverConversation(
   sessionId: string,
   agentEmail: string,
-  agentName: string
-): Promise<{ success: boolean }> {
+  agentName: string,
+  options?: any
+): Promise<{ success: boolean; glpiTicketId?: string }> {
+  // Aquí podríamos implementar la creación de ticket GLPI si fuera necesario
   const { error } = await supabaseAdmin
     .from("conversations")
     .update({
       status: "handed_over",
+      agent_email: agentEmail,
       specialist_name: agentName,
       updated_at: new Date().toISOString()
     })
@@ -221,13 +224,14 @@ export async function takeoverConversation(
 
 export async function pauseConversation(
   sessionId: string,
-  reason: string
+  reason: string,
+  options?: any
 ): Promise<{ success: boolean }> {
   const { error } = await supabaseAdmin
     .from("conversations")
     .update({
       status: "paused",
-      escalation_reason: reason,
+      notification_sent: true,
       updated_at: new Date().toISOString()
     })
     .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
@@ -237,13 +241,13 @@ export async function pauseConversation(
 
 export async function closeConversation(
   sessionId: string,
-  resolution: string
+  resolution: string,
+  options?: any
 ): Promise<{ success: boolean }> {
   const { error } = await supabaseAdmin
     .from("conversations")
     .update({
       status: "closed",
-      escalation_reason: resolution,
       closed_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     })
