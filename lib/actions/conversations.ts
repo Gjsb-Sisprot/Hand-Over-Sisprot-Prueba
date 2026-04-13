@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "../supabase/server";
 import { mcpClient } from "../mcp-client";
-import { createTicket as createGlpiTicket } from "../glpi";
+import { createTicket as createGlpiTicket, USUARIOS_GLPI, CATEGORIAS_TI_GLPI } from "../glpi";
 import type { MCPConversation, MCPChatMessage, MCPListConversationsResponse } from "../../types/mcp";
 import type { AgentRole } from "../auth/permissions";
 
@@ -161,6 +161,59 @@ export async function getChatHistory(
   }
 }
 
+/**
+ * Prepara los datos del ticket para GLPI basándose en la conversación
+ */
+function prepareGlpiTicketData(conversation: MCPConversation, agentName: string | null, customObservation?: string) {
+  const client = conversation.client;
+  const metadata = (conversation.metadata || {}) as any;
+  const summary = customObservation || conversation.summary || "Sin resumen disponible";
+
+  // Mapeo de usuario GLPI
+  const requesterId = agentName ? USUARIOS_GLPI[agentName] || 19 : 19;
+
+  // Detección básica de categoría
+  let categoryId = 1; // Administrativo por defecto
+  let urgency = 5;
+
+  for (const [key, val] of Object.entries(CATEGORIAS_TI_GLPI)) {
+    if (summary.toLowerCase().includes(key.toLowerCase())) {
+      categoryId = val.id;
+      urgency = val.urgency;
+      break;
+    }
+  }
+
+  // Formateo del contenido
+  const content = `Observacion: ${summary}
+
+Sector: ${metadata.sector || 'Consultar en Pay Fast'}
+Cliente: ${client?.name || 'N/A'}
+N° de contrato: ${client?.contract || 'N/A'}
+IP Actual: ${metadata.ip_actual || 'Consultar en Pay Fast'}
+Teléfono: ${client?.phone || 'N/A'}
+VLAN Actual: ${metadata.vlan_actual || 'Consultar en Pay Fast'}
+Serial GPON: ${metadata.serial_gpon || 'Consultar en Pay Fast'}
+Plan Contratado: ${metadata.plan_contratado || 'Consultar en Pay Fast'}
+
+Potencia Leida: 0
+Potencia Calculada: 0
+
+Dirección: ${metadata.direccion || 'Consultar en Pay Fast'}
+Ubicación: ${metadata.ubicacion_url || 'N/A'}`;
+
+  const firstLine = summary.split('\n')[0];
+  const ticketName = `${firstLine.substring(0, 40)} - Contrato ${client?.contract || 'S/N'} - ${client?.name || 'Cliente'}`;
+
+  return {
+    name: ticketName,
+    content,
+    itilcategories_id: categoryId,
+    urgency,
+    _users_id_requester: requesterId
+  };
+}
+
 export async function takeoverConversation(
   sessionId: string,
   options?: {
@@ -183,14 +236,12 @@ export async function takeoverConversation(
     let glpiTicketId: number | undefined;
 
     if (options?.createTicket !== false && conversation) {
-      const clientName = conversation.client?.name || "Cliente";
-      const contract = conversation.client?.contract || "S/N";
-      const reason = options?.reason || "Especialista toma control";
-
+      const ticketData = prepareGlpiTicketData(conversation, agent.name, options?.reason);
+      
       const glpiResult = await createGlpiTicket({
-        name: `Toma de control - Contrato ${contract} - ${clientName}`,
-        content: options?.ticketSummary || `Observación: ${reason}\n\nCliente: ${clientName}\nContrato: ${contract}\nEspecialista: ${agent.name || agent.email}`,
-        urgency: options?.urgency || 3,
+        ...ticketData,
+        // Permitir sobrescribir opcionalmente desde las opciones
+        urgency: options?.urgency || ticketData.urgency,
       });
 
       if (glpiResult.success) {
@@ -254,13 +305,11 @@ export async function pauseConversation(
     let glpiTicketId: number | undefined;
 
     if (options?.createTicket !== false && conversation) {
-      const clientName = conversation.client?.name || "Cliente";
-      const contract = conversation.client?.contract || "S/N";
+      const ticketData = prepareGlpiTicketData(conversation, agent.name, `Pausa: ${reason}`);
 
       const glpiResult = await createGlpiTicket({
-        name: `Pausa - Contrato ${contract} - ${clientName}`,
-        content: options?.ticketSummary || `Motivo de pausa: ${reason}\n\nCliente: ${clientName}\nContrato: ${contract}\nEspecialista: ${agent.name || agent.email}`,
-        urgency: options?.urgency || 3,
+        ...ticketData,
+        urgency: options?.urgency || ticketData.urgency,
       });
 
       if (glpiResult.success) {
@@ -321,14 +370,9 @@ export async function closeConversation(
 
     // Solo crear si no tiene ya un ticket previo
     if (options?.createTicket !== false && conversation && !conversation.glpiTicketId) {
-      const clientName = conversation.client?.name || "Cliente";
-      const contract = conversation.client?.contract || "S/N";
+      const ticketData = prepareGlpiTicketData(conversation, agent.name, `Resuelto: ${resolution}`);
 
-      const glpiResult = await createGlpiTicket({
-        name: `Resolución - Contrato ${contract} - ${clientName}`,
-        content: options?.ticketSummary || `Resolución: ${resolution}\n\nCliente: ${clientName}\nContrato: ${contract}\nEspecialista: ${agent.name || agent.email}`,
-        urgency: 3,
-      });
+      const glpiResult = await createGlpiTicket(ticketData);
 
       if (glpiResult.success) {
         glpiTicketId = glpiResult.ticketId;
