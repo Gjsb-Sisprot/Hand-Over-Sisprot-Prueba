@@ -325,5 +325,3 @@ export const mcpClient = {
   checkMCPHealth,
   getMCPStatus,
 };
-tatus,
-};
