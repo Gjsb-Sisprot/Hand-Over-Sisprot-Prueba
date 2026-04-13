@@ -1,13 +1,11 @@
 "use server";
 
-
 import { revalidatePath } from "next/cache";
 import { createClient } from "../supabase/server";
 import { mcpClient } from "../mcp-client";
 import { createTicket as createGlpiTicket } from "../glpi";
 import type { MCPConversation, MCPChatMessage, MCPListConversationsResponse } from "../../types/mcp";
 import type { AgentRole } from "../auth/permissions";
-
 
 async function getCurrentAgent(): Promise<{
   id: string;
@@ -191,7 +189,7 @@ export async function takeoverConversation(
 
       const glpiResult = await createGlpiTicket({
         name: `Toma de control - Contrato ${contract} - ${clientName}`,
-        content: `Observación: ${reason}\n\nCliente: ${clientName}\nContrato: ${contract}\nEspecialista: ${agent.name || agent.email}`,
+        content: options?.ticketSummary || `Observación: ${reason}\n\nCliente: ${clientName}\nContrato: ${contract}\nEspecialista: ${agent.name || agent.email}`,
         urgency: options?.urgency || 3,
       });
 
@@ -215,7 +213,7 @@ export async function takeoverConversation(
       const supabase = await createClient();
       await supabase
         .from("conversations")
-        .update({ glpi_ticket_id: glpiTicketId })
+        .update({ glpi_ticket_id: glpiTicketId.toString() })
         .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
     }
 
@@ -261,7 +259,7 @@ export async function pauseConversation(
 
       const glpiResult = await createGlpiTicket({
         name: `Pausa - Contrato ${contract} - ${clientName}`,
-        content: `Mótivo de pausa: ${reason}\n\nCliente: ${clientName}\nContrato: ${contract}\nEspecialista: ${agent.name || agent.email}`,
+        content: options?.ticketSummary || `Motivo de pausa: ${reason}\n\nCliente: ${clientName}\nContrato: ${contract}\nEspecialista: ${agent.name || agent.email}`,
         urgency: options?.urgency || 3,
       });
 
@@ -281,7 +279,7 @@ export async function pauseConversation(
       status: "paused",
       last_active_at: new Date().toISOString() 
     };
-    if (glpiTicketId) updateData.glpi_ticket_id = glpiTicketId;
+    if (glpiTicketId) updateData.glpi_ticket_id = glpiTicketId.toString();
 
     await supabase
       .from("conversations")
@@ -328,7 +326,7 @@ export async function closeConversation(
 
       const glpiResult = await createGlpiTicket({
         name: `Resolución - Contrato ${contract} - ${clientName}`,
-        content: `Resolución: ${resolution}\n\nCliente: ${clientName}\nContrato: ${contract}\nEspecialista: ${agent.name || agent.email}`,
+        content: options?.ticketSummary || `Resolución: ${resolution}\n\nCliente: ${clientName}\nContrato: ${contract}\nEspecialista: ${agent.name || agent.email}`,
         urgency: 3,
       });
 
@@ -353,7 +351,7 @@ export async function closeConversation(
       closed_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
     };
-    if (glpiTicketId) updateData.glpi_ticket_id = glpiTicketId;
+    if (glpiTicketId) updateData.glpi_ticket_id = glpiTicketId.toString();
 
     await supabase
       .from("conversations")
