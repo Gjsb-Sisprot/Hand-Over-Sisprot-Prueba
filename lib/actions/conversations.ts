@@ -289,6 +289,7 @@ export async function getConversationStats() {
     };
   } catch (error) {
     return {
+      active: 0,
       waitingAgent: 0,
       handedOver: 0,
       closed: 0,
