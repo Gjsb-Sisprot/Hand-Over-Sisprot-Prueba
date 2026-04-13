@@ -338,18 +338,34 @@ export function ContactPanel({
                     </div>
                   )}
                   
-                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Historial completo:</p>
-                    {messages.map((m, idx) => (
-                      <div key={m.id || idx} className="text-sm border-l-2 border-muted pl-3 py-1">
-                        <p className="text-xs font-bold text-primary mb-0.5">
-                          {m.role === "user" ? "Cliente" : "IA"}
-                        </p>
-                        <p className="text-muted-foreground leading-relaxed italic">
-                          {m.content}
-                        </p>
+                  <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest border-b pb-1">Historial completo:</p>
+                    {messages.length === 0 ? (
+                      <div className="py-4 text-center border-2 border-dashed rounded-lg">
+                        <p className="text-xs text-muted-foreground italic">Cargando mensajes o sin historial...</p>
                       </div>
-                    ))}
+                    ) : (
+                      messages.map((m, idx) => (
+                        <div key={m.id || idx} className="text-sm border-l-2 border-primary/30 pl-3 py-1 bg-background/50 rounded-r-md">
+                          <p className="text-[10px] font-bold text-primary flex items-center gap-1.5 uppercase">
+                            {m.role === "user" ? (
+                              <>
+                                <User className="h-3 w-3" />
+                                Cliente
+                              </>
+                            ) : (
+                              <>
+                                <Bot className="h-3 w-3" />
+                                IA Sisprot
+                              </>
+                            )}
+                          </p>
+                          <p className="text-muted-foreground leading-relaxed text-xs">
+                            {m.content}
+                          </p>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </CardContent>
               </Card>
