@@ -16,23 +16,20 @@ function mapRowToConversation(conv: any): MCPConversation {
   // Aseguramos que tenemos un ID válido
   const id = conv.session_id || conv.id;
   
-  // Para que el dashboard fascine, si no hay nombre usamos la identificación o contrato
-  const displayName = conv.contact_name || conv.name || 
-                     (conv.identification ? `Cliente ${conv.identification}` : null) || 
-                     (conv.contract ? `Contrato ${conv.contract}` : "Cliente Nuevo");
+  // Sincronización exacta con las columnas de la base de datos (contact_name)
+  const displayName = conv.contact_name || conv.name || conv.identification || "Cliente";
 
   return {
-    id: id,
-    sessionId: conv.session_id || id,
-    status: conv.status || "active",
+    id: conv.id,
+    sessionId: id,
+    status: (conv.status || "active") as any,
     summary: conv.summary || null,
-    messageCount: conv.message_count || 0,
     client: {
       name: displayName,
-      identification: conv.identification || "Sin ID",
+      identification: conv.identification || null,
       contract: conv.contract || null,
-      email: conv.contact_email || conv.email || null,
-      phone: conv.contact_phone || conv.phone || null,
+      email: conv.contact_email || null,
+      phone: conv.contact_phone || null,
     },
     timestamps: {
       createdAt: conv.created_at,
@@ -292,7 +289,7 @@ export async function getConversationStats(): Promise<MCPConversationStats> {
   return {
     total: data.length,
     active: data.filter(c => c.status === "active").length,
-    waiting_agent: data.filter(c => c.status === "waiting_specialist" || c.status === "active").length, // Incluimos active en waiting por ahora si queremos visibilidad
+    waiting_agent: data.filter(c => c.status === "waiting_specialist").length,
     handed_over: data.filter(c => c.status === "handed_over").length,
     closed: data.filter(c => c.status === "closed").length,
   };
