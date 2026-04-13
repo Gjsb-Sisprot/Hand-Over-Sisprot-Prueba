@@ -322,8 +322,8 @@ export function ContactPanel({
               </Card>
             )}
 
-            {}
-            {conversation.summary && (
+            {/* Resumen e Historial Rápido */}
+            {(conversation.summary || messages.length > 0) && (
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-lg flex items-center gap-2">
@@ -331,10 +331,26 @@ export function ContactPanel({
                     Resumen de la Conversación
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-sm text-muted-foreground">
-                    {conversation.summary}
-                  </p>
+                <CardContent className="space-y-4">
+                  {conversation.summary && (
+                    <div className="bg-primary/5 p-3 rounded-lg border border-primary/10">
+                      <p className="text-sm font-medium">{conversation.summary}</p>
+                    </div>
+                  )}
+                  
+                  <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Historial completo:</p>
+                    {messages.map((m, idx) => (
+                      <div key={m.id || idx} className="text-sm border-l-2 border-muted pl-3 py-1">
+                        <p className="text-xs font-bold text-primary mb-0.5">
+                          {m.role === "user" ? "Cliente" : "IA"}
+                        </p>
+                        <p className="text-muted-foreground leading-relaxed italic">
+                          {m.content}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             )}
