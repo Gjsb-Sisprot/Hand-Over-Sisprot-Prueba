@@ -421,14 +421,14 @@ export function ConversationList({
     </div>
   );
 }
-}
 
 function EmptyState({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
   return (
-    <div className="flex flex-col items-center justify-center p-12 text-center border-2 border-dashed rounded-xl bg-muted/10">
+    <div className="flex flex-col items-center justify-center p-8 text-center border border-dashed rounded-2xl bg-muted/5 border-border/50">
       {icon}
-      <h3 className="mt-4 text-lg font-semibold">{title}</h3>
-      <p className="mt-2 text-sm text-muted-foreground max-w-[250px]">{description}</p>
+      <h3 className="mt-3 text-xs font-bold uppercase tracking-widest text-muted-foreground">{title}</h3>
+      <p className="mt-1 text-[10px] text-muted-foreground/60">{description}</p>
     </div>
   );
 }
+
