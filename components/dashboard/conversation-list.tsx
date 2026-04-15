@@ -34,6 +34,10 @@ interface ConversationListProps {
 
 type TabType = "escalated" | "active" | "mine" | "paused";
 
+import { ChatWindow } from "./chat-window";
+import { ClientDetailPanel } from "./client-detail-panel";
+import { PayFastBridgeChat } from "./payfast-bridge-chat";
+
 export function ConversationList({ 
   initialConversations,
   agent 
@@ -45,6 +49,7 @@ export function ConversationList({
   const [conversationToClose, setConversationToClose] = useState<MCPConversation | null>(null);
   const [conversationToPause, setConversationToPause] = useState<MCPConversation | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showPayFastBridge, setShowPayFastBridge] = useState(false);
 
   const { 
     conversations, 
@@ -231,9 +236,9 @@ export function ConversationList({
     <button
       onClick={() => setActiveTab(id)}
       className={cn(
-        "flex items-center gap-2 px-4 py-3 text-sm font-medium transition-all border-b-2",
+        "flex items-center gap-2 px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-all border-b-2",
         activeTab === id 
-          ? "border-primary text-primary bg-primary/5" 
+          ? "border-primary text-primary bg-primary/5 shadow-[inset_0_-2px_0_0_rgba(var(--primary),1)]" 
           : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
       )}
     >
@@ -242,7 +247,7 @@ export function ConversationList({
       {count > 0 && (
         <Badge 
           variant={id === "escalated" ? "destructive" : "secondary"} 
-          className="ml-1 h-5 min-w-[20px] justify-center px-1"
+          className={cn("ml-1 h-4 min-w-[18px] justify-center px-1 text-[9px] rounded-full", id === "escalated" && "animate-pulse")}
         >
           {count}
         </Badge>
@@ -251,115 +256,139 @@ export function ConversationList({
   );
 
   return (
-    <div className="flex flex-col h-full bg-background">
-      <div className="p-4 border-b space-y-4 shrink-0">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-bold">Panel de Conversaciones</h2>
-          <Badge variant="outline" className="font-mono">
-            {conversations.length} total
-          </Badge>
+    <div className="flex w-full h-full overflow-hidden bg-background">
+      {/* Columna 1: Lista de Conversaciones (Sidebar Secundario) */}
+      <div className="w-[350px] flex flex-col border-r border-border shrink-0 bg-card/10">
+        <header className="p-6 border-b border-border space-y-4 shrink-0 bg-card/30 backdrop-blur-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-bold uppercase tracking-wider">Conversaciones</h2>
+            <Badge variant="secondary" className="font-mono text-[9px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
+              {conversations.length}
+            </Badge>
+          </div>
+          <div className="relative group">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+            <Input
+              placeholder="Buscar por cliente o contrato..."
+              className="pl-9 h-10 text-xs bg-background/50 border-border/50 focus:border-primary/50 transition-all rounded-xl"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </header>
+
+        <div className="flex border-b border-border bg-card/20 overflow-x-auto no-scrollbar shrink-0">
+          {renderTabTrigger("escalated", "Esperando", <Inbox className="h-3.5 w-3.5" />, waitingEscalation.length)}
+          {renderTabTrigger("mine", "En uso", <User className="h-3.5 w-3.5" />, inAttendence.length)}
+          {renderTabTrigger("active", "Susana", <Bot className="h-3.5 w-3.5" />, activeIA.length)}
+          {renderTabTrigger("paused", "Pausa", <MessageSquareX className="h-3.5 w-3.5" />, paused.length)}
         </div>
-        
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Buscar por nombre, ID o contrato..."
-            className="pl-9"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+
+        <ScrollArea className="flex-1">
+          <div className="p-4 space-y-3">
+            {activeTab === "escalated" && (
+              <div className="space-y-3">
+                {waitingEscalation.length === 0 
+                  ? <EmptyState title="Cero esperas" icon={<Inbox className="h-8 w-8 text-muted-foreground/20" />} description="No hay casos escalados." /> 
+                  : waitingEscalation.map(c => (
+                    <ConversationCard 
+                      key={c.sessionId} 
+                      conversation={c} 
+                      onClick={() => handleConversationClick(c)} 
+                      onTakeover={() => setConversationToTake(c)}
+                      isSelected={activeConversation?.sessionId === c.sessionId}
+                    />
+                  ))}
+              </div>
+            )}
+
+            {activeTab === "active" && (
+              <div className="space-y-3">
+                {activeIA.length === 0 
+                  ? <EmptyState title="Inactividad" icon={<Bot className="h-8 w-8 text-muted-foreground/20" />} description="Susana no está atendiendo a nadie." /> 
+                  : activeIA.map(c => (
+                    <ConversationCard 
+                      key={c.sessionId} 
+                      conversation={c} 
+                      onClick={() => handleConversationClick(c)} 
+                      onTakeover={() => setConversationToTake(c)}
+                      isSelected={activeConversation?.sessionId === c.sessionId}
+                    />
+                  ))}
+              </div>
+            )}
+
+            {activeTab === "mine" && (
+              <div className="space-y-3">
+                {inAttendence.length === 0 
+                  ? <EmptyState title="Sin atenciones" icon={<User className="h-8 w-8 text-muted-foreground/20" />} description="Toma un caso para comenzar." /> 
+                  : inAttendence.map(c => (
+                    <ConversationCard 
+                      key={c.sessionId} 
+                      conversation={c} 
+                      onClick={() => handleConversationClick(c)} 
+                      isSelected={activeConversation?.sessionId === c.sessionId}
+                    />
+                  ))}
+              </div>
+            )}
+
+            {activeTab === "paused" && (
+              <div className="space-y-3">
+                {paused.length === 0 
+                  ? <EmptyState title="Sin pendientes" icon={<MessageSquareX className="h-8 w-8 text-muted-foreground/20" />} description="No hay casos guardados." /> 
+                  : paused.map(c => (
+                    <ConversationCard 
+                      key={c.sessionId} 
+                      conversation={c} 
+                      onClick={() => handleConversationClick(c)} 
+                      onTakeover={() => setConversationToTake(c)}
+                      isSelected={activeConversation?.sessionId === c.sessionId}
+                    />
+                  ))}
+              </div>
+            )}
+          </div>
+        </ScrollArea>
+      </div>
+
+      {/* Columna 2: Área de Chat (Centro) */}
+      <div className="flex-1 min-w-0 h-full overflow-hidden bg-background">
+        {activeConversation ? (
+          <ChatWindow 
+            conversation={activeConversation} 
+            messages={realtimeMessages} 
+          />
+        ) : (
+          <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-30">
+            <div className="p-8 rounded-full bg-muted shadow-inner">
+              <MessageSquareX className="h-16 w-16" />
+            </div>
+            <h3 className="text-xl font-bold uppercase tracking-widest">Sin Selección</h3>
+            <p className="max-w-xs text-center text-sm">Escoge una conversación de la izquierda para ver los detalles y responder.</p>
+          </div>
+        )}
+      </div>
+
+      {/* Columna 3: Detalles del Cliente (Derecha) */}
+      {activeConversation && (
+        <ClientDetailPanel
+          conversation={activeConversation}
+          onCloseConversation={() => setConversationToClose(activeConversation)}
+          onPauseConversation={() => setConversationToPause(activeConversation)}
+          onShowPayFast={() => setShowPayFastBridge(true)}
+        />
+      )}
+
+      {/* Diálogos y Floating Mods */}
+      {showPayFastBridge && activeConversation?.client?.identification && (
+        <div className="fixed bottom-6 right-8 z-[60]">
+          <PayFastBridgeChat 
+            identification={activeConversation.client.identification}
+            clientName={activeConversation.client.name || "Cliente"}
+            onClose={() => setShowPayFastBridge(false)}
           />
         </div>
-      </div>
-
-      <div className="flex border-b bg-muted/20 overflow-x-auto no-scrollbar shrink-0">
-        {renderTabTrigger("escalated", "Esperando", <Inbox className="h-4 w-4" />, waitingEscalation.length)}
-        {renderTabTrigger("active", "IA Activa", <Clock className="h-4 w-4" />, activeIA.length)}
-        {renderTabTrigger("mine", "En atención", <User className="h-4 w-4" />, inAttendence.length)}
-        {renderTabTrigger("paused", "Pausadas", <MessageSquareX className="h-4 w-4" />, paused.length)}
-      </div>
-
-      <ScrollArea className="flex-1">
-        <div className="p-4">
-          {activeTab === "escalated" && (
-            <div className="space-y-4">
-              {waitingEscalation.length === 0 
-                ? <EmptyState icon={<Inbox className="h-12 w-12 text-muted-foreground/30" />} title="No hay mensajes esperando" description="Las conversaciones escaladas aparecerán aquí." /> 
-                : waitingEscalation.map(c => (
-                  <ConversationCard 
-                    key={c.sessionId} 
-                    conversation={c} 
-                    onClick={() => handleConversationClick(c)} 
-                    onTakeover={() => setConversationToTake(c)}
-                    isSelected={activeConversation?.sessionId === c.sessionId}
-                  />
-                ))}
-            </div>
-          )}
-
-          {activeTab === "active" && (
-            <div className="space-y-4">
-              {activeIA.length === 0 
-                ? <EmptyState icon={<Bot className="h-12 w-12 text-muted-foreground/30" />} title="No hay IA activa" description="Las conversaciones siendo atendidas por Susana aparecerán aquí." /> 
-                : activeIA.map(c => (
-                  <ConversationCard 
-                    key={c.sessionId} 
-                    conversation={c} 
-                    onClick={() => handleConversationClick(c)} 
-                    onTakeover={() => setConversationToTake(c)}
-                    isSelected={activeConversation?.sessionId === c.sessionId}
-                  />
-                ))}
-            </div>
-          )}
-
-          {activeTab === "mine" && (
-            <div className="space-y-4">
-              {inAttendence.length === 0 
-                ? <EmptyState icon={<User className="h-12 w-12 text-muted-foreground/30" />} title="No tienes atenciones activas" description="Las conversaciones que tomes aparecerán aquí." /> 
-                : inAttendence.map(c => (
-                  <ConversationCard 
-                    key={c.sessionId} 
-                    conversation={c} 
-                    onClick={() => handleConversationClick(c)} 
-                    isSelected={activeConversation?.sessionId === c.sessionId}
-                  />
-                ))}
-            </div>
-          )}
-
-          {activeTab === "paused" && (
-            <div className="space-y-4">
-              {paused.length === 0 
-                ? <EmptyState icon={<MessageSquareX className="h-12 w-12 text-muted-foreground/30" />} title="No hay pausas" description="Aquí verás los casos que quedaron pendientes." /> 
-                : paused.map(c => (
-                  <ConversationCard 
-                    key={c.sessionId} 
-                    conversation={c} 
-                    onClick={() => handleConversationClick(c)} 
-                    onTakeover={() => setConversationToTake(c)}
-                    isSelected={activeConversation?.sessionId === c.sessionId}
-                  />
-                ))}
-            </div>
-          )}
-        </div>
-      </ScrollArea>
-
-      {activeConversation && (
-        <ContactPanel
-          conversation={activeConversation}
-          messages={realtimeMessages}
-          isOpen={!!activeConversation}
-          onClose={() => setActiveConversation(null)}
-          onCloseConversation={(id) => {
-            setConversationToClose(activeConversation);
-            return Promise.resolve();
-          }}
-          onPauseConversation={(id) => {
-            setConversationToPause(activeConversation);
-            return Promise.resolve();
-          }}
-        />
       )}
 
       {conversationToTake && (
@@ -391,6 +420,7 @@ export function ConversationList({
       )}
     </div>
   );
+}
 }
 
 function EmptyState({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) {
