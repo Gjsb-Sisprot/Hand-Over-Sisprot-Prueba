@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { DashboardHeader } from "@/components/dashboard/header";
+import { Sidebar } from "@/components/dashboard/sidebar";
 
 export default async function DashboardLayout({
   children,
@@ -16,16 +16,15 @@ export default async function DashboardLayout({
     redirect("/login");
   }
 
-  const { data: agent } = await supabase
-    .from("agents")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
   return (
-    <div className="min-h-screen bg-background">
-      <DashboardHeader agent={agent} />
-      <main className="container mx-auto">{children}</main>
+    <div className="flex h-screen w-full bg-background overflow-hidden">
+      <Sidebar />
+      <div className="flex flex-col flex-1 h-full min-w-0">
+        <main className="flex-1 overflow-hidden relative">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }
+
