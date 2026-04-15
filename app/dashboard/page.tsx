@@ -1,11 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
-import { DashboardStats } from "@/components/dashboard/stats";
-import { AgentStatsCard } from "@/components/dashboard/agent-stats-card";
-import {
-  getConversationStats,
-  getConversations,
-  getMyAgentStats,
-} from "@/lib/actions/conversations";
+import { DashboardHeader } from "@/components/dashboard/header";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -26,7 +19,9 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="flex flex-col h-full bg-background overflow-y-auto">
+      <DashboardHeader agent={agent} />
+      <div className="container mx-auto p-6 space-y-6">
       {}
       {agentStats && (
         <div>
