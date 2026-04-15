@@ -98,16 +98,16 @@ export function PayFastBridgeChat({ identification, clientName, onClose }: PayFa
   };
 
   return (
-    <div className="flex flex-col h-[500px] w-[400px] bg-white border rounded-xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-5">
+    <div className="flex flex-col h-[500px] w-[400px] bg-card border border-border rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-5">
       {/* Header */}
-      <div className="bg-black text-white p-4 flex justify-between items-center">
+      <div className="bg-sidebar text-sidebar-foreground p-4 flex justify-between items-center border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold">
-            SF
+          <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center font-bold text-primary-foreground shadow-lg shadow-primary/20">
+            SGF
           </div>
           <div>
             <h3 className="text-sm font-bold truncate max-w-[150px]">{clientName}</h3>
-            <p className="text-[10px] text-blue-300 uppercase tracking-wider">
+            <p className="text-[10px] text-primary uppercase tracking-widest font-bold">
               {status === "handed_over" ? "🤝 Puente Activo" : `🤖 IA: ${status}`}
             </p>
           </div>
@@ -117,7 +117,7 @@ export function PayFastBridgeChat({ identification, clientName, onClose }: PayFa
           {status !== "handed_over" && status !== "closed" && (
             <Button 
               size="sm" 
-              variant="outline" 
+              variant="default" 
               onClick={async () => {
                 if (!conversationId) return;
                 setIsLoading(true);
@@ -125,22 +125,22 @@ export function PayFastBridgeChat({ identification, clientName, onClose }: PayFa
                 if (res.success) setStatus("handed_over");
                 setIsLoading(false);
               }}
-              className="h-7 px-2 text-[10px] bg-blue-600 border-none hover:bg-blue-700 text-white font-bold"
+              className="h-7 px-2 text-[10px] font-bold"
             >
               TOMAR CONTROL
             </Button>
           )}
-          <button onClick={onClose} className="hover:bg-white/20 p-1 rounded-full transition-colors ml-1">
+          <button onClick={onClose} className="hover:bg-muted p-1 rounded-full transition-colors ml-1">
             <X size={18} />
           </button>
         </div>
       </div>
 
       {/* Messages Area */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 space-y-4 bg-background/50">
         {messages.length === 0 ? (
-          <div className="text-center py-10">
-            <p className="text-gray-400 text-sm">No hay mensajes en esta sesión de Pay-Fast</p>
+          <div className="text-center py-10 opacity-40">
+            <p className="text-sm">No hay mensajes en esta sesión de Pay-Fast</p>
           </div>
         ) : (
           messages.map((msg) => {
@@ -151,13 +151,13 @@ export function PayFastBridgeChat({ identification, clientName, onClose }: PayFa
 
             return (
               <div key={msg.id} className={`flex ${isAgent ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] p-3 rounded-2xl text-sm ${
+                <div className={`max-w-[85%] p-3 rounded-2xl text-sm shadow-sm ${
                   isAgent 
-                    ? "bg-black text-white rounded-tr-none" 
-                    : "bg-white border text-gray-800 rounded-tl-none shadow-sm"
+                    ? "bg-primary text-primary-foreground rounded-tr-none" 
+                    : "bg-muted text-foreground rounded-tl-none border border-border/50"
                 }`}>
-                  <p>{msg.content}</p>
-                  <span className={`text-[10px] mt-1 block ${isAgent ? "text-gray-400" : "text-gray-400"}`}>
+                  <p className="leading-relaxed">{msg.content}</p>
+                  <span className={`text-[9px] mt-1 block opacity-60 uppercase font-bold`}>
                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
@@ -168,20 +168,20 @@ export function PayFastBridgeChat({ identification, clientName, onClose }: PayFa
       </div>
 
       {/* Input Area */}
-      <div className="p-4 border-t bg-white">
+      <div className="p-4 border-t border-border bg-card/50 backdrop-blur-sm">
         <div className="flex gap-2">
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && handleSend()}
             placeholder="Mensaje para el cliente..."
-            className="rounded-xl border-gray-200"
+            className="rounded-xl border-border/50 bg-background"
             disabled={!conversationId}
           />
           <Button 
             onClick={handleSend} 
             disabled={!input.trim() || !conversationId || isLoading}
-            className="rounded-xl bg-blue-600 hover:bg-blue-700"
+            className="rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
           >
             <Send size={18} />
           </Button>
