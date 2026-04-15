@@ -22,7 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatDateTime } from "@/lib/date-utils";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+
 
 interface ClientDetailPanelProps {
   conversation: MCPConversation;
@@ -91,47 +91,46 @@ export function ClientDetailPanel({
 
       <Separator className="bg-border/50" />
 
-      {/* Accordion Details */}
-      <Accordion type="multiple" defaultValue={["contact", "conversation"]} className="px-6 pb-20">
-        <AccordionItem value="contact" className="border-border/50">
-          <AccordionTrigger className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:no-underline">
-            Datos de Contacto
-          </AccordionTrigger>
-          <AccordionContent className="space-y-4 pt-2">
+      {/* Details Sections */}
+      <div className="px-6 pb-20 space-y-8 mt-4">
+        <section className="space-y-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Datos de Contacto</h3>
+          <div className="space-y-4 pt-2">
             <DetailItem icon={IdCard} label="Identificación" value={client.identification || "N/A"} />
             <DetailItem icon={Building} label="Contrato" value={client.contract || "N/A"} />
             <DetailItem icon={Phone} label="Móvil" value={client.phone || "N/A"} isLink href={`https://wa.me/${client.phone?.replace(/\D/g, "")}`} />
             <DetailItem icon={Mail} label="Email" value={client.email || "N/A"} />
-          </AccordionContent>
-        </AccordionItem>
+          </div>
+        </section>
 
-        <AccordionItem value="conversation" className="border-border/50">
-          <AccordionTrigger className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:no-underline">
-            Información del Caso
-          </AccordionTrigger>
-          <AccordionContent className="space-y-4 pt-2">
+        <Separator className="bg-border/30" />
+
+        <section className="space-y-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Información del Caso</h3>
+          <div className="space-y-4 pt-2">
             <DetailItem icon={History} label="Conversación ID" value={conversation.sessionId} />
             <DetailItem icon={Clock} label="Iniciada" value={conversation.timestamps?.createdAt ? formatDateTime(new Date(conversation.timestamps.createdAt)) : "N/A"} />
             {conversation.timestamps?.escalatedAt && (
                <DetailItem icon={Clock} label="Escalada" value={formatDateTime(new Date(conversation.timestamps.escalatedAt))} />
             )}
-          </AccordionContent>
-        </AccordionItem>
+          </div>
+        </section>
 
-        <AccordionItem value="actions" className="border-border/50">
-          <AccordionTrigger className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground hover:no-underline">
-            Herramientas Externas
-          </AccordionTrigger>
-          <AccordionContent className="space-y-2 pt-2">
+        <Separator className="bg-border/30" />
+
+        <section className="space-y-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Herramientas Externas</h3>
+          <div className="space-y-2 pt-2">
             <ToolLink icon={CreditCard} label="PayFast Bridge" onClick={onShowPayFast} />
             <ToolLink 
               icon={ExternalLink} 
               label="Portal PayFast" 
               href={`https://payfast.sisprot.com/?search=${client.contract || client.identification}`} 
             />
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+          </div>
+        </section>
+      </div>
+
     </div>
   );
 }
