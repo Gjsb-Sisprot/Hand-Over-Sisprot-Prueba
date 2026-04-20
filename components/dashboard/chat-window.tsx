@@ -10,7 +10,8 @@ import {
   SendHorizontal, 
   MoreVertical,
   Phone,
-  Video
+  Video,
+  Loader2
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -23,9 +24,10 @@ interface ChatWindowProps {
   conversation: MCPConversation;
   messages: MCPChatMessage[];
   onTakeControl?: () => Promise<void>;
+  isLoading?: boolean;
 }
 
-export function ChatWindow({ conversation, messages, onTakeControl }: ChatWindowProps) {
+export function ChatWindow({ conversation, messages, onTakeControl, isLoading }: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isTakingControl, setIsTakingControl] = useState(false);
@@ -120,12 +122,23 @@ export function ChatWindow({ conversation, messages, onTakeControl }: ChatWindow
       {/* Messages */}
       <ScrollArea className="flex-1 p-6">
         <div className="space-y-6 max-w-4xl mx-auto">
-          {messages.length === 0 ? (
+          {isLoading ? (
+            <div className="flex flex-col items-center justify-center h-[50vh] text-center space-y-4">
+              <div className="relative">
+                <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse" />
+                <Loader2 className="h-10 w-10 text-primary animate-spin relative" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm font-medium">Recuperando historial unificado...</p>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Buscando sesiones previas</p>
+              </div>
+            </div>
+          ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[50vh] text-center space-y-4 opacity-40">
               <div className="p-4 rounded-full bg-muted">
                 <Bot className="h-8 w-8" />
               </div>
-              <p className="text-sm">Esperando nuevos mensajes...</p>
+              <p className="text-sm">Sin historial previo. Esperando mensajes...</p>
             </div>
           ) : (
             messages.map((m, idx) => {
