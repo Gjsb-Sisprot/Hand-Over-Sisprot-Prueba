@@ -49,6 +49,7 @@ export function ConversationList({
   const [conversationToClose, setConversationToClose] = useState<MCPConversation | null>(null);
   const [conversationToPause, setConversationToPause] = useState<MCPConversation | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const { 
     conversations, 
@@ -72,9 +73,16 @@ export function ConversationList({
       return;
     }
 
-    const messages = await getChatHistory(conversation.sessionId);
-    setChatMessages(messages);
-    setActiveConversation(conversation);
+    setIsLoadingHistory(true);
+    try {
+      const messages = await getChatHistory(conversation.sessionId);
+      setChatMessages(messages);
+      setActiveConversation(conversation);
+    } catch (error) {
+      toast.error("Error al cargar el historial");
+    } finally {
+      setIsLoadingHistory(false);
+    }
   };
 
   const handleConfirmTakeover = async () => {
@@ -89,55 +97,62 @@ export function ConversationList({
       },
     });
 
-    const messages = await getChatHistory(conversationToTake.sessionId);
-    const transcript = messages
-      .map((m) => `${m.role === "user" ? "Cliente" : "IA"}: ${m.content}`)
-      .join("\n");
+    setIsLoadingHistory(true);
+    try {
+      const messages = await getChatHistory(conversationToTake.sessionId);
+      const transcript = messages
+        .map((m) => `${m.role === "user" ? "Cliente" : "IA"}: ${m.content}`)
+        .join("\n");
 
-    const metadata = (conversationToTake.metadata || {}) as {
-      escalationReason?: string;
-    };
-    
-    const baseSummary = conversationToTake.summary || metadata.escalationReason || "Sin resumen";
-    const fullSummary = `${baseSummary}\n\n--- TRANSCRIPCIÓN ---\n${transcript}`.trim();
+      const metadata = (conversationToTake.metadata || {}) as {
+        escalationReason?: string;
+      };
+      
+      const baseSummary = conversationToTake.summary || metadata.escalationReason || "Sin resumen";
+      const fullSummary = `${baseSummary}\n\n--- TRANSCRIPCIÓN ---\n${transcript}`.trim();
 
-    const result = await takeoverConversation(conversationToTake.sessionId, {
-      createTicket: true,
-      reason: metadata.escalationReason,
-      ticketSummary: fullSummary,
-    });
+      const result = await takeoverConversation(conversationToTake.sessionId, {
+        createTicket: true,
+        reason: metadata.escalationReason,
+        ticketSummary: fullSummary,
+      });
 
-    if (result.error) {
-      toast.error(result.error);
-      refresh();
-      return;
+      if (result.error) {
+        toast.error(result.error);
+        refresh();
+        return;
+      }
+
+      if (result.glpiTicketId) {
+        optimisticUpdate(conversationToTake.sessionId, { glpiTicketId: result.glpiTicketId });
+      }
+
+      setChatMessages(messages);
+
+      const updatedConversation: MCPConversation = {
+        ...conversationToTake,
+        status: "handed_over",
+        glpiTicketId: result.glpiTicketId || conversationToTake.glpiTicketId,
+        agent: {
+          email: agent?.email || "",
+          name: agent?.name || "",
+          takenAt: new Date().toISOString(),
+        },
+        timestamps: {
+          ...conversationToTake.timestamps,
+          handedOverAt: new Date().toISOString(),
+        },
+      };
+
+      setConversationToTake(null);
+      setActiveConversation(updatedConversation);
+
+      toast.success("¡Conversación tomada! Ya puedes contactar al cliente.");
+    } catch (error) {
+      toast.error("Error al procesar el traspaso");
+    } finally {
+      setIsLoadingHistory(false);
     }
-
-    if (result.glpiTicketId) {
-      optimisticUpdate(conversationToTake.sessionId, { glpiTicketId: result.glpiTicketId });
-    }
-
-    setChatMessages(messages);
-
-    const updatedConversation: MCPConversation = {
-      ...conversationToTake,
-      status: "handed_over",
-      glpiTicketId: result.glpiTicketId || conversationToTake.glpiTicketId,
-      agent: {
-        email: agent?.email || "",
-        name: agent?.name || "",
-        takenAt: new Date().toISOString(),
-      },
-      timestamps: {
-        ...conversationToTake.timestamps,
-        handedOverAt: new Date().toISOString(),
-      },
-    };
-
-    setConversationToTake(null);
-    setActiveConversation(updatedConversation);
-
-    toast.success("¡Conversación tomada! Ya puedes contactar al cliente.");
   };
 
   const handleCloseConversation = async (
@@ -369,6 +384,7 @@ export function ConversationList({
             conversation={activeConversation} 
             messages={realtimeMessages}
             onTakeControl={() => handleBridgeTakeover(activeConversation)}
+            isLoading={isLoadingHistory}
           />
         ) : (
           <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-30">
