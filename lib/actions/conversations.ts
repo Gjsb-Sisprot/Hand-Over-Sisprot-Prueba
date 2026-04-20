@@ -189,43 +189,55 @@ export async function getChatHistory(
 ): Promise<MCPChatMessage[]> {
   try {
     const supabase = await createClient();
-    
-    // 1. Intentamos encontrar la conversación por session_id o por ID (UUID)
-    const { data: currentConv } = await supabase
+    let conversationIds: string[] = [sessionId];
+    let identification: string | null = null;
+
+    // 1. Buscamos la conversación por session_id (el string del chat)
+    const { data: bySession } = await supabase
       .from("conversations")
       .select("id, identification")
-      .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
+      .eq("session_id", sessionId)
       .maybeSingle();
 
-    let conversationIds: string[] = [];
-    
-    if (currentConv) {
-      conversationIds.push(currentConv.id);
-      
-      // 2. Si tiene identificación (DNI/RUC), buscamos TODAS las sesiones de ese cliente
-      if (currentConv.identification) {
-        const { data: relatedConvs } = await supabase
-          .from("conversations")
-          .select("id")
-          .eq("identification", currentConv.identification);
-        
-        if (relatedConvs && relatedConvs.length > 0) {
-          const ids = relatedConvs.map(c => c.id);
-          conversationIds = Array.from(new Set([...conversationIds, ...ids]));
-        }
-      }
-    } else {
-      // Fallback: tratar el sessionId como el ID de conversación si no hay registro previo
-      conversationIds = [sessionId];
+    if (bySession) {
+      conversationIds.push(bySession.id);
+      if (bySession.identification) identification = bySession.identification;
     }
 
-    // 3. Consulta unificada a chat_logs para todos los IDs asociados
+    // 2. Buscamos la conversación por id (el UUID/string identificador)
+    const { data: byId } = await supabase
+      .from("conversations")
+      .select("id, identification")
+      .eq("id", sessionId)
+      .maybeSingle();
+
+    if (byId) {
+      conversationIds.push(byId.id);
+      if (byId.identification) identification = byId.identification;
+    }
+
+    // 3. Si encontramos una identidad (DNI/RUC), traemos el historial de TODAS sus sesiones
+    if (identification) {
+      const { data: allSessions } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("identification", identification);
+      
+      if (allSessions) {
+        allSessions.forEach(s => conversationIds.push(s.id));
+      }
+    }
+
+    // Limpiamos duplicados
+    const uniqueIds = Array.from(new Set(conversationIds.filter(Boolean)));
+
+    // 4. Consulta final a chat_logs
     const { data, error } = await supabase
       .from("chat_logs")
       .select("*")
-      .in("conversation_id", conversationIds)
+      .in("conversation_id", uniqueIds)
       .order("created_at", { ascending: true })
-      .limit(limit || 200);
+      .limit(limit || 250);
 
     if (error) throw error;
 
