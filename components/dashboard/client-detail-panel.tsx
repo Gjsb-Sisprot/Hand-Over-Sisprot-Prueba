@@ -28,14 +28,12 @@ interface ClientDetailPanelProps {
   conversation: MCPConversation;
   onCloseConversation: (id: string) => void;
   onPauseConversation: (id: string) => void;
-  onShowPayFast: () => void;
 }
 
 export function ClientDetailPanel({
   conversation,
   onCloseConversation,
-  onPauseConversation,
-  onShowPayFast
+  onPauseConversation
 }: ClientDetailPanelProps) {
   const client = conversation.client ?? {};
   
@@ -121,7 +119,6 @@ export function ClientDetailPanel({
         <section className="space-y-4">
           <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Herramientas Externas</h3>
           <div className="space-y-2 pt-2">
-            <ToolLink icon={CreditCard} label="PayFast Bridge" onClick={onShowPayFast} />
             <ToolLink 
               icon={ExternalLink} 
               label="Portal PayFast" 
