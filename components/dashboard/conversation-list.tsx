@@ -285,9 +285,9 @@ export function ConversationList({
         </div>
 
         <ScrollArea className="flex-1">
-          <div className="p-4 space-y-3">
+          <div className="p-0">
             {activeTab === "escalated" && (
-              <div className="space-y-3">
+              <div>
                 {waitingEscalation.length === 0 
                   ? <EmptyState title="Cero esperas" icon={<Inbox className="h-8 w-8 text-muted-foreground/20" />} description="No hay casos escalados." /> 
                   : waitingEscalation.map(c => (
@@ -303,7 +303,7 @@ export function ConversationList({
             )}
 
             {activeTab === "active" && (
-              <div className="space-y-3">
+              <div>
                 {activeIA.length === 0 
                   ? <EmptyState title="Inactividad" icon={<Bot className="h-8 w-8 text-muted-foreground/20" />} description="Susana no está atendiendo a nadie." /> 
                   : activeIA.map(c => (
@@ -319,7 +319,7 @@ export function ConversationList({
             )}
 
             {activeTab === "mine" && (
-              <div className="space-y-3">
+              <div>
                 {inAttendence.length === 0 
                   ? <EmptyState title="Sin atenciones" icon={<User className="h-8 w-8 text-muted-foreground/20" />} description="Toma un caso para comenzar." /> 
                   : inAttendence.map(c => (
@@ -334,7 +334,7 @@ export function ConversationList({
             )}
 
             {activeTab === "paused" && (
-              <div className="space-y-3">
+              <div>
                 {paused.length === 0 
                   ? <EmptyState title="Sin pendientes" icon={<MessageSquareX className="h-8 w-8 text-muted-foreground/20" />} description="No hay casos guardados." /> 
                   : paused.map(c => (
