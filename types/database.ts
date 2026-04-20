@@ -108,6 +108,10 @@ export type Database = {
           agent_email: string | null
           glpi_ticket_id: string | null
           notification_sent: boolean
+          metadata: Json
+          priority: string | null
+          closed_by: string | null
+          escalated_at: string | null
           created_at: string
           updated_at: string
           closed_at: string | null
@@ -126,6 +130,10 @@ export type Database = {
           agent_email?: string | null
           glpi_ticket_id?: string | null
           notification_sent?: boolean
+          metadata?: Json
+          priority?: string | null
+          closed_by?: string | null
+          escalated_at?: string | null
           created_at?: string
           updated_at?: string
           closed_at?: string | null
@@ -144,6 +152,10 @@ export type Database = {
           agent_email?: string | null
           glpi_ticket_id?: string | null
           notification_sent?: boolean
+          metadata?: Json
+          priority?: string | null
+          closed_by?: string | null
+          escalated_at?: string | null
           created_at?: string
           updated_at?: string
           closed_at?: string | null
