@@ -36,7 +36,7 @@ type TabType = "escalated" | "active" | "mine" | "paused";
 
 import { ChatWindow } from "./chat-window";
 import { ClientDetailPanel } from "./client-detail-panel";
-import { PayFastBridgeChat } from "./payfast-bridge-chat";
+import { sendPayFastBridgeMessage } from "../../lib/actions/conversations";
 
 export function ConversationList({ 
   initialConversations,
@@ -49,7 +49,6 @@ export function ConversationList({
   const [conversationToClose, setConversationToClose] = useState<MCPConversation | null>(null);
   const [conversationToPause, setConversationToPause] = useState<MCPConversation | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showPayFastBridge, setShowPayFastBridge] = useState(false);
 
   const { 
     conversations, 
@@ -217,6 +216,17 @@ export function ConversationList({
     }
   };
 
+  const handleBridgeTakeover = async (conv: MCPConversation) => {
+    const res = await sendPayFastBridgeMessage(conv.id, "--- Agente ha tomado el control del puente desde el Dashboard ---");
+    if (res.success) {
+      optimisticUpdate(conv.sessionId, { status: "handed_over" });
+      setActiveConversation({ ...conv, status: "handed_over" });
+      toast.success("Control del puente tomado exitosamente");
+    } else {
+      toast.error(res.error || "Error al tomar control del puente");
+    }
+  };
+
   const filteredConversations = conversations.filter(c => {
     const searchLower = searchQuery.toLowerCase();
     return (
@@ -357,7 +367,8 @@ export function ConversationList({
         {activeConversation ? (
           <ChatWindow 
             conversation={activeConversation} 
-            messages={realtimeMessages} 
+            messages={realtimeMessages}
+            onTakeControl={() => handleBridgeTakeover(activeConversation)}
           />
         ) : (
           <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-30">
@@ -376,20 +387,9 @@ export function ConversationList({
           conversation={activeConversation}
           onCloseConversation={() => setConversationToClose(activeConversation)}
           onPauseConversation={() => setConversationToPause(activeConversation)}
-          onShowPayFast={() => setShowPayFastBridge(true)}
         />
       )}
 
-      {/* Diálogos y Floating Mods */}
-      {showPayFastBridge && activeConversation?.client?.identification && (
-        <div className="fixed bottom-6 right-8 z-[60]">
-          <PayFastBridgeChat 
-            identification={activeConversation.client.identification}
-            clientName={activeConversation.client.name || "Cliente"}
-            onClose={() => setShowPayFastBridge(false)}
-          />
-        </div>
-      )}
 
       {conversationToTake && (
         <TakeoverDialog
