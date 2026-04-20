@@ -34,9 +34,12 @@ export function ChatWindow({ conversation, messages }: ChatWindowProps) {
 
     setIsSending(true);
     try {
-      const result = await sendMessage(conversation.sessionId, newMessage);
+      const result = await sendMessage(conversation.sessionId, newMessage) as { success: boolean, error?: string, warning?: string };
       if (result.success) {
         setNewMessage("");
+        if (result.warning) {
+          toast.warning(result.warning);
+        }
       } else {
         toast.error(result.error || "Error al enviar mensaje");
       }
