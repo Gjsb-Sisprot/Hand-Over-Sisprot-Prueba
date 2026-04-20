@@ -190,42 +190,48 @@ export async function getChatHistory(
   try {
     const supabase = await createClient();
     
-    // 1. Buscar la identificación del cliente para esta sesión
+    // 1. Intentamos encontrar la conversación por session_id o por ID (UUID)
     const { data: currentConv } = await supabase
       .from("conversations")
       .select("id, identification")
       .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
       .maybeSingle();
 
-    if (!currentConv) return [];
-
-    let conversationIds = [currentConv.id];
-
-    // 2. Si tiene identificación, buscamos TODAS las conversaciones de ese cliente
-    if (currentConv.identification) {
-      const { data: relatedConvs } = await supabase
-        .from("conversations")
-        .select("id")
-        .eq("identification", currentConv.identification);
+    let conversationIds: string[] = [];
+    
+    if (currentConv) {
+      conversationIds.push(currentConv.id);
       
-      if (relatedConvs && relatedConvs.length > 0) {
-        conversationIds = relatedConvs.map(c => c.id);
+      // 2. Si tiene identificación (DNI/RUC), buscamos TODAS las sesiones de ese cliente
+      if (currentConv.identification) {
+        const { data: relatedConvs } = await supabase
+          .from("conversations")
+          .select("id")
+          .eq("identification", currentConv.identification);
+        
+        if (relatedConvs && relatedConvs.length > 0) {
+          const ids = relatedConvs.map(c => c.id);
+          conversationIds = Array.from(new Set([...conversationIds, ...ids]));
+        }
       }
+    } else {
+      // Fallback: tratar el sessionId como el ID de conversación si no hay registro previo
+      conversationIds = [sessionId];
     }
 
-    // 3. Consulta unificada a chat_logs para todos los IDs encontrados
+    // 3. Consulta unificada a chat_logs para todos los IDs asociados
     const { data, error } = await supabase
       .from("chat_logs")
       .select("*")
       .in("conversation_id", conversationIds)
       .order("created_at", { ascending: true })
-      .limit(limit || 200); // Aumentamos un poco el límite por ser historial unificado
+      .limit(limit || 200);
 
     if (error) throw error;
 
     return (data || []).map((row: any) => ({
       id: row.id,
-      role: row.role === "model" || row.role === "assistant" ? "assistant" : row.role,
+      role: (row.role === "model" || row.role === "assistant") ? "assistant" : row.role,
       content: row.content,
       createdAt: row.created_at,
       toolName: row.tool_name,
