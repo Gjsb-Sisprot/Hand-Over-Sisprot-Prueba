@@ -626,6 +626,8 @@ export async function markAllNotificationsRead() {
   return { success: true };
 }
 
+import { evolutionService } from "../services/evolution";
+
 export async function sendMessage(sessionId: string, content: string) {
   const agent = await getCurrentAgent();
   if (!agent) {
@@ -635,14 +637,27 @@ export async function sendMessage(sessionId: string, content: string) {
   try {
     const supabase = await createClient();
     
-    // Buscar UUID de la conversación
+    // Buscar UUID de la conversación y el teléfono del cliente
     const { data: conv } = await supabase
       .from("conversations")
-      .select("id")
+      .select("id, contact_phone")
       .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
       .maybeSingle();
 
     if (!conv) return { error: "Conversación no encontrada" };
+
+    // Intentar enviar por WhatsApp si hay un teléfono disponible
+    let whatsappResult = null;
+    if (conv.contact_phone) {
+      whatsappResult = await evolutionService.sendWhatsAppMessage(conv.contact_phone, content);
+      
+      if (!whatsappResult.success) {
+        console.warn('[WHATSAPP_SEND_FAILURE]', whatsappResult.error);
+        // Podríamos continuar para guardar en el dashboard, pero notificamos el error
+      }
+    } else {
+      console.warn('[WHATSAPP_SEND_SKIP] No phone number available for conversation', sessionId);
+    }
 
     const { error } = await supabase
       .from("chat_logs")
@@ -650,10 +665,23 @@ export async function sendMessage(sessionId: string, content: string) {
         conversation_id: conv.id,
         role: "agent",
         content: content,
-        author_name: agent.name || agent.email
+        author_name: agent.name || agent.email,
+        metadata: {
+          whatsapp_sent: whatsappResult?.success || false,
+          whatsapp_error: whatsappResult?.error || null,
+          delivered_at: whatsappResult?.success ? new Date().toISOString() : null
+        }
       });
 
     if (error) throw error;
+
+    // Si falló el envío de WhatsApp, informamos pero el mensaje quedó guardado en el dashboard
+    if (whatsappResult && !whatsappResult.success) {
+      return { 
+        success: true, 
+        warning: `El mensaje se guardó pero no se pudo enviar por WhatsApp: ${whatsappResult.error}` 
+      };
+    }
 
     return { success: true };
   } catch (error) {
