@@ -666,7 +666,7 @@ export async function sendMessage(sessionId: string, content: string) {
         role: "agent",
         content: content,
         author_name: agent.name || agent.email,
-        metadata: {
+        attachments: {
           whatsapp_sent: whatsappResult?.success || false,
           whatsapp_error: whatsappResult?.error || null,
           delivered_at: whatsappResult?.success ? new Date().toISOString() : null
