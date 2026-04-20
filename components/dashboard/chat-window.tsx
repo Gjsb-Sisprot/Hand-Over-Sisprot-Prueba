@@ -22,33 +22,27 @@ import { Badge } from "@/components/ui/badge";
 interface ChatWindowProps {
   conversation: MCPConversation;
   messages: MCPChatMessage[];
+  onTakeControl?: () => Promise<void>;
 }
 
-export function ChatWindow({ conversation, messages }: ChatWindowProps) {
+export function ChatWindow({ conversation, messages, onTakeControl }: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [isTakingControl, setIsTakingControl] = useState(false);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newMessage.trim() || isSending) return;
-
-    setIsSending(true);
+  const handleTakeControl = async () => {
+    if (!onTakeControl || isTakingControl) return;
+    setIsTakingControl(true);
     try {
-      const result = await sendMessage(conversation.sessionId, newMessage) as { success: boolean, error?: string, warning?: string };
-      if (result.success) {
-        setNewMessage("");
-        if (result.warning) {
-          toast.warning(result.warning);
-        }
-      } else {
-        toast.error(result.error || "Error al enviar mensaje");
-      }
-    } catch (error) {
-      toast.error("Error inesperado al enviar mensaje");
+      await onTakeControl();
     } finally {
-      setIsSending(false);
+      setIsTakingControl(false);
     }
   };
+
+  const statusLabel = conversation.status === "handed_over" 
+    ? "🤝 Puente Activo" 
+    : `🤖 IA: ${conversation.status?.toUpperCase() || 'BUSY'}`;
 
   return (
     <div className="flex flex-col h-full bg-background relative">
@@ -61,7 +55,15 @@ export function ChatWindow({ conversation, messages }: ChatWindowProps) {
             </AvatarFallback>
           </Avatar>
           <div>
-            <h3 className="text-sm font-semibold">{conversation.client?.name || "Cliente"}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold">{conversation.client?.name || "Cliente"}</h3>
+              <Badge variant="outline" className={cn(
+                "text-[9px] px-1.5 py-0 h-4 border-primary/20",
+                conversation.status === "handed_over" ? "bg-primary/10 text-primary" : "bg-orange-500/10 text-orange-500 animate-pulse"
+              )}>
+                {statusLabel}
+              </Badge>
+            </div>
             <div className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
               <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">En línea</span>
@@ -78,6 +80,15 @@ export function ChatWindow({ conversation, messages }: ChatWindowProps) {
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary transition-colors">
             <MoreVertical className="h-4 w-4" />
           </Button>
+          {conversation.status !== "handed_over" && conversation.status !== "closed" && (
+            <Button 
+              onClick={handleTakeControl}
+              disabled={isTakingControl}
+              className="ml-2 bg-orange-600 hover:bg-orange-700 text-white font-bold px-4 h-9 animate-in fade-in zoom-in duration-300"
+            >
+              {isTakingControl ? "Tomando..." : "TOMAR CONTROL"}
+            </Button>
+          )}
           <Button className="ml-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-4 h-9">
             Resolver
           </Button>
