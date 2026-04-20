@@ -190,28 +190,42 @@ export async function getChatHistory(
   try {
     const supabase = await createClient();
     
-    // Primero buscamos el UUID
-    const { data: conv } = await supabase
+    // 1. Buscar la identificación del cliente para esta sesión
+    const { data: currentConv } = await supabase
       .from("conversations")
-      .select("id")
+      .select("id, identification")
       .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
       .maybeSingle();
 
-    if (!conv) return [];
+    if (!currentConv) return [];
 
-    // Consulta directa a chat_logs (Función Local)
+    let conversationIds = [currentConv.id];
+
+    // 2. Si tiene identificación, buscamos TODAS las conversaciones de ese cliente
+    if (currentConv.identification) {
+      const { data: relatedConvs } = await supabase
+        .from("conversations")
+        .select("id")
+        .eq("identification", currentConv.identification);
+      
+      if (relatedConvs && relatedConvs.length > 0) {
+        conversationIds = relatedConvs.map(c => c.id);
+      }
+    }
+
+    // 3. Consulta unificada a chat_logs para todos los IDs encontrados
     const { data, error } = await supabase
       .from("chat_logs")
       .select("*")
-      .eq("conversation_id", conv.id)
+      .in("conversation_id", conversationIds)
       .order("created_at", { ascending: true })
-      .limit(limit || 100);
+      .limit(limit || 200); // Aumentamos un poco el límite por ser historial unificado
 
     if (error) throw error;
 
     return (data || []).map((row: any) => ({
       id: row.id,
-      role: row.role === "model" ? "assistant" : row.role,
+      role: row.role === "model" || row.role === "assistant" ? "assistant" : row.role,
       content: row.content,
       createdAt: row.created_at,
       toolName: row.tool_name,
