@@ -99,6 +99,9 @@ export type Database = {
           session_id: string
           status: string
           identification: string | null
+          contact_name: string | null
+          contact_phone: string | null
+          contact_email: string | null
           contract: string | null
           summary: string | null
           specialist_name: string | null
@@ -113,7 +116,10 @@ export type Database = {
           id?: string
           session_id: string
           status?: string
-          identification?: string | null
+          identification: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contact_email?: string | null
           contract?: string | null
           summary?: string | null
           specialist_name?: string | null
@@ -129,6 +135,9 @@ export type Database = {
           session_id?: string
           status?: string
           identification?: string | null
+          contact_name?: string | null
+          contact_phone?: string | null
+          contact_email?: string | null
           contract?: string | null
           summary?: string | null
           specialist_name?: string | null
