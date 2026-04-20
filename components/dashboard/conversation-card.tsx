@@ -99,81 +99,49 @@ export function ConversationCard({
   const timestamps = conversation.timestamps ?? { createdAt: null, updatedAt: null, escalatedAt: null, closedAt: null };
 
   return (
-    <Card
+    <div
       className={cn(
-        "cursor-pointer transition-all hover:shadow-md hover:border-primary/50 group overflow-hidden",
-        isSelected && "border-primary shadow-md bg-primary/5"
+        "cursor-pointer transition-all hover:bg-muted/30 group relative flex items-center gap-3 py-3 px-4 border-b border-border/40",
+        isSelected && "bg-primary/[0.03] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-primary"
       )}
       onClick={onClick}
     >
-      <CardHeader className="pb-2 pt-3 px-4">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-3">
-            <Avatar className="h-9 w-9">
-              <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-                {getInitials(client.name)}
-              </AvatarFallback>
-            </Avatar>
-            <div className="min-w-0">
-              <p className="font-bold text-sm truncate max-w-[150px]">
-                {client.name || "Cliente Anónimo"}
-              </p>
-              <p className="text-[10px] text-muted-foreground font-mono">
-                {client.identification || "Sin ID"}
-              </p>
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-1 shrink-0">
-            {getStatusBadge(conversation.status)}
-            {getUrgentBadge(conversation.isUrgent)}
-          </div>
+      <Avatar className="h-10 w-10 shrink-0 ring-offset-background transition-transform group-hover:scale-105">
+        <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+          {getInitials(client.name)}
+        </AvatarFallback>
+      </Avatar>
+
+      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className={cn(
+            "font-semibold text-sm truncate transition-colors",
+            isSelected ? "text-primary" : "text-foreground"
+          )}>
+            {client.name || "Cliente Anónimo"}
+          </h3>
+          <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+            {timestamps.escalatedAt
+              ? formatDistanceToNow(new Date(timestamps.escalatedAt))
+              : timestamps.createdAt 
+                ? formatDistanceToNow(new Date(timestamps.createdAt))
+                : "Ahora"}
+          </span>
         </div>
-      </CardHeader>
-      <CardContent className="space-y-2 px-4 pb-3">
-        {conversation.summary && (
-          <p className="text-xs text-muted-foreground line-clamp-2 italic">
-            "{conversation.summary}"
+
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[11px] text-muted-foreground line-clamp-1 italic flex-1">
+            {conversation.summary ? `"${conversation.summary}"` : "Sin resumen"}
           </p>
-        )}
-
-        {escalationReason && (
-          <div className="flex items-start gap-2 text-[10px] bg-red-50 text-red-700 p-2 rounded-md border border-red-100">
-            <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
-            <span className="line-clamp-2">{escalationReason}</span>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between pt-2 border-t">
-          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            <span>
-              {timestamps.escalatedAt
-                ? formatDistanceToNow(new Date(timestamps.escalatedAt))
-                : timestamps.createdAt 
-                  ? formatDistanceToNow(new Date(timestamps.createdAt))
-                  : "Reciente"}
-            </span>
-          </div>
-          
-          {(conversation.status === "waiting_specialist" || conversation.status === "active") && onTakeover ? (
-            <Button 
-              size="sm" 
-              className="h-7 px-2 text-[10px] bg-primary hover:bg-primary/90"
-              onClick={(e) => {
-                e.stopPropagation();
-                onTakeover();
-              }}
-            >
-              Tomar
-              <ArrowRight className="ml-1 h-3 w-3" />
-            </Button>
-          ) : (
-            <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tight">
+          <div className="flex items-center gap-1.5 shrink-0">
+            {getUrgentBadge(conversation.isUrgent)}
+            {getStatusBadge(conversation.status)}
+            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-tighter">
               {client.contract || "S/N"}
             </span>
-          )}
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
