@@ -132,15 +132,53 @@ export async function getConversationBySessionId(
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     
-    if (!user) {
-      return null;
-    }
+    if (!user) return null;
 
-    const conversation = await mcpClient.getConversationStatus(sessionId);
-    if (!conversation) return null;
+    // Búsqueda directa en Supabase (Función Local)
+    const { data: conv, error } = await supabase
+      .from("conversations")
+      .select("*")
+      .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
+      .maybeSingle();
 
-    return conversation;
+    if (error || !conv) return null;
+
+    // Mapeo robusto (Fallback para teléfono y nombre)
+    const metadata = (conv.metadata || {}) as any;
+    const phone = conv.contact_phone || metadata.phone || metadata.tel || null;
+    const email = conv.contact_email || metadata.email || null;
+    const name = conv.contact_name || conv.name || metadata.name || conv.identification || "Cliente";
+
+    return {
+      id: conv.id,
+      sessionId: conv.session_id || conv.id,
+      status: conv.status as any,
+      summary: conv.summary || null,
+      client: {
+        name,
+        identification: conv.identification || null,
+        contract: conv.contract || null,
+        email,
+        phone,
+      },
+      timestamps: {
+        createdAt: conv.created_at,
+        updatedAt: conv.updated_at,
+        escalatedAt: conv.escalated_at || conv.updated_at,
+        closedAt: conv.closed_at || null,
+      },
+      agent: conv.specialist_name ? {
+        email: conv.agent_email || conv.specialist_name,
+        name: conv.specialist_name,
+        takenAt: conv.updated_at,
+      } : undefined,
+      glpiTicketId: conv.glpi_ticket_id || null,
+      closedBy: conv.closed_by || null,
+      metadata: conv.metadata || {},
+      isUrgent: conv.priority === "high" || conv.priority === "critical",
+    } as MCPConversation;
   } catch (error) {
+    console.error("[GET_CONV_ERROR]", error);
     return null;
   }
 }
@@ -150,13 +188,39 @@ export async function getChatHistory(
   limit?: number
 ): Promise<MCPChatMessage[]> {
   try {
-    const conversation = await getConversationBySessionId(sessionId);
-    if (!conversation) {
-      return [];
-    }
+    const supabase = await createClient();
+    
+    // Primero buscamos el UUID
+    const { data: conv } = await supabase
+      .from("conversations")
+      .select("id")
+      .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
+      .maybeSingle();
 
-    return await mcpClient.getConversationHistory(sessionId, limit);
+    if (!conv) return [];
+
+    // Consulta directa a chat_logs (Función Local)
+    const { data, error } = await supabase
+      .from("chat_logs")
+      .select("*")
+      .eq("conversation_id", conv.id)
+      .order("created_at", { ascending: true })
+      .limit(limit || 100);
+
+    if (error) throw error;
+
+    return (data || []).map((row: any) => ({
+      id: row.id,
+      role: row.role === "model" ? "assistant" : row.role,
+      content: row.content,
+      createdAt: row.created_at,
+      toolName: row.tool_name,
+      metadata: {
+        attachments: row.attachments
+      }
+    })) as MCPChatMessage[];
   } catch (error) {
+    console.error("[GET_HISTORY_ERROR]", error);
     return [];
   }
 }
@@ -637,23 +701,26 @@ export async function sendMessage(sessionId: string, content: string) {
   try {
     const supabase = await createClient();
     
-    // Buscar UUID de la conversación y el teléfono del cliente
+    // Buscar UUID de la conversación y toda la información necesaria
     const { data: conv } = await supabase
       .from("conversations")
-      .select("id, contact_phone")
+      .select("*")
       .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
       .maybeSingle();
 
     if (!conv) return { error: "Conversación no encontrada" };
 
+    // Mapeo robusto del teléfono (local)
+    const metadata = (conv.metadata || {}) as any;
+    const phone = conv.contact_phone || metadata.phone || metadata.tel || null;
+
     // Intentar enviar por WhatsApp si hay un teléfono disponible
     let whatsappResult = null;
-    if (conv.contact_phone) {
-      whatsappResult = await evolutionService.sendWhatsAppMessage(conv.contact_phone, content);
+    if (phone) {
+      whatsappResult = await evolutionService.sendWhatsAppMessage(phone, content);
       
       if (!whatsappResult.success) {
         console.warn('[WHATSAPP_SEND_FAILURE]', whatsappResult.error);
-        // Podríamos continuar para guardar en el dashboard, pero notificamos el error
       }
     } else {
       console.warn('[WHATSAPP_SEND_SKIP] No phone number available for conversation', sessionId);
