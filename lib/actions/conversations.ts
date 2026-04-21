@@ -842,21 +842,26 @@ export async function sendMessage(conversationId: string, content: string, mode:
     // Insertar en chat_logs
     // Si es bridge, usamos role: "model" para que sea visible en Pay-Fast
     // Si es whatsapp, usamos role: "agent"
-    const { error } = await supabase
-      .from("chat_logs")
-      .insert({
-        conversation_id: conv.id,
-        role: mode === "bridge" ? "model" : "agent",
-        content: content,
-        author_name: agent.name || agent.email,
-        attachments: mode === "whatsapp" ? {
-          whatsapp_sent: whatsappResult?.success || false,
-          whatsapp_error: whatsappResult?.error || null,
-          delivered_at: whatsappResult?.success ? new Date().toISOString() : null
-        } : { via: "bridge" }
-      });
+    const insertData = {
+      conversation_id: conv.id,
+      role: mode === "bridge" ? "model" : "agent",
+      content: content,
+      author_name: agent.name || agent.email,
+      attachments: mode === "whatsapp" ? {
+        whatsapp_sent: whatsappResult?.success || false,
+        whatsapp_error: whatsappResult?.error || null,
+        delivered_at: whatsappResult?.success ? new Date().toISOString() : null
+      } : { via: "bridge" }
+    };
 
-    if (error) throw error;
+    const { error: logError } = await supabase
+      .from("chat_logs")
+      .insert(insertData);
+
+    if (logError) {
+      console.error("[SEND_MESSAGE_SUPABASE_ERROR]", logError);
+      return { error: `Error al guardar en DB: ${logError.message}` };
+    }
 
     // Si falló el envío de WhatsApp, informamos pero el mensaje quedó guardado en el dashboard
     if (mode === "whatsapp" && whatsappResult && !whatsappResult.success) {
@@ -866,9 +871,10 @@ export async function sendMessage(conversationId: string, content: string, mode:
       };
     }
 
+    revalidatePath("/dashboard/conversations");
     return { success: true };
   } catch (error) {
     console.error("[SEND_MESSAGE_ERROR]", error);
-    return { error: "Error al enviar el mensaje" };
+    return { error: error instanceof Error ? error.message : "Error desconocido al enviar mensaje" };
   }
 }
