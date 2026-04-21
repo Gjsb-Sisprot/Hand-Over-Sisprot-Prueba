@@ -142,32 +142,50 @@ export function ChatWindow({ conversation, messages, onTakeControl, isLoading }:
             </div>
           ) : (
             messages.map((m, idx) => {
-              const isAI = m.role !== "user";
+              const isAI = m.role === "assistant" || m.role === "model";
+              const isAgent = m.role === "agent";
+              const isUser = m.role === "user";
+              
+              // Determinar el nombre a mostrar
+              let displayAuthor = "Cliente";
+              if (isAI) displayAuthor = "Susana (IA)";
+              if (isAgent) displayAuthor = m.authorName || "Agente";
+              if (isUser) displayAuthor = conversation.client?.name || "Cliente";
+
               return (
                 <div 
                   key={m.id || idx} 
                   className={cn(
-                    "flex flex-col max-w-[80%] gap-1",
-                    isAI ? "items-end ml-auto" : "items-start"
+                    "flex flex-col max-w-[85%] gap-1 animate-in fade-in slide-in-from-bottom-2 duration-300",
+                    (isAI || isAgent) ? "items-end ml-auto" : "items-start"
                   )}
                 >
-                  <div className="flex items-center gap-2 mb-1">
-                    {!isAI && <span className="text-[10px] font-bold text-muted-foreground uppercase">{conversation.client?.name}</span>}
-                    {isAI && <span className="text-[10px] font-bold text-primary uppercase">Susana (SGF)</span>}
+                  <div className="flex items-center gap-2 mb-0.5 px-1">
+                    <span className={cn(
+                      "text-[9px] font-black uppercase tracking-tighter",
+                      (isAI || isAgent) ? "text-primary text-right" : "text-muted-foreground"
+                    )}>
+                      {displayAuthor}
+                    </span>
                   </div>
                   <div 
                     className={cn(
-                      "px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm",
+                      "px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm transition-all hover:shadow-md",
                       isAI 
                         ? "bg-primary text-primary-foreground rounded-tr-none" 
+                        : isAgent
+                        ? "bg-orange-600 text-white rounded-tr-none"
                         : "bg-muted text-foreground rounded-tl-none border border-border/50"
                     )}
                   >
                     {m.content}
                   </div>
-                  <span className="text-[10px] text-muted-foreground mt-1 px-1">
-                    {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                  <div className="flex items-center gap-1.5 px-1 mt-0.5">
+                    <span className="text-[9px] text-muted-foreground/60 font-medium">
+                      {m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Reciente"}
+                    </span>
+                    {isAgent && <span className="h-1 w-1 rounded-full bg-orange-400" />}
+                  </div>
                 </div>
               );
             })
