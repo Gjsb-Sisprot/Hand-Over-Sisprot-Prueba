@@ -390,6 +390,7 @@ Ubicación: ${metadata.ubicacion_url || 'N/A'}`;
     name: ticketName,
     content,
     itilcategories_id: categoryId,
+    urgency,
     _users_id_requester: requesterId
   };
 }
