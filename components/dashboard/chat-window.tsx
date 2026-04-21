@@ -35,7 +35,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
   const [sendMode, setSendMode] = useState<"whatsapp" | "bridge">("whatsapp");
 
   // El ChatWindow ahora es el dueño de sus mensajes y su tiempo real
-  const { messages, isMessagesLoading } = useDashboardMessages({ 
+  const { messages, isMessagesLoading, refresh } = useDashboardMessages({ 
     conversationId: conversation.id,
     isActive: true 
   });
@@ -59,6 +59,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
       const result = await sendMessage(conversation.id, newMessage, sendMode) as any;
       if (result.success) {
         setNewMessage("");
+        await refresh(); // Forzar actualización del historial
         if (result.warning) toast.warning(result.warning);
       } else {
         toast.error(result.error || "Error al enviar mensaje");
