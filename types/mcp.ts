@@ -41,6 +41,7 @@ export interface MCPChatMessage {
   role: "user" | "assistant" | "model" | "system" | "tool" | "agent";
   content: string;
   createdAt: string;
+  authorName?: string | null;
   toolName?: string;
   metadata?: Record<string, unknown>;
 }
