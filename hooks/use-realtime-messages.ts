@@ -35,6 +35,7 @@ export function useDashboardMessages({
 
     isFetchingRef.current = true;
     try {
+      // Solo mostramos el cargador si no tenemos ningún mensaje aún
       if (messages.length === 0) setIsLoading(true);
       const newMessages = await getChatHistory(conversationId);
       setMessages(newMessages || []);
@@ -44,7 +45,8 @@ export function useDashboardMessages({
       isFetchingRef.current = false;
       setIsLoading(false);
     }
-  }, [conversationId, messages.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId]); // ELIMINADO messages.length para evitar bucles
 
   useEffect(() => {
     if (conversationId && isActive) {
@@ -71,6 +73,7 @@ export function useDashboardMessages({
         },
         (payload) => {
           console.log(`[REALTIME] EVENTO RECIBIDO en ${conversationId}:`, payload);
+          // Usamos la función de refresco aquí
           fetchMessages();
         }
       )
@@ -83,7 +86,8 @@ export function useDashboardMessages({
       console.log(`[REALTIME] Desconectando canal ${conversationId}`);
       supabase.removeChannel(channel);
     };
-  }, [conversationId, isActive, fetchMessages]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversationId, isActive]); // ELIMINADO fetchMessages para no reconectar cada vez que cambie
 
   return {
     messages,
