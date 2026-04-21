@@ -1,80 +1,204 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { MCPChatMessage } from "@/types/mcp";
-import { getChatHistory } from "@/lib/actions/conversations";
+import { useEffect, useState, useCallback, useRef } from "react";
+import { MCPConversation, MCPPaginationInfo } from "@/types/mcp";
 import { createClient } from "@/lib/supabase/client";
+import { getConversationsPaginated } from "@/lib/actions/conversations";
 
-interface UseRealtimeMessagesOptions {
-    conversationId: string | null;
-    initialMessages?: MCPChatMessage[];
-    isActive?: boolean;
+interface UseRealtimeConversationsOptions {
+  initialData?: MCPConversation[];
+  status?: string | string[];
+  agentEmail?: string;
+  includeAll?: boolean;
+  pollingInterval?: number;
+  onNewConversation?: (conversation: MCPConversation) => void;
+  onConversationUpdated?: (conversation: MCPConversation) => void;
 }
 
-export function useRealtimeMessages({
-  conversationId,
-  initialMessages = [],
-  isActive = true,
-}: UseRealtimeMessagesOptions) {
-  const [messages, setMessages] = useState<MCPChatMessage[]>(initialMessages);
-  const [isLoading, setIsLoading] = useState(false);
-  const isFetchingRef = useRef(false);
+export function useRealtimeConversations({
+  initialData = [],
+  status,
+  agentEmail,
+  includeAll = false,
+  pollingInterval = 30000,
+  onNewConversation,
+  onConversationUpdated,
+}: UseRealtimeConversationsOptions = {}) {
+  const hasInitialData = initialData.length > 0;
+  const [conversations, setConversations] = useState<MCPConversation[]>(initialData);
+  const [pagination, setPagination] = useState<MCPPaginationInfo | null>(
+    hasInitialData
+      ? {
+          page: 1,
+          pageSize: initialData.length,
+          totalItems: initialData.length,
+          totalPages: 1,
+          hasNextPage: false,
+          hasPreviousPage: false,
+        }
+      : null
+  );
+  const [isConnected, setIsConnected] = useState(hasInitialData);
+  const [isLoading, setIsLoading] = useState(!hasInitialData);
+  const [error, setError] = useState<Error | null>(null);
 
-  const fetchMessages = useCallback(async () => {
-    if (!conversationId || isFetchingRef.current) return;
+  const previousIdsRef = useRef<Set<string>>(new Set(initialData.map((c) => c.id)));
+  const conversationsRef = useRef<MCPConversation[]>(initialData);
+  const previousFilterRef = useRef<string | null>(null);
+  const isLoadingRef = useRef(!hasInitialData);
+  const onNewRef = useRef(onNewConversation);
+  const onUpdatedRef = useRef(onConversationUpdated);
 
-    isFetchingRef.current = true;
-    try {
-      if (messages.length === 0) setIsLoading(true);
-      const newMessages = await getChatHistory(conversationId);
-      setMessages(newMessages);
-    } catch (err) {
-      console.error("[USE_REALTIME_MESSAGES_FETCH_ERROR]", err);
-    } finally {
-      isFetchingRef.current = false;
-      setIsLoading(false);
-    }
-  }, [conversationId, messages.length]);
+  useEffect(() => { conversationsRef.current = conversations; }, [conversations]);
+  useEffect(() => { isLoadingRef.current = isLoading; }, [isLoading]);
+  useEffect(() => { onNewRef.current = onNewConversation; }, [onNewConversation]);
+  useEffect(() => { onUpdatedRef.current = onConversationUpdated; }, [onConversationUpdated]);
 
-  // Carga inicial al cambiar de conversación
+  const fetchConversations = useCallback(
+    async (isFilterChange = false) => {
+      try {
+        if (isFilterChange) setIsLoading(true);
+
+        const data = await getConversationsPaginated({
+          status,
+          includeAll,
+          pageSize: 100,
+        });
+        
+        const convs = data.conversations || [];
+
+        if (!isFilterChange) {
+          const currentIds = new Set(convs.map((c) => c.id));
+
+          convs.forEach((conv) => {
+            if (!previousIdsRef.current.has(conv.id)) {
+              onNewRef.current?.(conv);
+            }
+          });
+
+          convs.forEach((conv) => {
+            const existing = conversationsRef.current.find((c) => c.id === conv.id);
+            if (existing && JSON.stringify(existing) !== JSON.stringify(conv)) {
+              onUpdatedRef.current?.(conv);
+            }
+          });
+
+          previousIdsRef.current = currentIds;
+        } else {
+          previousIdsRef.current = new Set(convs.map((c) => c.id));
+        }
+
+        setConversations(convs);
+        setPagination(data.pagination || null);
+        setIsConnected(true);
+        setIsLoading(false);
+        setError(null);
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error("Unknown error"));
+        setIsConnected(false);
+        setIsLoading(false);
+      }
+    },
+    [status, agentEmail, includeAll]
+  );
+
   useEffect(() => {
-    if (conversationId && isActive) {
-      fetchMessages();
-    } else if (!conversationId) {
-      setMessages([]);
+    const currentFilter = JSON.stringify({ status, agentEmail, includeAll });
+
+    if (previousFilterRef.current !== null && previousFilterRef.current !== currentFilter) {
+      setPagination(null);
+      setConversations([]);
+      fetchConversations(true);
+    } else if (previousFilterRef.current === null && !hasInitialData) {
+      fetchConversations(false);
     }
-  }, [conversationId, isActive, fetchMessages]);
 
-  // Suscripción de tiempo real filtrada por conversation_id
+    previousFilterRef.current = currentFilter;
+  }, [status, agentEmail, includeAll, initialData.length, fetchConversations, hasInitialData]);
+
   useEffect(() => {
-    if (!conversationId || !isActive) return;
-
     const supabase = createClient();
     
     const channel = supabase
-      .channel(`chat-messages-${conversationId}`)
+      .channel("realtime-conversations")
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
-          table: "chat_logs",
-          filter: `conversation_id=eq.${conversationId}`
+          table: "conversations",
         },
-        () => {
-          fetchMessages();
+        async () => {
+          if (!isLoadingRef.current) {
+            fetchConversations(false);
+          }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        setIsConnected(status === "SUBSCRIBED");
+      });
 
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId, isActive, fetchMessages]);
+  }, [fetchConversations]);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (!isLoadingRef.current) {
+        fetchConversations(false);
+      }
+    }, pollingInterval);
+
+    return () => clearInterval(interval);
+  }, [pollingInterval, fetchConversations]);
+
+  const optimisticUpdate = useCallback(
+    (id: string, updates: Partial<MCPConversation>) => {
+      setConversations((prev) => {
+        const idx = prev.findIndex(
+          (c) => c.id === id || c.sessionId === id
+        );
+        if (idx === -1) return prev;
+
+        const updated = [...prev];
+        updated[idx] = {
+          ...updated[idx],
+          ...updates,
+          timestamps: {
+            ...updated[idx].timestamps,
+            ...updates.timestamps,
+            updatedAt: new Date().toISOString(),
+          },
+        };
+        conversationsRef.current = updated;
+        return updated;
+      });
+    },
+    []
+  );
+
+  const removeFromList = useCallback(
+    (id: string) => {
+      setConversations((prev) => {
+        const filtered = prev.filter(
+          (c) => c.id !== id && c.sessionId !== id
+        );
+        conversationsRef.current = filtered;
+        return filtered;
+      });
+    },
+    []
+  );
 
   return {
-    messages,
+    conversations,
+    pagination,
+    isConnected,
     isLoading,
-    refresh: fetchMessages,
+    error,
+    refresh: () => fetchConversations(false),
+    optimisticUpdate,
+    removeFromList,
   };
 }
