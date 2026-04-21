@@ -279,27 +279,12 @@ export async function getChatHistory(
       .maybeSingle();
 
     const targetId = conv?.id || conversationId;
-    const identification = conv?.identification;
 
-    let targetIds: string[] = [targetId];
-
-    // 2. Si el cliente está identificado, unificamos sesiones
-    if (identification) {
-      const { data: related } = await supabaseAdmin
-        .from("conversations")
-        .select("id")
-        .eq("identification", identification);
-      
-      if (related) {
-        targetIds = Array.from(new Set([...targetIds, ...related.map(r => r.id)]));
-      }
-    }
-
-    // 3. Consultar chat_logs
+    // 2. Consultar chat_logs de forma estricta para esta sesión únicamente
     const { data, error } = await supabaseAdmin
       .from("chat_logs")
       .select("*")
-      .in("conversation_id", targetIds)
+      .eq("conversation_id", targetId)
       .order("created_at", { ascending: true })
       .limit(limit || 250);
 
