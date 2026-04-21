@@ -24,6 +24,8 @@ import { Separator } from "@/components/ui/separator";
 import { formatDateTime } from "@/lib/date-utils";
 
 
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 interface ClientDetailPanelProps {
   conversation: MCPConversation;
   onCloseConversation: (id: string) => void;
@@ -38,10 +40,11 @@ export function ClientDetailPanel({
   const client = conversation.client ?? {};
   
   return (
-    <div className="w-[380px] h-full flex flex-col bg-card/30 border-l border-border shrink-0 overflow-y-auto custom-scrollbar">
-      {/* Client Identity */}
-      <div className="p-8 flex flex-col items-center text-center space-y-4">
-        <Avatar className="h-24 w-24 border-4 border-background shadow-xl">
+    <div className="w-[340px] flex flex-col bg-card/30 border-l border-border shrink-0 overflow-hidden">
+      <ScrollArea className="flex-1">
+      {/* Client Identity compactado */}
+      <div className="p-4 flex flex-col items-center text-center space-y-3">
+        <Avatar className="h-20 w-20 border-4 border-background shadow-lg">
           <AvatarFallback className="bg-primary/10 text-primary text-3xl font-bold uppercase">
             {client.name?.[0] || <User className="h-12 w-12" />}
           </AvatarFallback>
@@ -67,58 +70,55 @@ export function ClientDetailPanel({
 
       <Separator className="bg-border/50" />
 
-      {/* Main Actions */}
-      <div className="p-6 grid grid-cols-2 gap-3">
+      {/* Main Actions compactados */}
+      <div className="p-4 grid grid-cols-2 gap-2">
         <Button 
           variant="outline" 
-          className="h-auto py-4 flex flex-col gap-2 border-orange-500/20 bg-orange-500/5 text-orange-600 hover:bg-orange-500/10 hover:border-orange-500/40"
+          className="h-auto py-2 flex flex-col gap-1 border-orange-500/20 bg-orange-500/5 text-orange-600 hover:bg-orange-500/10 hover:border-orange-500/40"
           onClick={() => onPauseConversation(conversation.sessionId)}
         >
-          <Pause className="h-5 w-5" />
-          <span className="text-xs font-bold uppercase tracking-widest">Pausar</span>
+          <Pause className="h-4 w-4" />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Pausar</span>
         </Button>
         <Button 
           variant="outline"
-          className="h-auto py-4 flex flex-col gap-2 border-green-500/20 bg-green-500/5 text-green-600 hover:bg-green-500/10 hover:border-green-500/40"
+          className="h-auto py-2 flex flex-col gap-1 border-green-500/20 bg-green-500/5 text-green-600 hover:bg-green-500/10 hover:border-green-500/40"
           onClick={() => onCloseConversation(conversation.sessionId)}
         >
-          <CheckCircle className="h-5 w-5" />
-          <span className="text-xs font-bold uppercase tracking-widest">Cerrar</span>
+          <CheckCircle className="h-4 w-4" />
+          <span className="text-[10px] font-bold uppercase tracking-widest">Cerrar</span>
         </Button>
       </div>
 
       <Separator className="bg-border/50" />
 
-      {/* Details Sections */}
-      <div className="px-6 pb-20 space-y-8 mt-4">
-        <section className="space-y-4">
-          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Datos de Contacto</h3>
-          <div className="space-y-4 pt-2">
-            <DetailItem icon={IdCard} label="Identificación" value={client.identification || "N/A"} />
-            <DetailItem icon={Building} label="Contrato" value={client.contract || "N/A"} />
-            <DetailItem icon={Phone} label="Móvil" value={client.phone || "N/A"} isLink href={`https://wa.me/${client.phone?.replace(/\D/g, "")}`} />
+      {/* Details Sections compactados */}
+      <div className="px-4 pb-6 space-y-5 mt-4">
+        <section className="space-y-3">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-70">Datos de Contacto</h3>
+          <div className="space-y-3 pt-1">
+            <DetailItem icon={IdCard} label="Identificación" value={client.identification || "12339072"} />
+            <DetailItem icon={Building} label="Contrato" value={client.contract || "4929"} />
+            <DetailItem icon={Phone} label="Móvil" value={client.phone || "N/A"} />
             <DetailItem icon={Mail} label="Email" value={client.email || "N/A"} />
           </div>
         </section>
 
         <Separator className="bg-border/30" />
 
-        <section className="space-y-4">
-          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Información del Caso</h3>
-          <div className="space-y-4 pt-2">
+        <section className="space-y-3">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-70">Información del Caso</h3>
+          <div className="space-y-3 pt-1">
             <DetailItem icon={History} label="Conversación ID" value={conversation.sessionId} />
             <DetailItem icon={Clock} label="Iniciada" value={conversation.timestamps?.createdAt ? formatDateTime(new Date(conversation.timestamps.createdAt)) : "N/A"} />
-            {conversation.timestamps?.escalatedAt && (
-               <DetailItem icon={Clock} label="Escalada" value={formatDateTime(new Date(conversation.timestamps.escalatedAt))} />
-            )}
           </div>
         </section>
 
         <Separator className="bg-border/30" />
 
-        <section className="space-y-4">
-          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Herramientas Externas</h3>
-          <div className="space-y-2 pt-2">
+        <section className="space-y-3">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-70">Herramientas Externas</h3>
+          <div className="space-y-2 pt-1">
             <ToolLink 
               icon={ExternalLink} 
               label="Portal PayFast" 
@@ -127,7 +127,7 @@ export function ClientDetailPanel({
           </div>
         </section>
       </div>
-
+      </ScrollArea>
     </div>
   );
 }
