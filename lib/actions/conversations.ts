@@ -189,37 +189,49 @@ export async function getChatHistory(
   limit?: number
 ): Promise<MCPChatMessage[]> {
   try {
-    // 2. Buscamos si la conversación tiene una identificación (DNI/RUC)
-    const { data: bySession } = await supabaseAdmin
+    if (!sessionId) return [];
+
+    // 1. Identificar la conversación y el cliente asociado
+    const { data: conv, error: convError } = await supabaseAdmin
       .from("conversations")
-      .select("id, identification")
+      .select("id, session_id, identification")
       .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
       .maybeSingle();
+
+    if (convError) {
+      console.error("[GET_HISTORY_QUERY_ERROR]", convError);
+    }
 
     let conversationIds: string[] = [sessionId];
     let identification: string | null = null;
 
-    if (bySession) {
-      conversationIds.push(bySession.id);
-      identification = bySession.identification;
+    if (conv) {
+      conversationIds = [conv.id];
+      if (conv.session_id) conversationIds.push(conv.session_id);
+      identification = conv.identification;
     }
 
-    // 3. Si encontramos una identidad (DNI/RUC), traemos el historial de TODAS sus sesiones
+    // 2. Si hay identificación (DNI/RUC), buscar TODAS las sesiones de este cliente
+    // Esto permite ver el historial unificado de múltiples chats del mismo usuario
     if (identification) {
       const { data: allSessions } = await supabaseAdmin
         .from("conversations")
-        .select("id")
+        .select("id, session_id")
         .eq("identification", identification);
       
       if (allSessions) {
-        allSessions.forEach(s => conversationIds.push(s.id));
+        allSessions.forEach(s => {
+          conversationIds.push(s.id);
+          if (s.session_id) conversationIds.push(s.session_id);
+        });
       }
     }
 
-    // Limpiamos duplicados y nulos
+    // Limpiamos y preparamos los IDs para la consulta final
     const uniqueIds = Array.from(new Set(conversationIds.filter(Boolean)));
 
-    // 4. Consulta final a chat_logs (Bypassing RLS with supabaseAdmin)
+    // 3. Recuperar logs (Bypass RLS para asegurar visibilidad total en Handover)
+    // Buscamos mensajes asociados a cualquiera de los IDs vinculados (UUID o String)
     const { data, error } = await supabaseAdmin
       .from("chat_logs")
       .select("*")
@@ -227,20 +239,25 @@ export async function getChatHistory(
       .order("created_at", { ascending: true })
       .limit(limit || 250);
 
-    if (error) throw error;
+    if (error) {
+      console.error("[GET_CHAT_LOGS_ERROR]", error);
+      throw error;
+    }
 
     return (data || []).map((row: any) => ({
       id: row.id,
       role: (row.role === "model" || row.role === "assistant") ? "assistant" : row.role,
       content: row.content,
       createdAt: row.created_at,
+      authorName: row.author_name,
       toolName: row.tool_name,
       metadata: {
-        attachments: row.attachments
+        attachments: row.attachments,
+        ...(row.metadata || {})
       }
     })) as MCPChatMessage[];
   } catch (error) {
-    console.error("[GET_HISTORY_ERROR]", error);
+    console.error("[GET_HISTORY_CRITICAL_ERROR]", error);
     return [];
   }
 }
