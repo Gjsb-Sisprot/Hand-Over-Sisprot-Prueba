@@ -6,61 +6,68 @@ import { getChatHistory } from "@/lib/actions/conversations";
 import { createClient } from "@/lib/supabase/client";
 
 interface UseRealtimeMessagesOptions {
-    sessionId: string | null;
+    conversationId: string | null;
     initialMessages?: MCPChatMessage[];
-    pollingInterval?: number;
     isActive?: boolean;
 }
 
-export function useRealtimeMessages({
-  sessionId,
+/**
+ * REFORMULATED HOOK - Version 2.2 (useDashboardMessages)
+ * Regresa explícitamente { messages, isMessagesLoading, refresh }
+ */
+export function useDashboardMessages({
+  conversationId,
   initialMessages = [],
-  pollingInterval = 30000,
   isActive = true,
-}: UseRealtimeMessagesOptions) {
+}: UseRealtimeMessagesOptions): {
+  messages: MCPChatMessage[];
+  isMessagesLoading: boolean;
+  refresh: () => Promise<void>;
+} {
   const [messages, setMessages] = useState<MCPChatMessage[]>(initialMessages);
-  const messagesCountRef = useRef(initialMessages.length);
-  const isPollingRef = useRef(false);
-
-  useEffect(() => {
-    setMessages(initialMessages);
-    messagesCountRef.current = initialMessages.length;
-  }, [initialMessages]);
+  const [isLoading, setIsLoading] = useState(false);
+  const isFetchingRef = useRef(false);
 
   const fetchMessages = useCallback(async () => {
-    if (!sessionId || isPollingRef.current) return;
+    if (!conversationId || isFetchingRef.current) return;
 
-    isPollingRef.current = true;
+    isFetchingRef.current = true;
     try {
-      const newMessages = await getChatHistory(sessionId);
-
-      if (newMessages.length !== messagesCountRef.current) {
-        setMessages(newMessages);
-        messagesCountRef.current = newMessages.length;
-      }
+      if (messages.length === 0) setIsLoading(true);
+      const newMessages = await getChatHistory(conversationId);
+      setMessages(newMessages || []);
     } catch (err) {
+      console.error("[USE_REALTIME_MESSAGES_FETCH_ERROR]", err);
     } finally {
-      isPollingRef.current = false;
+      isFetchingRef.current = false;
+      setIsLoading(false);
     }
-  }, [sessionId]);
+  }, [conversationId, messages.length]);
 
-  // Suscripción de tiempo real a la tabla chat_logs
   useEffect(() => {
-    if (!sessionId || !isActive) return;
+    if (conversationId && isActive) {
+      fetchMessages();
+    } else if (!conversationId) {
+      setMessages([]);
+    }
+  }, [conversationId, isActive, fetchMessages]);
+
+  useEffect(() => {
+    if (!conversationId || !isActive) return;
 
     const supabase = createClient();
     
     const channel = supabase
-      .channel(`rt-messages-${sessionId}`)
+      .channel(`chat-messages-${conversationId}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
-          table: "chat_logs"
+          table: "chat_logs",
+          filter: `conversation_id=eq.${conversationId}`
         },
-        async (payload) => {
-          // Recargamos mensajes cuando hay uno nuevo
+        () => {
           fetchMessages();
         }
       )
@@ -69,20 +76,11 @@ export function useRealtimeMessages({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [sessionId, isActive, fetchMessages]);
-
-  useEffect(() => {
-    if (!sessionId || !isActive) return;
-
-    const interval = setInterval(() => {
-      fetchMessages();
-    }, pollingInterval);
-
-    return () => clearInterval(interval);
-  }, [sessionId, isActive, pollingInterval, fetchMessages]);
+  }, [conversationId, isActive, fetchMessages]);
 
   return {
     messages,
+    isMessagesLoading: isLoading,
     refresh: fetchMessages,
   };
 }
