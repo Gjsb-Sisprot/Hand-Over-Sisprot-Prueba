@@ -3,20 +3,18 @@ import { supabaseAdmin } from "@/lib/supabase/service-role";
 
 /**
  * Webhook para recibir mensajes de Evolution API (WhatsApp)
- * Versión 7.0 - Diagnóstico Profundo con Logs Persistentes
+ * Versión 7.1 - Diagnóstico con Bypass de tipos para despliegue rápido
  */
 export async function POST(request: NextRequest) {
   let payload: any = null;
   let headers: any = {};
   
   try {
-    // 1. Extraer Headers y Payload para el log de diagnóstico
     request.headers.forEach((value, key) => { headers[key] = value; });
     payload = await request.json();
     
-    // GUARDAR EN LOG DE DIAGNÓSTICO (Indispensable para ver qué pasa)
-    // @ts-ignore
-    await supabaseAdmin.from("webhook_logs").insert({
+    // GUARDAR EN LOG DE DIAGNÓSTICO (Forzamos 'any' para evitar errores de compilación)
+    await (supabaseAdmin as any).from("webhook_logs").insert({
       event_type: payload?.event || "unknown",
       payload: payload,
       headers: headers,
@@ -24,15 +22,14 @@ export async function POST(request: NextRequest) {
     });
 
     const { event, data } = payload;
-    if (!event || !data) return NextResponse.json({ success: true, info: "no_data_to_process" });
+    if (!event || !data) return NextResponse.json({ success: true, info: "no_data" });
 
-    // Solo procesamos mensajes nuevos
     if (event.toLowerCase() !== "messages.upsert") {
-      return NextResponse.json({ success: true, warning: "ignored_event" });
+      return NextResponse.json({ success: true, warning: "not_upsert" });
     }
 
     const message = data.message;
-    if (!message) return NextResponse.json({ success: true, warning: "no_content" });
+    if (!message) return NextResponse.json({ success: true, warning: "no_msg" });
 
     const content = message.conversation || message.extendedTextMessage?.text || message.imageMessage?.caption || "";
     const remoteJid = data.key.remoteJid;
@@ -41,12 +38,11 @@ export async function POST(request: NextRequest) {
 
     if (!remoteJid) return NextResponse.json({ success: true, warning: "no_jid" });
 
-    // Match de teléfono flexible (últimos 10 dígitos)
     const incomingPhone = remoteJid.replace(/\D/g, '');
     const localPhone = incomingPhone.length > 10 ? incomingPhone.slice(-10) : incomingPhone;
     const suffixPhone = incomingPhone.slice(-7);
 
-    // 2. Control de duplicados
+    // 1. Duplicados
     const { data: existingMsg } = await supabaseAdmin
       .from("chat_logs")
       .select("id")
@@ -55,7 +51,7 @@ export async function POST(request: NextRequest) {
 
     if (existingMsg) return NextResponse.json({ success: true, info: "duplicate" });
 
-    // 3. Buscar conversación
+    // 2. Buscar conversación
     const { data: conv, error: convError } = await supabaseAdmin
       .from("conversations")
       .select("id, status, contact_phone")
@@ -65,9 +61,7 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (convError || !conv) {
-      // Si no hay conversación, actualizamos el log con el error pero respondemos 200
-      // @ts-ignore
-      await supabaseAdmin.from("webhook_logs").insert({
+      await (supabaseAdmin as any).from("webhook_logs").insert({
         event_type: "MATCH_FAILED",
         payload: { phone: incomingPhone, search: [localPhone, suffixPhone] },
         status: "conversation_not_found"
@@ -75,13 +69,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, error: "conv_not_found" });
     }
 
-    // 4. Insertar mensaje en chat_logs
+    // 3. Insertar
     const { error: logError } = await supabaseAdmin
       .from("chat_logs")
       .insert({
         conversation_id: conv.id,
         role: fromMe ? "agent" : "user",
-        content: content || (fromMe ? "(Enviado desde WhatsApp)" : "📷 Multimedia"),
+        content: content || (fromMe ? "(WhatsApp)" : "📷 Multimedia"),
         author_name: fromMe ? "Agente (WhatsApp)" : "Cliente (WhatsApp)",
         attachments: {
           via: "whatsapp",
@@ -92,7 +86,7 @@ export async function POST(request: NextRequest) {
 
     if (logError) throw logError;
 
-    // 5. Reabrir caso
+    // 4. Actualizar
     const updates: any = { updated_at: new Date().toISOString() };
     if (!fromMe && (conv.status === "closed" || conv.status === "paused")) {
       updates.status = "handed_over";
@@ -103,17 +97,14 @@ export async function POST(request: NextRequest) {
       .update(updates)
       .eq("id", conv.id);
 
-    return NextResponse.json({ success: true, synced: true, matched_id: conv.id });
+    return NextResponse.json({ success: true, synced: true });
 
   } catch (err: any) {
-    // Si hay un error crítico, lo grabamos en el log para saber qué fue
-    // @ts-ignore
-    await supabaseAdmin.from("webhook_logs").insert({
+    await (supabaseAdmin as any).from("webhook_logs").insert({
       event_type: "CRITICAL_ERROR",
-      payload: { error: err.message, raw_data: payload },
+      payload: { error: err.message },
       status: "error"
     });
-    console.error("[WEBHOOK_DIAGNOSTIC_ERROR]", err.message);
-    return NextResponse.json({ error: "diagnostic_error", message: err.message }, { status: 500 });
+    return NextResponse.json({ error: "error", message: err.message }, { status: 500 });
   }
 }
