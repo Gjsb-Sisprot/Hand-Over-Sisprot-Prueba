@@ -11,7 +11,9 @@ import {
   MoreVertical,
   Phone,
   Video,
-  Loader2
+  Loader2,
+  MessageCircle,
+  Globe
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -30,6 +32,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isTakingControl, setIsTakingControl] = useState(false);
+  const [sendMode, setSendMode] = useState<"whatsapp" | "bridge">("whatsapp");
 
   // El ChatWindow ahora es el dueño de sus mensajes y su tiempo real
   const { messages, isMessagesLoading } = useDashboardMessages({ 
@@ -53,7 +56,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
 
     setIsSending(true);
     try {
-      const result = await sendMessage(conversation.id, newMessage) as any;
+      const result = await sendMessage(conversation.id, newMessage, sendMode) as any;
       if (result.success) {
         setNewMessage("");
         if (result.warning) toast.warning(result.warning);
@@ -182,9 +185,58 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
 
       {/* Input compacto */}
       <footer className="p-3 border-t border-border bg-card/50 backdrop-blur-md shrink-0">
+        <div className="max-w-5xl mx-auto mb-3 flex items-center gap-2">
+            <div className="flex bg-muted/50 p-1 rounded-xl border border-border/40 backdrop-blur-sm self-start shadow-inner">
+                <Button
+                    type="button"
+                    variant={sendMode === "whatsapp" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setSendMode("whatsapp")}
+                    className={cn(
+                        "h-8 px-3 rounded-lg text-[10px] font-bold transition-all gap-1.5 uppercase tracking-wider",
+                        sendMode === "whatsapp" ? "bg-green-600 hover:bg-green-700 text-white shadow-lg shadow-green-600/20" : "text-muted-foreground hover:bg-muted"
+                    )}
+                >
+                    <MessageCircle className="h-3 w-3" />
+                    Evolution API
+                </Button>
+                <Button
+                    type="button"
+                    variant={sendMode === "bridge" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setSendMode("bridge")}
+                    className={cn(
+                        "h-8 px-3 rounded-lg text-[10px] font-bold transition-all gap-1.5 uppercase tracking-wider",
+                        sendMode === "bridge" ? "bg-primary hover:bg-primary/90 text-white shadow-lg shadow-primary/20" : "text-muted-foreground hover:bg-muted"
+                    )}
+                >
+                    <Globe className="h-3 w-3" />
+                    Py Fast
+                </Button>
+            </div>
+            
+            {sendMode === "whatsapp" && conversation.client?.phone && (
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                    <span className="h-1.5 w-1.5 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-muted/30 px-2 py-0.5 rounded-md border border-border/20">
+                        Destino: {conversation.client.phone}
+                    </span>
+                </div>
+            )}
+            
+            {sendMode === "whatsapp" && !conversation.client?.phone && (
+                <div className="flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                    <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+                    <span className="text-[10px] font-black text-red-500 uppercase tracking-widest bg-red-500/5 px-2 py-0.5 rounded-md border border-red-500/10">
+                        ⚠ Sin teléfono configurado
+                    </span>
+                </div>
+            )}
+        </div>
+
         <form onSubmit={handleSendMessage} className="max-w-5xl mx-auto relative group">
           <Input
-            placeholder="Escribe tu mensaje aquí..."
+            placeholder={sendMode === "whatsapp" ? "Escribe por WhatsApp..." : "Escribe por el canal web..."}
             className="h-12 pl-6 pr-14 bg-background border-border/60 focus:border-primary/50 focus:ring-primary/20 rounded-2xl transition-all shadow-sm group-hover:shadow-md"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
@@ -192,16 +244,21 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
           />
           <Button 
             type="submit" 
-            disabled={isSending || !newMessage.trim()}
+            disabled={isSending || !newMessage.trim() || (sendMode === "whatsapp" && !conversation.client?.phone)}
             size="icon"
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 w-9 rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+            className={cn(
+                "absolute right-1.5 top-1/2 -translate-y-1/2 h-9 w-9 rounded-xl transition-all hover:scale-105 active:scale-95 shadow-lg",
+                sendMode === "whatsapp" 
+                    ? "bg-green-600 hover:bg-green-700 shadow-green-600/20" 
+                    : "bg-primary hover:bg-primary/90 shadow-primary/20"
+            )}
           >
             <SendHorizontal className="h-4 w-4" />
           </Button>
         </form>
         <div className="flex items-center justify-center gap-4 mt-2">
-            <p className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] font-black opacity-50">
-              Shift + Enter para nueva línea • Inicia con / para respuestas rápidas
+            <p className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] font-black opacity-40">
+              Shift + Enter para nueva línea • Canal actual: <span className="text-primary font-black">{sendMode === "whatsapp" ? "WhatsApp" : "Web Bridge"}</span>
             </p>
         </div>
       </footer>
