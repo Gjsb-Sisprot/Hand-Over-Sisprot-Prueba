@@ -5,114 +5,113 @@ const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || '26F9D106EA66-4FE6-96
 
 /**
  * Webhook para recibir mensajes de Evolution API (WhatsApp)
- * Soporta sincronización bidireccional y reapertura de casos
+ * Versión 3.0 - Búsqueda robusta y sincronización bidireccional
  */
 export async function POST(request: NextRequest) {
   try {
-    const apiKey = request.headers.get("apikey");
+    const apiKey = request.headers.get("apikey") || request.nextUrl.searchParams.get("apikey");
+    
+    // Si hay una API Key configurada y no coincide, rechazamos
     if (apiKey && apiKey !== EVOLUTION_API_KEY) {
-      console.warn("[WEBHOOK_EVOLUTION] API Key mismatch");
+      console.error("[WEBHOOK_EVOLUTION] Unauthorized: API Key mismatch");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const payload = await request.json();
     const { event, data } = payload;
     
-    console.log(`[WEBHOOK_EVOLUTION] Evento recibido: ${event}`);
+    console.log(`[WEBHOOK_EVOLUTION] Evento: ${event}`);
 
-    // Solo nos interesan los mensajes nuevos (case-insensitive)
     if (event?.toLowerCase() !== "messages.upsert") {
-      return NextResponse.json({ success: true, event_ignored: event });
+      return NextResponse.json({ success: true, ignored_event: event });
     }
 
     const message = data.message;
-    if (!message) return NextResponse.json({ success: true, empty_message: true });
+    if (!message) return NextResponse.json({ success: true, reason: "no_message_content" });
 
-    // 1. Extraer contenido de texto (Soporta múltiples tipos de mensaje de WhatsApp)
+    // Contenido del mensaje
     const content = 
       message.conversation || 
       message.extendedTextMessage?.text || 
       message.imageMessage?.caption || 
       message.videoMessage?.caption || 
       message.documentMessage?.caption || 
-      ""; // Si es un sticker o audio, podríamos manejarlo luego
+      "";
 
-    const remoteJid = data.key.remoteJid; // ej: 584241436934@s.whatsapp.net
+    const remoteJid = data.key.remoteJid; // 584241234567@s.whatsapp.net
     const messageId = data.key.id;
     const fromMe = data.key.fromMe || false;
 
     if (!remoteJid || !messageId) {
-      return NextResponse.json({ success: true, incomplete_data: true });
+      return NextResponse.json({ success: true, reason: "missing_ids" });
     }
 
-    // Limpiar el número para la búsqueda (solo dígitos)
+    // Limpiar número: 584241234567
     const phone = remoteJid.replace(/\D/g, '');
+    // Variante sin el código de país para búsqueda flexible: 4241234567
+    const shortPhone = phone.length > 10 ? phone.slice(-10) : phone;
 
-    console.log(`[WEBHOOK_EVOLUTION] Procesando ${fromMe ? 'saliente' : 'entrante'} - Tel: ${phone} - Msg: ${content.substring(0, 30)}`);
+    console.log(`[WEBHOOK_EVOLUTION] Phone: ${phone} (Short: ${shortPhone}) | fromMe: ${fromMe}`);
 
-    // 2. Verificar duplicados (Si ya se insertó desde la UI)
-    const { data: existingMsg } = await supabaseAdmin
+    // 1. Evitar duplicados
+    const { data: existing } = await supabaseAdmin
       .from("chat_logs")
       .select("id")
       .contains("attachments", { messageId: messageId })
       .maybeSingle();
 
-    if (existingMsg) {
-      return NextResponse.json({ success: true, duplicate: true });
+    if (existing) {
+      return NextResponse.json({ success: true, reason: "duplicate" });
     }
 
-    // 3. Buscar la conversación más reciente para este número
-    // Importante: contact_phone debe estar guardado sin el '+' en la BD
+    // 2. Buscar conversación (Búsqueda agresiva)
+    // Buscamos coincidencia exacta o que el final del número coincida
     const { data: conv, error: convError } = await supabaseAdmin
       .from("conversations")
-      .select("id, status, identification")
-      .eq("contact_phone", phone)
+      .select("id, status, identification, contact_phone")
+      .or(`contact_phone.eq.${phone},contact_phone.ilike.%${shortPhone}`)
       .order("updated_at", { ascending: false })
       .limit(1)
       .maybeSingle();
 
     if (convError) {
-      console.error("[WEBHOOK_EVOLUTION] Error buscando conversación:", convError);
-      return NextResponse.json({ error: "DB Error" }, { status: 500 });
+      console.error("[WEBHOOK_EVOLUTION] DB Search Error:", convError);
+      return NextResponse.json({ error: "Database error during search" }, { status: 500 });
     }
 
     if (!conv) {
-      console.warn(`[WEBHOOK_EVOLUTION] No se encontró conversación para el teléfono: ${phone}`);
-      // Podríamos crear una conversación nueva aquí si quisiéramos
-      return NextResponse.json({ success: true, no_conversation_found: phone });
+      console.warn(`[WEBHOOK_EVOLUTION] No se halló conversación para ${phone}`);
+      return NextResponse.json({ success: true, reason: "conversation_not_found", searched: [phone, shortPhone] });
     }
 
-    // 4. Insertar el mensaje en el historial
+    console.log(`[WEBHOOK_EVOLUTION] Match encontrado: Conv ID ${conv.id} para Cliente ${conv.identification}`);
+
+    // 3. Insertar mensaje en chat_logs
     const { error: logError } = await supabaseAdmin
       .from("chat_logs")
       .insert([{
         conversation_id: conv.id,
         role: fromMe ? "agent" : "user",
-        content: content || (fromMe ? "(Mensaje saliente de WhatsApp)" : "(Mensaje entrante sin texto)"),
-        author_name: fromMe ? "Tú (WhatsApp)" : "Cliente (WhatsApp)",
+        content: content || (fromMe ? "(Enviado desde WhatsApp)" : "📷 Archivo multimedia"),
+        author_name: fromMe ? "Agente (WhatsApp)" : "Cliente (WhatsApp)",
         attachments: {
           via: "whatsapp",
           remoteJid: remoteJid,
           messageId: messageId,
           external: fromMe,
-          received_at: new Date().toISOString()
+          timestamp: new Date().toISOString()
         }
       }]);
 
     if (logError) {
-      console.error("[WEBHOOK_EVOLUTION] Error insertando log:", logError);
-      throw logError;
+      console.error("[WEBHOOK_EVOLUTION] Insert Error:", logError);
+      return NextResponse.json({ error: "Failed to insert message log" }, { status: 500 });
     }
 
-    // 5. Actualizar la conversación (Reabrir si estaba cerrada)
-    const updates: any = {
-      updated_at: new Date().toISOString()
-    };
-
-    // Si escribe el cliente y estaba cerrada o pausada, reactivamos
+    // 4. Actualizar estado y fecha
+    const updates: any = { updated_at: new Date().toISOString() };
     if (!fromMe && (conv.status === "closed" || conv.status === "paused")) {
       updates.status = "handed_over";
-      console.log(`[WEBHOOK_EVOLUTION] Reabriendo caso ${conv.id} para el cliente ${conv.identification}`);
     }
 
     await supabaseAdmin
@@ -120,9 +119,14 @@ export async function POST(request: NextRequest) {
       .update(updates)
       .eq("id", conv.id);
 
-    return NextResponse.json({ success: true, processed: true });
+    return NextResponse.json({ 
+      success: true, 
+      conversation_id: conv.id,
+      status: fromMe ? "synced_outgoing" : "received_incoming" 
+    });
+
   } catch (error) {
     console.error("[WEBHOOK_EVOLUTION_CRITICAL]", error);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: "Critical server error" }, { status: 500 });
   }
 }
