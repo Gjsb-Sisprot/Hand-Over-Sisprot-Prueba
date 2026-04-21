@@ -850,6 +850,7 @@ export async function sendMessage(conversationId: string, content: string, mode:
       attachments: mode === "whatsapp" ? {
         whatsapp_sent: whatsappResult?.success || false,
         whatsapp_error: whatsappResult?.error || null,
+        messageId: whatsappResult?.data?.key?.id || null,
         delivered_at: whatsappResult?.success ? new Date().toISOString() : null
       } : { via: "bridge" }
     };
