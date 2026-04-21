@@ -3,7 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "../supabase/server";
 import { supabaseAdmin } from "../supabase/service-role";
-import { mcpClient } from "../mcp-client";
 import { createTicket as createGlpiTicket, USUARIOS_GLPI, CATEGORIAS_TI_GLPI } from "../glpi";
 import type { MCPConversation, MCPChatMessage, MCPListConversationsResponse } from "../../types/mcp";
 import type { AgentRole } from "../auth/permissions";
@@ -55,6 +54,43 @@ function filterConversationsByPermissions(
 }
 
 
+function mapSupabaseToMCPConversation(conv: any): MCPConversation {
+  const metadata = (conv.metadata || {}) as any;
+  const phone = conv.contact_phone || metadata.phone || metadata.tel || null;
+  const email = conv.contact_email || metadata.email || null;
+  const name = conv.contact_name || conv.name || metadata.name || conv.identification || "Cliente";
+
+  return {
+    id: conv.id,
+    sessionId: conv.session_id || conv.id,
+    status: conv.status as any,
+    summary: conv.summary || null,
+    messageCount: 0, // Se puede hidratar luego si es necesario
+    client: {
+      name,
+      identification: conv.identification || null,
+      contract: conv.contract || null,
+      email,
+      phone,
+    },
+    timestamps: {
+      createdAt: conv.created_at,
+      updatedAt: conv.updated_at,
+      escalatedAt: conv.escalated_at || conv.updated_at,
+      closedAt: conv.closed_at || null,
+    },
+    agent: conv.specialist_name ? {
+      email: conv.agent_email || conv.specialist_name,
+      name: conv.specialist_name,
+      takenAt: conv.updated_at,
+    } : undefined,
+    glpiTicketId: conv.glpi_ticket_id || null,
+    closedBy: conv.closed_by || null,
+    metadata: conv.metadata || {},
+    isUrgent: conv.priority === "high" || conv.priority === "critical",
+  };
+}
+
 export async function getConversations(
   status?: string | string[],
   includeAll?: boolean
@@ -62,21 +98,35 @@ export async function getConversations(
   try {
     const agent = await getCurrentAgent();
     
-    // Ya no bloqueamos la carga de datos si no hay agente
-    const response = await mcpClient.listConversations({
-      status,
-      includeAll: includeAll || false,
-      pageSize: 100,
-    });
+    let query = supabaseAdmin
+      .from("conversations")
+      .select("*")
+      .order("updated_at", { ascending: false });
+
+    if (status) {
+      if (Array.isArray(status)) {
+        query = query.in("status", status);
+      } else {
+        query = query.eq("status", status);
+      }
+    }
+
+    const { data, error } = await query.limit(100);
+
+    if (error) {
+      console.error("[GET_CONVERSATIONS_ERROR]", error);
+      return [];
+    }
 
     const filteredConversations = filterConversationsByPermissions(
-      response.conversations,
+      (data || []).map(mapSupabaseToMCPConversation),
       agent?.email,
       agent?.role
     );
 
     return filteredConversations;
   } catch (error) {
+    console.error("[GET_CONVERSATIONS_CRITICAL]", error);
     return [];
   }
 }
@@ -89,28 +139,58 @@ export async function getConversationsPaginated(params: {
 }): Promise<MCPListConversationsResponse> {
   try {
     const agent = await getCurrentAgent();
-    const response = await mcpClient.listConversations(params);
+    const page = params.page || 1;
+    const pageSize = params.pageSize || 20;
+    const from = (page - 1) * pageSize;
+    const to = from + pageSize - 1;
 
-    // Permitimos ver sin filtrar por ahora si no hay agente detectado
-    if (!agent) {
-      return response;
+    let query = supabaseAdmin
+      .from("conversations")
+      .select("*", { count: "exact" })
+      .order("updated_at", { ascending: false });
+
+    if (params.status) {
+      if (Array.isArray(params.status)) {
+        query = query.in("status", params.status);
+      } else {
+        query = query.eq("status", params.status);
+      }
     }
 
+    const { data, error, count } = await query.range(from, to);
+
+    if (error) {
+      console.error("[GET_CONVERSATIONS_PAGINATED_ERROR]", error);
+      throw error;
+    }
+
+    const mcpConvs = (data || []).map(mapSupabaseToMCPConversation);
     const filteredConversations = filterConversationsByPermissions(
-      response.conversations,
-      agent.email,
-      agent.role
+      mcpConvs,
+      agent?.email,
+      agent?.role
     );
 
+    const totalItems = count || 0;
+    const totalPages = Math.ceil(totalItems / pageSize);
+
     return {
-      ...response,
       conversations: filteredConversations,
       pagination: {
-        ...response.pagination,
-        totalItems: filteredConversations.length,
+        page,
+        pageSize,
+        totalItems,
+        totalPages,
+        hasNextPage: page < totalPages,
+        hasPreviousPage: page > 1,
+      },
+      filters: { 
+        status: params.status,
+        includeAll: params.includeAll || false 
       },
     };
   } catch (error) {
+    console.error("[GET_CONVERSATIONS_PAGINATED_CRITICAL]", error);
     return {
       conversations: [],
       pagination: {
@@ -310,7 +390,6 @@ Ubicación: ${metadata.ubicacion_url || 'N/A'}`;
     name: ticketName,
     content,
     itilcategories_id: categoryId,
-    urgency,
     _users_id_requester: requesterId
   };
 }
@@ -331,7 +410,6 @@ export async function takeoverConversation(
     return { error: "No autenticado" };
   }
 
-
   try {
     const conversation = await getConversationBySessionId(sessionId);
     let glpiTicketId: number | undefined;
@@ -341,7 +419,6 @@ export async function takeoverConversation(
       
       const glpiResult = await createGlpiTicket({
         ...ticketData,
-        // Permitir sobrescribir opcionalmente desde las opciones
         urgency: options?.urgency || ticketData.urgency,
       });
 
@@ -350,36 +427,31 @@ export async function takeoverConversation(
       }
     }
 
-    const result = await mcpClient.takeoverConversation(
-      sessionId,
-      agent?.email || "agente@sisprot.com",
-      agent?.name || agent?.email || "Agente",
-      {
-        ...options,
-        glpiTicketId, // Pasar el ID del ticket si se creó
-      }
-    );
+    // ACTUALIZACIÓN DIRECTA EN SUPABASE
+    const { error: updateError } = await supabaseAdmin
+      .from("conversations")
+      .update({
+        status: "handed_over",
+        specialist_name: agent.name || agent.email,
+        agent_email: agent.email,
+        glpi_ticket_id: glpiTicketId ? glpiTicketId.toString() : conversation?.glpiTicketId?.toString(),
+        updated_at: new Date().toISOString(),
+      })
+      .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
 
-    // Actualizar ticket ID en Supabase si se creó
-    if (glpiTicketId) {
-      const supabase = await createClient();
-      await supabase
-        .from("conversations")
-        .update({ glpi_ticket_id: glpiTicketId.toString() })
-        .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
-    }
+    if (updateError) throw updateError;
 
     if (agent) {
-      const supabase = await createClient();
-      await supabase
+      await supabaseAdmin
         .from("agents")
         .update({ last_active_at: new Date().toISOString() })
         .eq("id", agent.id);
     }
 
     revalidatePath("/dashboard/conversations");
-    return { success: true, glpiTicketId: glpiTicketId || result.glpiTicketId };
+    return { success: true, glpiTicketId };
   } catch (error) {
+    console.error("[TAKEOVER_ERROR]", error);
     return { error: "Error al tomar la conversación" };
   }
 }
@@ -400,7 +472,6 @@ export async function pauseConversation(
     return { error: "No autenticado" };
   }
 
-
   try {
     const conversation = await getConversationBySessionId(sessionId);
     let glpiTicketId: number | undefined;
@@ -418,25 +489,19 @@ export async function pauseConversation(
       }
     }
 
-    await mcpClient.pauseConversation(sessionId, reason, {
-      ...options,
-      specialistName: agent.name || undefined,
-      specialistEmail: agent.email,
-    });
-
-    const supabase = await createClient();
-    const updateData: any = { 
-      status: "paused",
-      last_active_at: new Date().toISOString() 
-    };
-    if (glpiTicketId) updateData.glpi_ticket_id = glpiTicketId.toString();
-
-    await supabase
+    // ACTUALIZACIÓN DIRECTA EN SUPABASE
+    const { error: updateError } = await supabaseAdmin
       .from("conversations")
-      .update(updateData)
+      .update({ 
+        status: "paused",
+        updated_at: new Date().toISOString(),
+        glpi_ticket_id: glpiTicketId ? glpiTicketId.toString() : conversation?.glpiTicketId?.toString(),
+      })
       .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
 
-    await supabase
+    if (updateError) throw updateError;
+
+    await supabaseAdmin
       .from("agents")
       .update({ last_active_at: new Date().toISOString() })
       .eq("id", agent.id);
@@ -444,6 +509,7 @@ export async function pauseConversation(
     revalidatePath("/dashboard/conversations");
     return { success: true, glpiTicketId };
   } catch (error) {
+    console.error("[PAUSE_ERROR]", error);
     return { error: "Error al pausar la conversación" };
   }
 }
@@ -464,46 +530,31 @@ export async function closeConversation(
     return { error: "No autenticado" };
   }
 
-
   try {
     const conversation = await getConversationBySessionId(sessionId);
     let glpiTicketId: number | undefined;
 
-    // Solo crear si no tiene ya un ticket previo
     if (options?.createTicket !== false && conversation && !conversation.glpiTicketId) {
       const ticketData = prepareGlpiTicketData(conversation, agent.name, `Resuelto: ${resolution}`);
-
       const glpiResult = await createGlpiTicket(ticketData);
-
-      if (glpiResult.success) {
-        glpiTicketId = glpiResult.ticketId;
-      }
+      if (glpiResult.success) glpiTicketId = glpiResult.ticketId;
     }
 
-    await mcpClient.closeConversation(sessionId, resolution, {
-      closedBy: options?.closedBy ?? "agent",
-      createTicket: options?.createTicket ?? true,
-      ticketTypeId: options?.ticketTypeId,
-      ticketTypeName: options?.ticketTypeName,
-      ticketSummary: options?.ticketSummary,
-      specialistName: agent.name || undefined,
-      specialistEmail: agent.email,
-    });
-
-    const supabase = await createClient();
-    const updateData: any = { 
-      status: "closed",
-      closed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    if (glpiTicketId) updateData.glpi_ticket_id = glpiTicketId.toString();
-
-    await supabase
+    // ACTUALIZACIÓN DIRECTA EN SUPABASE
+    const { error: updateError } = await supabaseAdmin
       .from("conversations")
-      .update(updateData)
+      .update({ 
+        status: "closed",
+        closed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        closed_by: options?.closedBy ?? "agent",
+        glpi_ticket_id: glpiTicketId ? glpiTicketId.toString() : conversation?.glpiTicketId?.toString(),
+      })
       .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
 
-    await supabase
+    if (updateError) throw updateError;
+
+    await supabaseAdmin
       .from("agents")
       .update({ last_active_at: new Date().toISOString() })
       .eq("id", agent.id);
@@ -511,22 +562,37 @@ export async function closeConversation(
     revalidatePath("/dashboard/conversations");
     return { success: true, glpiTicketId };
   } catch (error) {
+    console.error("[CLOSE_ERROR]", error);
     return { error: "Error al cerrar la conversación" };
   }
 }
 
 export async function getConversationStats() {
   try {
-    const stats = await mcpClient.getConversationStats();
+    const { data, error } = await supabaseAdmin
+      .from("conversations")
+      .select("status");
 
-    return {
-      active: stats.active,
-      waitingAgent: stats.waiting_agent,
-      handedOver: stats.handed_over,
-      closed: stats.closed,
-      total: stats.total,
+    if (error) throw error;
+
+    const stats = {
+      active: 0,
+      waitingAgent: 0,
+      handedOver: 0,
+      closed: 0,
+      total: data?.length || 0,
     };
+
+    data?.forEach((conv) => {
+      if (conv.status === "active") stats.active++;
+      if (conv.status === "waiting_specialist" || conv.status === "waiting_agent") stats.waitingAgent++;
+      if (conv.status === "handed_over") stats.handedOver++;
+      if (conv.status === "closed") stats.closed++;
+    });
+
+    return stats;
   } catch (error) {
+    console.error("[GET_CONV_STATS_ERROR]", error);
     return {
       active: 0,
       waitingAgent: 0,
@@ -543,8 +609,28 @@ export async function searchConversations(params: {
   status?: string;
 }): Promise<MCPConversation[]> {
   try {
-    return await mcpClient.searchConversations(params);
+    let query = supabaseAdmin
+      .from("conversations")
+      .select("*")
+      .order("updated_at", { ascending: false });
+
+    if (params.identification) {
+      query = query.ilike("identification", `%${params.identification}%`);
+    }
+    if (params.contract) {
+      query = query.ilike("contract", `%${params.contract}%`);
+    }
+    if (params.status) {
+      query = query.eq("status", params.status);
+    }
+
+    const { data, error } = await query.limit(50);
+
+    if (error) throw error;
+
+    return (data || []).map(mapSupabaseToMCPConversation);
   } catch (error) {
+    console.error("[SEARCH_CONVERSATIONS_ERROR]", error);
     return [];
   }
 }
@@ -598,7 +684,8 @@ export async function sendPayFastBridgeMessage(conversationId: string, content: 
 
 
 export async function checkMCPStatus(): Promise<boolean> {
-  return mcpClient.checkMCPHealth();
+  // Siempre retornamos true si decidimos ignorar MCP y usar Supabase directamente
+  return true;
 }
 
 
@@ -613,19 +700,34 @@ export async function getMyAgentStats() {
     return null;
   }
 
-  const { data: agent } = await supabase
-    .from("agents")
-    .select("email")
-    .eq("id", user.id)
-    .single();
-
-  if (!agent) {
-    return null;
-  }
-
   try {
-    return await mcpClient.getAgentStats(agent.email);
+    const { data: agent } = await supabase
+      .from("agents")
+      .select("email, name")
+      .eq("id", user.id)
+      .single();
+
+    if (!agent) return null;
+
+    // Obtener estadísticas reales de Supabase
+    const { data: conversations } = await supabaseAdmin
+      .from("conversations")
+      .select("status")
+      .eq("agent_email", agent.email);
+
+    const stats = {
+      agentEmail: agent.email,
+      totalConversations: conversations?.length || 0,
+      activeConversations: conversations?.filter(c => c.status === 'handed_over').length || 0,
+      closedConversations: conversations?.filter(c => c.status === 'closed').length || 0,
+      pendingConversations: conversations?.filter(c => c.status === 'waiting_specialist').length || 0,
+      avgClosureTimeMinutes: null,
+      lastTakenAt: null,
+    };
+
+    return stats;
   } catch (error) {
+    console.error("[GET_MY_AGENT_STATS_ERROR]", error);
     return null;
   }
 }
