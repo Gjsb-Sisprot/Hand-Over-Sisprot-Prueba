@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { MCPConversation, MCPChatMessage } from "@/types/mcp";
+import { MCPConversation } from "@/types/mcp";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { 
@@ -19,18 +19,23 @@ import { sendMessage } from "@/lib/actions/conversations";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
+import { useRealtimeMessages } from "@/hooks/use-realtime-messages";
 
 interface ChatWindowProps {
   conversation: MCPConversation;
-  messages: MCPChatMessage[];
   onTakeControl?: () => Promise<void>;
-  isLoading?: boolean;
 }
 
-export function ChatWindow({ conversation, messages, onTakeControl, isLoading }: ChatWindowProps) {
+export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isTakingControl, setIsTakingControl] = useState(false);
+
+  // El ChatWindow ahora es el dueño de sus mensajes y su tiempo real
+  const { messages, isLoading } = useRealtimeMessages({ 
+    conversationId: conversation.id,
+    isActive: true 
+  });
 
   const handleTakeControl = async () => {
     if (!onTakeControl || isTakingControl) return;
@@ -48,12 +53,10 @@ export function ChatWindow({ conversation, messages, onTakeControl, isLoading }:
 
     setIsSending(true);
     try {
-      const result = await sendMessage(conversation.sessionId, newMessage) as { success: boolean, error?: string, warning?: string };
+      const result = await sendMessage(conversation.id, newMessage) as any;
       if (result.success) {
         setNewMessage("");
-        if (result.warning) {
-          toast.warning(result.warning);
-        }
+        if (result.warning) toast.warning(result.warning);
       } else {
         toast.error(result.error || "Error al enviar mensaje");
       }
@@ -82,7 +85,7 @@ export function ChatWindow({ conversation, messages, onTakeControl, isLoading }:
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-semibold">{conversation.client?.name || "Cliente"}</h3>
               <Badge variant="outline" className={cn(
-                "text-[9px] px-1.5 py-0 h-4 border-primary/20",
+                "text-[10px] px-1.5 py-0 h-4 border-primary/20",
                 conversation.status === "handed_over" ? "bg-primary/10 text-primary" : "bg-orange-500/10 text-orange-500 animate-pulse"
               )}>
                 {statusLabel}
@@ -113,9 +116,6 @@ export function ChatWindow({ conversation, messages, onTakeControl, isLoading }:
               {isTakingControl ? "Tomando..." : "TOMAR CONTROL"}
             </Button>
           )}
-          <Button className="ml-2 bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-4 h-9">
-            Resolver
-          </Button>
         </div>
       </header>
 
@@ -128,10 +128,7 @@ export function ChatWindow({ conversation, messages, onTakeControl, isLoading }:
                 <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse" />
                 <Loader2 className="h-10 w-10 text-primary animate-spin relative" />
               </div>
-              <div className="space-y-1">
-                <p className="text-sm font-medium">Recuperando historial unificado...</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Buscando sesiones previas</p>
-              </div>
+              <p className="text-sm font-medium">Reformulando historial de Supabase...</p>
             </div>
           ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[50vh] text-center space-y-4 opacity-40">
@@ -146,7 +143,6 @@ export function ChatWindow({ conversation, messages, onTakeControl, isLoading }:
               const isAgent = m.role === "agent";
               const isUser = m.role === "user";
               
-              // Determinar el nombre a mostrar
               let displayAuthor = "Cliente";
               if (isAI) displayAuthor = "Susana (IA)";
               if (isAgent) displayAuthor = m.authorName || "Agente";
@@ -184,7 +180,6 @@ export function ChatWindow({ conversation, messages, onTakeControl, isLoading }:
                     <span className="text-[9px] text-muted-foreground/60 font-medium">
                       {m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Reciente"}
                     </span>
-                    {isAgent && <span className="h-1 w-1 rounded-full bg-orange-400" />}
                   </div>
                 </div>
               );
