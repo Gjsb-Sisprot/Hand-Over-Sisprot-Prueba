@@ -72,13 +72,13 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
     : `🤖 IA: ${conversation.status?.toUpperCase() || 'BUSY'}`;
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-background overflow-hidden">
-      {/* Header */}
-      <header className="h-[72px] border-b border-border px-6 flex items-center justify-between shrink-0 bg-card/30 backdrop-blur-sm sticky top-0 z-10">
+    <div className="flex flex-col flex-1 min-h-0 bg-background overflow-hidden animate-in fade-in duration-500">
+      {/* Header compactado */}
+      <header className="h-12 border-b border-border px-4 flex items-center justify-between shrink-0 bg-card/30 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <Avatar className="h-10 w-10 border-2 border-primary/20">
-            <AvatarFallback className="bg-primary/10 text-primary">
-              {conversation.client?.name?.[0] || <User className="h-5 w-5" />}
+          <Avatar className="h-8 w-8 border-2 border-primary/20">
+            <AvatarFallback className="bg-primary/10 text-primary text-xs">
+              {conversation.client?.name?.[0] || <User className="h-4 w-4" />}
             </AvatarFallback>
           </Avatar>
           <div>
@@ -119,9 +119,9 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
         </div>
       </header>
 
-      {/* Messages */}
+      {/* Messages con paddings optimizados */}
       <ScrollArea className="flex-1 bg-muted/5">
-        <div className="px-8 py-10 space-y-8 max-w-5xl mx-auto">
+        <div className="px-4 py-6 space-y-6 max-w-5xl mx-auto">
           {isMessagesLoading ? (
             <div className="flex flex-col items-center justify-center h-[50vh] text-center space-y-4">
               <div className="relative">
@@ -146,7 +146,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
                 <div 
                   key={m.id || idx} 
                   className={cn(
-                    "flex flex-col max-w-[75%] gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300",
+                    "flex flex-col max-w-[80%] gap-1 animate-in fade-in slide-in-from-bottom-1 duration-200",
                     (isAI || isAgent) ? "items-end ml-auto" : "items-start"
                   )}
                 >
@@ -180,8 +180,8 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
         </div>
       </ScrollArea>
 
-      {/* Input */}
-      <footer className="p-4 border-t border-border bg-card/50 backdrop-blur-md shrink-0">
+      {/* Input compacto */}
+      <footer className="p-3 border-t border-border bg-card/50 backdrop-blur-md shrink-0">
         <form onSubmit={handleSendMessage} className="max-w-5xl mx-auto relative group">
           <Input
             placeholder="Escribe tu mensaje aquí..."
