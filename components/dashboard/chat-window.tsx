@@ -76,7 +76,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
     : `🤖 IA: ${conversation.status?.toUpperCase() || 'BUSY'}`;
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-background overflow-hidden animate-in fade-in duration-500">
+    <div className="flex flex-col w-full h-full min-h-0 bg-background overflow-hidden animate-in fade-in duration-500">
       {/* Header compactado */}
       <header className="h-12 border-b border-border px-4 flex items-center justify-between shrink-0 bg-card/30 backdrop-blur-sm">
         <div className="flex items-center gap-3">
