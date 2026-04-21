@@ -22,6 +22,7 @@ export function useDashboardMessages({
 }: UseRealtimeMessagesOptions): {
   messages: MCPChatMessage[];
   isMessagesLoading: boolean;
+  isConnected: boolean;
   refresh: () => Promise<void>;
 } {
   const [messages, setMessages] = useState<MCPChatMessage[]>(initialMessages);
