@@ -856,7 +856,7 @@ export async function sendMessage(conversationId: string, content: string, mode:
 
     const { error: logError } = await supabase
       .from("chat_logs")
-      .insert(insertData);
+      .insert([insertData]);
 
     if (logError) {
       console.error("[SEND_MESSAGE_SUPABASE_ERROR]", logError);
