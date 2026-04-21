@@ -17,14 +17,13 @@ export default async function DashboardLayout({
   }
 
   return (
-    <div className="flex h-screen w-full bg-background overflow-hidden">
+    <div className="flex h-[100dvh] w-full bg-background overflow-hidden relative">
       <Sidebar />
-      <div className="flex flex-col flex-1 h-full min-w-0">
-        <main className="flex-1 overflow-hidden relative">
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        <main className="flex-1 flex flex-col overflow-hidden relative">
           {children}
         </main>
       </div>
     </div>
   );
 }
-
