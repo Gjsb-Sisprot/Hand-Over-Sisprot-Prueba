@@ -19,7 +19,7 @@ import { sendMessage } from "@/lib/actions/conversations";
 import { toast } from "sonner";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { useRealtimeMessages } from "@/hooks/use-realtime-messages";
+import { useDashboardMessages } from "@/hooks";
 
 interface ChatWindowProps {
   conversation: MCPConversation;
@@ -32,7 +32,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
   const [isTakingControl, setIsTakingControl] = useState(false);
 
   // El ChatWindow ahora es el dueño de sus mensajes y su tiempo real
-  const { messages, isMessagesLoading } = useRealtimeMessages({ 
+  const { messages, isMessagesLoading } = useDashboardMessages({ 
     conversationId: conversation.id,
     isActive: true 
   });
