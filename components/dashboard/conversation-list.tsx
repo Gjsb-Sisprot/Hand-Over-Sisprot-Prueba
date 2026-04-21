@@ -258,7 +258,7 @@ export function ConversationList({
   );
 
   return (
-    <div className="flex w-full h-full overflow-hidden bg-background">
+    <div className="flex w-full flex-1 min-h-0 overflow-hidden bg-background">
       {/* Columna 1: Lista de Conversaciones (Sidebar Secundario) */}
       <div className="w-[350px] flex flex-col border-r border-border shrink-0 bg-card/10">
         <header className="p-6 border-b border-border space-y-4 shrink-0 bg-card/30 backdrop-blur-sm">
@@ -355,7 +355,7 @@ export function ConversationList({
       </div>
 
       {/* Columna 2: Área de Chat (Centro) */}
-      <div className="flex-1 min-w-0 h-full overflow-hidden bg-background">
+      <div className="flex-1 min-w-0 flex flex-col min-h-0 overflow-hidden bg-background">
         {activeConversation ? (
           <ChatWindow 
             conversation={activeConversation} 
