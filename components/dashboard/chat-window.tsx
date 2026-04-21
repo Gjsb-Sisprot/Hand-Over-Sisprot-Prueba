@@ -123,8 +123,9 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
         </div>
       </header>
 
-      {/* Messages con paddings optimizados */}
-      <ScrollArea className="flex-1 bg-muted/5">
+      {/* Messages con scroll interno bloqueado */}
+      <div className="flex-1 min-h-0 overflow-hidden relative bg-muted/5">
+        <ScrollArea className="h-full w-full">
         <div className="px-4 py-6 space-y-6 max-w-5xl mx-auto">
           {isMessagesLoading ? (
             <div className="flex flex-col items-center justify-center h-[50vh] text-center space-y-4">
@@ -182,7 +183,8 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
             })
           )}
         </div>
-      </ScrollArea>
+        </ScrollArea>
+      </div>
 
       {/* Input compacto */}
       <footer className="p-3 border-t border-border bg-card/50 backdrop-blur-md shrink-0">
