@@ -56,17 +56,19 @@ export async function POST(request: NextRequest) {
     // 3. Insertar el mensaje en chat_logs
     const { error: logError } = await supabaseAdmin
       .from("chat_logs")
-      .insert({
-        conversation_id: conv.id,
-        role: "user",
-        content: content,
-        author_name: "Cliente (WhatsApp)",
-        metadata: {
-          via: "whatsapp",
-          remoteJid: remoteJid,
-          messageId: data.key.id
+      .insert([
+        {
+          conversation_id: conv.id,
+          role: "user",
+          content: content,
+          author_name: "Cliente (WhatsApp)",
+          attachments: {
+            via: "whatsapp",
+            remoteJid: remoteJid,
+            messageId: data.key.id
+          }
         }
-      });
+      ]);
 
     if (logError) throw logError;
 
