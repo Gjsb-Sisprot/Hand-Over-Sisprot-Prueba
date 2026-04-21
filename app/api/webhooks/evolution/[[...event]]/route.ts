@@ -15,6 +15,7 @@ export async function POST(request: NextRequest) {
     payload = await request.json();
     
     // GUARDAR EN LOG DE DIAGNÓSTICO (Indispensable para ver qué pasa)
+    // @ts-ignore
     await supabaseAdmin.from("webhook_logs").insert({
       event_type: payload?.event || "unknown",
       payload: payload,
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
 
     if (convError || !conv) {
       // Si no hay conversación, actualizamos el log con el error pero respondemos 200
+      // @ts-ignore
       await supabaseAdmin.from("webhook_logs").insert({
         event_type: "MATCH_FAILED",
         payload: { phone: incomingPhone, search: [localPhone, suffixPhone] },
@@ -105,6 +107,7 @@ export async function POST(request: NextRequest) {
 
   } catch (err: any) {
     // Si hay un error crítico, lo grabamos en el log para saber qué fue
+    // @ts-ignore
     await supabaseAdmin.from("webhook_logs").insert({
       event_type: "CRITICAL_ERROR",
       payload: { error: err.message, raw_data: payload },
