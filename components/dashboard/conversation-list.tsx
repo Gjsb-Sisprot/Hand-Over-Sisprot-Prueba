@@ -44,12 +44,10 @@ export function ConversationList({
 }: ConversationListProps) {
   const [activeTab, setActiveTab] = useState<TabType>("escalated");
   const [activeConversation, setActiveConversation] = useState<MCPConversation | null>(null);
-  const [chatMessages, setChatMessages] = useState<MCPChatMessage[]>([]);
   const [conversationToTake, setConversationToTake] = useState<MCPConversation | null>(null);
   const [conversationToClose, setConversationToClose] = useState<MCPConversation | null>(null);
   const [conversationToPause, setConversationToPause] = useState<MCPConversation | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
   const { 
     conversations, 
@@ -60,35 +58,14 @@ export function ConversationList({
     initialData: initialConversations
   });
 
-  const { messages: realtimeMessages } = useRealtimeMessages({
-    sessionId: activeConversation?.sessionId || null,
-    initialMessages: chatMessages,
-    isActive: !!activeConversation
-  });
-
-  const handleConversationClick = async (
-    conversation: MCPConversation
-  ) => {
-    if (activeConversation?.sessionId === conversation.sessionId) {
-      return;
-    }
-
-    setIsLoadingHistory(true);
-    try {
-      const messages = await getChatHistory(conversation.sessionId);
-      setChatMessages(messages);
-      setActiveConversation(conversation);
-    } catch (error) {
-      toast.error("Error al cargar el historial");
-    } finally {
-      setIsLoadingHistory(false);
-    }
+  const handleConversationClick = (conversation: MCPConversation) => {
+    setActiveConversation(conversation);
   };
 
   const handleConfirmTakeover = async () => {
     if (!conversationToTake) return;
 
-    optimisticUpdate(conversationToTake.sessionId, {
+    optimisticUpdate(conversationToTake.id, {
       status: "handed_over",
       agent: {
         email: agent?.email || "",
@@ -97,9 +74,9 @@ export function ConversationList({
       },
     });
 
-    setIsLoadingHistory(true);
     try {
-      const messages = await getChatHistory(conversationToTake.sessionId);
+      // Necesitamos el historial para el ticket de GLPI
+      const messages = await getChatHistory(conversationToTake.id);
       const transcript = messages
         .map((m) => `${m.role === "user" ? "Cliente" : "IA"}: ${m.content}`)
         .join("\n");
@@ -111,7 +88,7 @@ export function ConversationList({
       const baseSummary = conversationToTake.summary || metadata.escalationReason || "Sin resumen";
       const fullSummary = `${baseSummary}\n\n--- TRANSCRIPCIÓN ---\n${transcript}`.trim();
 
-      const result = await takeoverConversation(conversationToTake.sessionId, {
+      const result = await takeoverConversation(conversationToTake.id, {
         createTicket: true,
         reason: metadata.escalationReason,
         ticketSummary: fullSummary,
@@ -124,10 +101,8 @@ export function ConversationList({
       }
 
       if (result.glpiTicketId) {
-        optimisticUpdate(conversationToTake.sessionId, { glpiTicketId: result.glpiTicketId });
+        optimisticUpdate(conversationToTake.id, { glpiTicketId: result.glpiTicketId });
       }
-
-      setChatMessages(messages);
 
       const updatedConversation: MCPConversation = {
         ...conversationToTake,
@@ -140,7 +115,10 @@ export function ConversationList({
         },
         timestamps: {
           ...conversationToTake.timestamps,
-          handedOverAt: new Date().toISOString(),
+          escalatedAt: conversationToTake.timestamps?.escalatedAt || null,
+          updatedAt: new Date().toISOString(),
+          createdAt: conversationToTake.timestamps?.createdAt || new Date().toISOString(),
+          closedAt: null,
         },
       };
 
@@ -149,9 +127,8 @@ export function ConversationList({
 
       toast.success("¡Conversación tomada! Ya puedes contactar al cliente.");
     } catch (error) {
+      console.error("[TAKEOVER_UI_ERROR]", error);
       toast.error("Error al procesar el traspaso");
-    } finally {
-      setIsLoadingHistory(false);
     }
   };
 
@@ -174,6 +151,7 @@ export function ConversationList({
     setConversationToClose(null);
     toast.success("Conversación cerrada exitosamente");
 
+    // Historial para GLPI
     const currentMessages = await getChatHistory(conversationId);
     const transcript = currentMessages
       .map((m) => `${m.role === "user" ? "Cliente" : "IA"}: ${m.content}`)
@@ -234,7 +212,7 @@ export function ConversationList({
   const handleBridgeTakeover = async (conv: MCPConversation) => {
     const res = await sendPayFastBridgeMessage(conv.id, "--- Agente ha tomado el control del puente desde el Dashboard ---");
     if (res.success) {
-      optimisticUpdate(conv.sessionId, { status: "handed_over" });
+      optimisticUpdate(conv.id, { status: "handed_over" });
       setActiveConversation({ ...conv, status: "handed_over" });
       toast.success("Control del puente tomado exitosamente");
     } else {
@@ -382,9 +360,7 @@ export function ConversationList({
         {activeConversation ? (
           <ChatWindow 
             conversation={activeConversation} 
-            messages={realtimeMessages}
             onTakeControl={() => handleBridgeTakeover(activeConversation)}
-            isLoading={isLoadingHistory}
           />
         ) : (
           <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-30">
