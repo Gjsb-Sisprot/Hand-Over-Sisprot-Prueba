@@ -149,7 +149,7 @@ export async function getConversationsPaginated(params: {
       .select("*", { count: "exact" })
       .order("updated_at", { ascending: false });
 
-    if (params.status) {
+    if (params.status && params.status !== "undefined") {
       if (Array.isArray(params.status)) {
         query = query.in("status", params.status);
       } else {
