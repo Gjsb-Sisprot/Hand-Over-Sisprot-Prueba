@@ -32,7 +32,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
   const [isTakingControl, setIsTakingControl] = useState(false);
 
   // El ChatWindow ahora es el dueño de sus mensajes y su tiempo real
-  const { messages, isLoading } = useRealtimeMessages({ 
+  const { messages, isMessagesLoading } = useRealtimeMessages({ 
     conversationId: conversation.id,
     isActive: true 
   });
@@ -122,7 +122,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
       {/* Messages */}
       <ScrollArea className="flex-1 p-6">
         <div className="space-y-6 max-w-4xl mx-auto">
-          {isLoading ? (
+          {isMessagesLoading ? (
             <div className="flex flex-col items-center justify-center h-[50vh] text-center space-y-4">
               <div className="relative">
                 <div className="absolute inset-0 bg-primary/20 blur-xl rounded-full animate-pulse" />
