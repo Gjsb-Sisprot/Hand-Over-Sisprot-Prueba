@@ -15,7 +15,7 @@ import { TakeoverDialog } from "./takeover-dialog";
 import { CloseDialog } from "./close-dialog";
 import { PauseDialog } from "./pause-dialog";
 import { toast } from "sonner";
-import { useRealtimeConversations } from "../../hooks/use-realtime-conversations";
+import { useDashboardConversations } from "../../hooks";
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
 import { Loader2, Inbox, Clock, CheckCircle2, Search, MessageSquareX, Bot, User } from "lucide-react";
@@ -53,7 +53,7 @@ export function ConversationList({
     isLoading, 
     refresh, 
     optimisticUpdate 
-  } = useRealtimeConversations({
+  } = useDashboardConversations({
     initialData: initialConversations
   });
 
