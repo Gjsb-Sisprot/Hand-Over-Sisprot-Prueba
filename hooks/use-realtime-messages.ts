@@ -26,6 +26,7 @@ export function useDashboardMessages({
 } {
   const [messages, setMessages] = useState<MCPChatMessage[]>(initialMessages);
   const [isLoading, setIsLoading] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
   const isFetchingRef = useRef(false);
 
   const fetchMessages = useCallback(async () => {
