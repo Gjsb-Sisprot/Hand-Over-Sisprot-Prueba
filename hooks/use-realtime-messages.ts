@@ -67,13 +67,18 @@ export function useDashboardMessages({
           table: "chat_logs",
           filter: `conversation_id=eq.${conversationId}`
         },
-        () => {
+        (payload) => {
+          console.log(`[REALTIME] EVENTO RECIBIDO en ${conversationId}:`, payload);
           fetchMessages();
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log(`[REALTIME] Estado de suscripción para ${conversationId}:`, status);
+        setIsConnected(status === "SUBSCRIBED");
+      });
 
     return () => {
+      console.log(`[REALTIME] Desconectando canal ${conversationId}`);
       supabase.removeChannel(channel);
     };
   }, [conversationId, isActive, fetchMessages]);
@@ -81,6 +86,7 @@ export function useDashboardMessages({
   return {
     messages,
     isMessagesLoading: isLoading,
+    isConnected, // Añadido para diagnóstico
     refresh: fetchMessages,
   };
 }
