@@ -72,7 +72,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
     : `🤖 IA: ${conversation.status?.toUpperCase() || 'BUSY'}`;
 
   return (
-    <div className="flex flex-col h-full bg-background relative">
+    <div className="flex flex-col h-full bg-background overflow-hidden">
       {/* Header */}
       <header className="h-[72px] border-b border-border px-6 flex items-center justify-between shrink-0 bg-card/30 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center gap-3">
@@ -120,8 +120,8 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
       </header>
 
       {/* Messages */}
-      <ScrollArea className="flex-1 p-6">
-        <div className="space-y-6 max-w-4xl mx-auto">
+      <ScrollArea className="flex-1 bg-muted/5">
+        <div className="px-8 py-10 space-y-8 max-w-5xl mx-auto">
           {isMessagesLoading ? (
             <div className="flex flex-col items-center justify-center h-[50vh] text-center space-y-4">
               <div className="relative">
@@ -141,42 +141,34 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
             messages.map((m, idx) => {
               const isAI = m.role === "assistant" || m.role === "model";
               const isAgent = m.role === "agent";
-              const isUser = m.role === "user";
               
-              let displayAuthor = "Cliente";
-              if (isAI) displayAuthor = "Susana (IA)";
-              if (isAgent) displayAuthor = m.authorName || "Agente";
-              if (isUser) displayAuthor = conversation.client?.name || "Cliente";
-
               return (
                 <div 
                   key={m.id || idx} 
                   className={cn(
-                    "flex flex-col max-w-[85%] gap-1 animate-in fade-in slide-in-from-bottom-2 duration-300",
+                    "flex flex-col max-w-[75%] gap-1.5 animate-in fade-in slide-in-from-bottom-2 duration-300",
                     (isAI || isAgent) ? "items-end ml-auto" : "items-start"
                   )}
                 >
-                  <div className="flex items-center gap-2 mb-0.5 px-1">
-                    <span className={cn(
-                      "text-[9px] font-black uppercase tracking-tighter",
-                      (isAI || isAgent) ? "text-primary text-right" : "text-muted-foreground"
-                    )}>
-                      {displayAuthor}
-                    </span>
-                  </div>
                   <div 
                     className={cn(
-                      "px-4 py-2.5 rounded-2xl text-sm leading-relaxed shadow-sm transition-all hover:shadow-md",
+                      "px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm transition-all hover:shadow-md",
                       isAI 
-                        ? "bg-primary text-primary-foreground rounded-tr-none" 
+                        ? "bg-primary text-primary-foreground rounded-tr-none shadow-primary/10" 
                         : isAgent
-                        ? "bg-orange-600 text-white rounded-tr-none"
-                        : "bg-muted text-foreground rounded-tl-none border border-border/50"
+                        ? "bg-orange-600 text-white rounded-tr-none shadow-orange-600/10"
+                        : "bg-card text-foreground rounded-tl-none border border-border/60"
                     )}
                   >
                     {m.content}
                   </div>
-                  <div className="flex items-center gap-1.5 px-1 mt-0.5">
+                  <div className={cn(
+                    "flex items-center gap-1.5 px-1",
+                    (isAI || isAgent) ? "flex-row-reverse" : "flex-row"
+                  )}>
+                    <span className="text-[10px] font-bold text-primary/70 uppercase">
+                      {isAI ? "Susana" : isAgent ? (m.authorName || "Agente") : "Cliente"}
+                    </span>
                     <span className="text-[9px] text-muted-foreground/60 font-medium">
                       {m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Reciente"}
                     </span>
@@ -189,11 +181,11 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
       </ScrollArea>
 
       {/* Input */}
-      <footer className="p-6 bg-background/80 backdrop-blur-sm border-t border-border shrink-0">
-        <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto relative group">
+      <footer className="p-4 border-t border-border bg-card/50 backdrop-blur-md shrink-0">
+        <form onSubmit={handleSendMessage} className="max-w-5xl mx-auto relative group">
           <Input
             placeholder="Escribe tu mensaje aquí..."
-            className="h-14 pl-6 pr-16 bg-card border-border/50 focus:border-primary/50 focus:ring-primary/20 rounded-2xl transition-all shadow-sm group-hover:shadow-md"
+            className="h-12 pl-6 pr-14 bg-background border-border/60 focus:border-primary/50 focus:ring-primary/20 rounded-2xl transition-all shadow-sm group-hover:shadow-md"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             disabled={isSending}
@@ -202,14 +194,16 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
             type="submit" 
             disabled={isSending || !newMessage.trim()}
             size="icon"
-            className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
+            className="absolute right-1.5 top-1/2 -translate-y-1/2 h-9 w-9 rounded-xl bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 transition-all hover:scale-105 active:scale-95"
           >
-            <SendHorizontal className="h-5 w-5" />
+            <SendHorizontal className="h-4 w-4" />
           </Button>
         </form>
-        <p className="text-[10px] text-center text-muted-foreground mt-3 uppercase tracking-widest font-bold">
-          Shift + Enter para nueva línea • Inicia con / para respuestas rápidas
-        </p>
+        <div className="flex items-center justify-center gap-4 mt-2">
+            <p className="text-[9px] text-muted-foreground uppercase tracking-[0.2em] font-black opacity-50">
+              Shift + Enter para nueva línea • Inicia con / para respuestas rápidas
+            </p>
+        </div>
       </footer>
     </div>
   );
