@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDistanceToNow } from "@/lib/date-utils";
 import { useRealtimeStats } from "@/hooks/use-realtime-stats";
-import { useRealtimeConversations } from "@/hooks/use-realtime-conversations";
+import { useDashboardConversations } from "@/hooks";
 import {
   AlertCircle,
   Users,
@@ -37,7 +37,7 @@ export function DashboardStats({
 }: DashboardStatsProps) {
   const { stats, isConnected: statsConnected } = useRealtimeStats(initialStats);
   const { conversations: pendingConversations, isConnected: convsConnected } =
-    useRealtimeConversations({ initialData: initialConversations });
+    useDashboardConversations({ initialData: initialConversations });
 
   const isConnected = statsConnected && convsConnected;
 
