@@ -17,8 +17,11 @@ export async function POST(request: NextRequest) {
 
     const payload = await request.json();
     const { event, data } = payload;
+    
+    console.log(`[WEBHOOK_EVOLUTION] Evento recibido: ${event}`);
 
-    if (event !== "messages.upsert") {
+    // Solo nos interesan los mensajes nuevos (case-insensitive)
+    if (event?.toLowerCase() !== "messages.upsert") {
       return NextResponse.json({ success: true, event_ignored: event });
     }
 
