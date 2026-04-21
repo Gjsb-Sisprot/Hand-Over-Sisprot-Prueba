@@ -15,7 +15,6 @@ import { TakeoverDialog } from "./takeover-dialog";
 import { CloseDialog } from "./close-dialog";
 import { PauseDialog } from "./pause-dialog";
 import { toast } from "sonner";
-import { useRealtimeMessages } from "../../hooks/use-realtime-messages";
 import { useRealtimeConversations } from "../../hooks/use-realtime-conversations";
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
