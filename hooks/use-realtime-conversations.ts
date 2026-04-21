@@ -63,8 +63,11 @@ export function useDashboardConversations({
       try {
         if (isFilterChange) setIsLoading(true);
 
+        // Limpiar el estado para evitar enviar "undefined" o "$undefined" como string
+        const cleanStatus = (status === "undefined" || status === "$undefined" || !status) ? undefined : status;
+
         const data = await getConversationsPaginated({
-          status,
+          status: cleanStatus,
           includeAll,
           pageSize: 100,
         });
