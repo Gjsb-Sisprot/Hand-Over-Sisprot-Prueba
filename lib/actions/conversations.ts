@@ -265,64 +265,45 @@ export async function getConversationBySessionId(
 }
 
 export async function getChatHistory(
-  sessionId: string,
+  conversationId: string,
   limit?: number
 ): Promise<MCPChatMessage[]> {
   try {
-    if (!sessionId) return [];
+    if (!conversationId) return [];
 
-    // 1. Identificar la conversación y el cliente asociado
-    const { data: conv, error: convError } = await supabaseAdmin
+    // 1. Intentar encontrar por ID (UUID) o SessionID (String) para obtener el UUID definitivo
+    const { data: conv } = await supabaseAdmin
       .from("conversations")
-      .select("id, session_id, identification")
-      .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
+      .select("id, identification")
+      .or(`id.eq.${conversationId},session_id.eq.${conversationId}`)
       .maybeSingle();
 
-    if (convError) {
-      console.error("[GET_HISTORY_QUERY_ERROR]", convError);
-    }
+    const targetId = conv?.id || conversationId;
+    const identification = conv?.identification;
 
-    let conversationIds: string[] = [sessionId];
-    let identification: string | null = null;
+    let targetIds: string[] = [targetId];
 
-    if (conv) {
-      conversationIds = [conv.id];
-      if (conv.session_id) conversationIds.push(conv.session_id);
-      identification = conv.identification;
-    }
-
-    // 2. Si hay identificación (DNI/RUC), buscar TODAS las sesiones de este cliente
-    // Esto permite ver el historial unificado de múltiples chats del mismo usuario
+    // 2. Si el cliente está identificado, unificamos sesiones
     if (identification) {
-      const { data: allSessions } = await supabaseAdmin
+      const { data: related } = await supabaseAdmin
         .from("conversations")
-        .select("id, session_id")
+        .select("id")
         .eq("identification", identification);
       
-      if (allSessions) {
-        allSessions.forEach(s => {
-          conversationIds.push(s.id);
-          if (s.session_id) conversationIds.push(s.session_id);
-        });
+      if (related) {
+        targetIds = Array.from(new Set([...targetIds, ...related.map(r => r.id)]));
       }
     }
 
-    // Limpiamos y preparamos los IDs para la consulta final
-    const uniqueIds = Array.from(new Set(conversationIds.filter(Boolean)));
-
-    // 3. Recuperar logs (Bypass RLS para asegurar visibilidad total en Handover)
-    // Buscamos mensajes asociados a cualquiera de los IDs vinculados (UUID o String)
+    // 3. Consultar chat_logs
     const { data, error } = await supabaseAdmin
       .from("chat_logs")
       .select("*")
-      .in("conversation_id", uniqueIds)
+      .in("conversation_id", targetIds)
       .order("created_at", { ascending: true })
       .limit(limit || 250);
 
-    if (error) {
-      console.error("[GET_CHAT_LOGS_ERROR]", error);
-      throw error;
-    }
+    if (error) throw error;
 
     return (data || []).map((row: any) => ({
       id: row.id,
@@ -337,7 +318,7 @@ export async function getChatHistory(
       }
     })) as MCPChatMessage[];
   } catch (error) {
-    console.error("[GET_HISTORY_CRITICAL_ERROR]", error);
+    console.error("[GET_HISTORY_ERROR]", error);
     return [];
   }
 }
@@ -832,7 +813,7 @@ export async function markAllNotificationsRead() {
 
 import { evolutionService } from "../services/evolution";
 
-export async function sendMessage(sessionId: string, content: string) {
+export async function sendMessage(conversationId: string, content: string) {
   const agent = await getCurrentAgent();
   if (!agent) {
     return { error: "No autenticado" };
@@ -845,10 +826,12 @@ export async function sendMessage(sessionId: string, content: string) {
     const { data: conv } = await supabase
       .from("conversations")
       .select("*")
-      .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
+      .or(`id.eq.${conversationId},session_id.eq.${conversationId}`)
       .maybeSingle();
 
     if (!conv) return { error: "Conversación no encontrada" };
+
+    const targetUuid = conv.id;
 
     // Mapeo robusto del teléfono (local)
     const metadata = (conv.metadata || {}) as any;
@@ -863,7 +846,7 @@ export async function sendMessage(sessionId: string, content: string) {
         console.warn('[WHATSAPP_SEND_FAILURE]', whatsappResult.error);
       }
     } else {
-      console.warn('[WHATSAPP_SEND_SKIP] No phone number available for conversation', sessionId);
+      console.warn('[WHATSAPP_SEND_SKIP] No phone number available for conversation', conversationId);
     }
 
     const { error } = await supabase
