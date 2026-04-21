@@ -260,8 +260,8 @@ export function ConversationList({
   return (
     <div className="flex w-full flex-1 min-h-0 overflow-hidden bg-background">
       {/* Columna 1: Lista de Conversaciones (Sidebar Secundario) */}
-      <div className="w-[350px] flex flex-col border-r border-border shrink-0 bg-card/10">
-        <header className="p-6 border-b border-border space-y-4 shrink-0 bg-card/30 backdrop-blur-sm">
+      <div className="w-[320px] flex flex-col border-r border-border shrink-0 bg-card/10">
+        <header className="p-4 border-b border-border space-y-3 shrink-0 bg-card/30 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold uppercase tracking-wider">Conversaciones</h2>
             <Badge variant="secondary" className="font-mono text-[9px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
