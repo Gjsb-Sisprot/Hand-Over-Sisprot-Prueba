@@ -798,7 +798,7 @@ export async function markAllNotificationsRead() {
 
 import { evolutionService } from "../services/evolution";
 
-export async function sendMessage(conversationId: string, content: string) {
+export async function sendMessage(conversationId: string, content: string, mode: "whatsapp" | "bridge" = "whatsapp") {
   const agent = await getCurrentAgent();
   if (!agent) {
     return { error: "No autenticado" };
@@ -822,36 +822,44 @@ export async function sendMessage(conversationId: string, content: string) {
     const metadata = (conv.metadata || {}) as any;
     const phone = conv.contact_phone || metadata.phone || metadata.tel || null;
 
-    // Intentar enviar por WhatsApp si hay un teléfono disponible
     let whatsappResult = null;
-    if (phone) {
-      whatsappResult = await evolutionService.sendWhatsAppMessage(phone, content);
-      
-      if (!whatsappResult.success) {
-        console.warn('[WHATSAPP_SEND_FAILURE]', whatsappResult.error);
+
+    // Lógica según el modo seleccionado
+    if (mode === "whatsapp") {
+      if (phone) {
+        whatsappResult = await evolutionService.sendWhatsAppMessage(phone, content);
+        
+        if (!whatsappResult.success) {
+          console.warn('[WHATSAPP_SEND_FAILURE]', whatsappResult.error);
+        }
+      } else {
+        return { error: "No hay número de teléfono disponible para enviar WhatsApp" };
       }
     } else {
-      console.warn('[WHATSAPP_SEND_SKIP] No phone number available for conversation', conversationId);
+      console.log('[BRIDGE_SEND] Enviando mensaje solo por puente (Pay Fast)');
     }
 
+    // Insertar en chat_logs
+    // Si es bridge, usamos role: "model" para que sea visible en Pay-Fast
+    // Si es whatsapp, usamos role: "agent"
     const { error } = await supabase
       .from("chat_logs")
       .insert({
         conversation_id: conv.id,
-        role: "agent",
+        role: mode === "bridge" ? "model" : "agent",
         content: content,
         author_name: agent.name || agent.email,
-        attachments: {
+        attachments: mode === "whatsapp" ? {
           whatsapp_sent: whatsappResult?.success || false,
           whatsapp_error: whatsappResult?.error || null,
           delivered_at: whatsappResult?.success ? new Date().toISOString() : null
-        }
+        } : { via: "bridge" }
       });
 
     if (error) throw error;
 
     // Si falló el envío de WhatsApp, informamos pero el mensaje quedó guardado en el dashboard
-    if (whatsappResult && !whatsappResult.success) {
+    if (mode === "whatsapp" && whatsappResult && !whatsappResult.success) {
       return { 
         success: true, 
         warning: `El mensaje se guardó pero no se pudo enviar por WhatsApp: ${whatsappResult.error}` 
