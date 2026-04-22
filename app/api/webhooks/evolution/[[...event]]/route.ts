@@ -7,7 +7,7 @@ import { supabaseAdmin } from "@/lib/supabase/service-role";
  */
 export async function POST(request: NextRequest) {
   let payload: any = null;
-  let headers: any = {};
+  const headers: any = {};
   
   try {
     request.headers.forEach((value, key) => { headers[key] = value; });
