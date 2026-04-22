@@ -610,7 +610,11 @@ export async function searchConversations(params: {
 /**
  * Busca la conversación activa en el sistema Pay-Fast para un cliente.
  */
-export async function getPayFastConversation(identification: string) {
+export async function getPayFastConversation(identification: string): Promise<{ 
+  success: boolean; 
+  conversation?: any; 
+  error?: string; 
+}> {
   const supabase = await createClient();
   
   const { data, error } = await supabase
@@ -621,16 +625,19 @@ export async function getPayFastConversation(identification: string) {
     .limit(1)
     .maybeSingle();
 
-  if (error) return { error: "Error al buscar sesión de Pay-Fast" };
+  if (error) return { success: false, error: "Error al buscar sesión de Pay-Fast" };
   return { success: true, conversation: data };
 }
 
 /**
  * Envía un mensaje como especialista a una conversación de Pay-Fast.
  */
-export async function sendPayFastBridgeMessage(conversationId: string, content: string) {
+export async function sendPayFastBridgeMessage(conversationId: string, content: string): Promise<{
+  success: boolean;
+  error?: string;
+}> {
   const agent = await getCurrentAgent();
-  if (!agent) return { error: "No autenticado" };
+  if (!agent) return { success: false, error: "No autenticado" };
 
   const supabase = await createClient();
   
@@ -643,7 +650,7 @@ export async function sendPayFastBridgeMessage(conversationId: string, content: 
       author_name: agent.name || agent.email
     });
 
-  if (error) return { error: "Error al enviar el mensaje" };
+  if (error) return { success: false, error: "Error al enviar el mensaje" };
   
   // Actualizar status de la conversación para que el asistente no responda automáticamente
   await supabase
