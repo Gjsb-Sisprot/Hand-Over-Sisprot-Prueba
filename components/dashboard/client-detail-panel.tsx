@@ -14,7 +14,8 @@ import {
   Pause,
   ChevronRight,
   Mail,
-  Phone
+  Phone,
+  Calendar
 } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +23,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { formatDateTime } from "@/lib/date-utils";
+import { useState, useEffect } from "react";
+import { getTechnicians, Technician } from "@/lib/actions/visits";
+import { VisitDialog } from "./visit-dialog";
 
 
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -38,6 +42,12 @@ export function ClientDetailPanel({
   onPauseConversation
 }: ClientDetailPanelProps) {
   const client = conversation.client ?? {};
+  const [isVisitDialogOpen, setIsVisitDialogOpen] = useState(false);
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+
+  useEffect(() => {
+    getTechnicians().then(setTechnicians);
+  }, []);
   
   return (
     <div className="w-[340px] h-full max-h-full flex flex-col bg-card/30 border-l border-border shrink-0 overflow-hidden">
@@ -85,6 +95,7 @@ export function ClientDetailPanel({
       <Separator className="bg-border/50" />
 
       {/* Main Actions compactados */}
+      
       <div className="p-4 grid grid-cols-1 gap-2">
         <div className="grid grid-cols-2 gap-2">
           <Button 
@@ -104,15 +115,39 @@ export function ClientDetailPanel({
             <span className="text-[10px] font-bold uppercase tracking-widest">Cerrar</span>
           </Button>
         </div>
-        <Button 
-          variant="outline" 
-          className="h-auto py-2 flex flex-col gap-0.5 border-orange-500/20 bg-orange-500/5 text-orange-600 hover:bg-orange-500/10 hover:border-orange-500/40 w-full"
-          onClick={() => onPauseConversation(conversation.sessionId, true)}
-        >
-          <History className="h-3.5 w-3.5" />
-          <span className="text-[9px] font-black uppercase tracking-[0.1em]">Escalamiento GLPI</span>
-        </Button>
+        <div className="grid grid-cols-2 gap-2">
+          <Button 
+            variant="outline" 
+            className="h-auto py-2 flex flex-col gap-0.5 border-orange-500/20 bg-orange-500/5 text-orange-600 hover:bg-orange-500/10 hover:border-orange-500/40 w-full"
+            onClick={() => onPauseConversation(conversation.sessionId, true)}
+          >
+            <History className="h-3.5 w-3.5" />
+            <span className="text-[9px] font-black uppercase tracking-[0.1em]">Escalamiento GLPI</span>
+          </Button>
+          <Button 
+            variant="outline" 
+            className="h-auto py-2 flex flex-col gap-0.5 border-primary/20 bg-primary/5 text-primary hover:bg-primary/10 hover:border-primary/40 w-full"
+            onClick={() => setIsVisitDialogOpen(true)}
+          >
+            <Calendar className="h-3.5 w-3.5" />
+            <span className="text-[9px] font-black uppercase tracking-[0.1em]">Agendar Visita</span>
+          </Button>
+        </div>
       </div>
+
+      <VisitDialog 
+        isOpen={isVisitDialogOpen}
+        onClose={() => setIsVisitDialogOpen(false)}
+        onSuccess={() => setIsVisitDialogOpen(false)}
+        technicians={technicians}
+        initialData={{
+          client_name: client.name || "",
+          client_identification: client.identification || "",
+          contract_number: client.contract || "",
+          visit_date: new Date().toISOString(),
+          status: 'scheduled'
+        } as any}
+      />
 
       <Separator className="bg-border/50" />
 
