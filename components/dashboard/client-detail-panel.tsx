@@ -40,8 +40,8 @@ export function ClientDetailPanel({
   const client = conversation.client ?? {};
   
   return (
-    <div className="w-[340px] flex flex-col bg-card/30 border-l border-border shrink-0 overflow-hidden">
-      <ScrollArea className="flex-1">
+    <div className="w-[340px] h-full max-h-full flex flex-col bg-card/30 border-l border-border shrink-0 overflow-hidden">
+      <ScrollArea className="flex-1 w-full h-full">
       {/* Client Identity compactado */}
       <div className="p-4 flex flex-col items-center text-center space-y-3">
         <Avatar className="h-20 w-20 border-4 border-background shadow-lg">
