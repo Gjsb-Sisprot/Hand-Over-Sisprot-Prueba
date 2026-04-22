@@ -131,9 +131,9 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
             <Button 
               onClick={handleTakeControl}
               disabled={isTakingControl}
-              className="ml-2 bg-orange-600 hover:bg-orange-700 text-white font-bold px-4 h-9 animate-in fade-in zoom-in duration-300"
+              className="ml-2 bg-orange-600 hover:bg-orange-500 text-white font-black px-5 h-9 rounded-xl shadow-[0_4px_14px_rgba(234,88,12,0.3)] hover:shadow-[0_6px_20px_rgba(234,88,12,0.4)] transition-all uppercase tracking-widest text-[10px] border-b-4 border-orange-800 active:border-b-0 active:translate-y-1"
             >
-              {isTakingControl ? "Tomando..." : "TOMAR CONTROL"}
+              {isTakingControl ? "Procesando..." : "TOMAR CONTROL"}
             </Button>
           )}
         </div>
