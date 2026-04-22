@@ -175,7 +175,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
                     className={cn(
                       "px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm transition-all hover:shadow-md",
                       (isAI || isAgent) 
-                        ? (m.metadata?.attachments?.whatsapp_sent 
+                        ? ((m.metadata as any)?.attachments?.whatsapp_sent 
                             ? "bg-[#25D366] text-white rounded-tr-none shadow-green-600/10" 
                             : "bg-primary text-primary-foreground rounded-tr-none shadow-primary/10") 
                         : "bg-card text-foreground rounded-tl-none border border-border/60"
@@ -188,7 +188,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
                     (isAI || isAgent) ? "flex-row-reverse" : "flex-row"
                   )}>
                     <span className="text-[10px] font-bold text-primary/70 uppercase">
-                      {isAI ? "Susana" : isAgent ? (m.metadata?.attachments?.whatsapp_sent ? "WhatsApp" : (m.authorName || "Agente")) : "Cliente"}
+                      {isAI ? "Susana" : isAgent ? ((m.metadata as any)?.attachments?.whatsapp_sent ? "WhatsApp" : (m.authorName || "Agente")) : "Cliente"}
                     </span>
                     <span className="text-[9px] text-muted-foreground/60 font-medium">
                       {m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Reciente"}
