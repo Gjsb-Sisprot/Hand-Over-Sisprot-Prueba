@@ -1,17 +1,29 @@
 import { Suspense } from "react";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { Header } from "@/components/dashboard/header";
+import { DashboardHeader } from "@/components/dashboard/header";
 import { CalendarView } from "@/components/dashboard/calendar-view";
 import { getTechnicians } from "@/lib/actions/visits";
+import { createClient } from "@/lib/supabase/server";
 
 export default async function CalendarPage() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const { data: agent } = await supabase
+    .from("agents")
+    .select("*")
+    .eq("id", user?.id || "")
+    .single();
+
   const technicians = await getTechnicians();
 
   return (
     <div className="flex h-screen bg-background overflow-hidden relative">
       <Sidebar />
       <div className="flex-1 flex flex-col min-w-0 h-full relative">
-        <Header />
+        <DashboardHeader agent={agent} />
         <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
           <div className="max-w-[1400px] mx-auto h-full flex flex-col">
             <div className="flex items-center justify-between mb-8">
