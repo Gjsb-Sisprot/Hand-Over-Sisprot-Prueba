@@ -215,8 +215,8 @@ export async function getConversationBySessionId(
     
     if (!user) return null;
 
-    // Búsqueda directa en Supabase (Función Local)
-    const { data: conv, error } = await supabase
+    // Búsqueda directa en Supabase (Usamos Admin para asegurar acceso total del Agente)
+    const { data: conv, error } = await supabaseAdmin
       .from("conversations")
       .select("*")
       .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
