@@ -208,6 +208,21 @@ export function ConversationList({
     }
   };
 
+  const handleSimplePause = async (conv: MCPConversation) => {
+    optimisticUpdate(conv.id, { status: "paused" });
+    setActiveConversation(null);
+    toast.success("Modelo pausado (sin ticket)");
+
+    const result = await pauseConversation(conv.sessionId, "Pausa manual del agente (sin ticket)", {
+        createTicket: false
+    });
+
+    if (result.error) {
+        toast.error(result.error);
+        refresh();
+    }
+  };
+
   const handleBridgeTakeover = async (conv: MCPConversation) => {
     const res = await sendPayFastBridgeMessage(conv.id, "--- Agente ha tomado el control del puente desde el Dashboard ---");
     if (res.success) {
@@ -377,7 +392,13 @@ export function ConversationList({
         <ClientDetailPanel
           conversation={activeConversation}
           onCloseConversation={() => setConversationToClose(activeConversation)}
-          onPauseConversation={() => setConversationToPause(activeConversation)}
+          onPauseConversation={(id, isEscalation) => {
+            if (isEscalation) {
+                setConversationToPause(activeConversation);
+            } else {
+                handleSimplePause(activeConversation);
+            }
+          }}
         />
       )}
 
