@@ -49,7 +49,12 @@ export function PayFastBridgeChat({ identification, clientName, onClose }: PayFa
       .eq("conversation_id", convId)
       .order("created_at", { ascending: true });
     
-    if (data) setMessages(data.map(msg => ({ ...msg, id: String(msg.id) })) as Message[]);
+    if (data) setMessages((data as any[]).map((msg: any) => ({ 
+      id: String(msg.id),
+      role: msg.role || "",
+      content: msg.content || "",
+      created_at: msg.created_at || new Date().toISOString()
+    })) as Message[]);
   };
 
   const subscribeToMessages = (convId: string) => {
@@ -66,7 +71,12 @@ export function PayFastBridgeChat({ identification, clientName, onClose }: PayFa
         },
         (payload) => {
           const newMsg = payload.new as any;
-          setMessages((prev) => [...prev, { ...newMsg, id: String(newMsg.id) } as Message]);
+          setMessages((prev) => [...prev, { 
+            id: String(newMsg.id),
+            role: newMsg.role || "",
+            content: newMsg.content || "",
+            created_at: newMsg.created_at || new Date().toISOString()
+          } as Message]);
         }
       )
       .subscribe();
