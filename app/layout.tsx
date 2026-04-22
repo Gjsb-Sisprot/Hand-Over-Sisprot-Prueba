@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Handover SISPROT - Sistema de Relevo Humano",
-  description: "Sistema de relevo humano para conversaciones atendidas por IA",
+  title: "Taurus Chat SISPROT - Sistema de Relevo Humano",
+  description: "Sistema institucional de relevo humano para conversaciones inteligentes",
 };
 
 export default function RootLayout({
