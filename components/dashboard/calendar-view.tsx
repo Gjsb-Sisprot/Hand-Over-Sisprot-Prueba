@@ -25,7 +25,7 @@ import {
   eachDayOfInterval,
   parseISO
 } from "date-fns";
-import { es } from "date-fns/locale";
+import { es } from "date-fns/locale/es";
 import { cn } from "@/lib/utils";
 import { SupportVisit, Technician, getVisits } from "@/lib/actions/visits";
 import { VisitDialog } from "./visit-dialog";
