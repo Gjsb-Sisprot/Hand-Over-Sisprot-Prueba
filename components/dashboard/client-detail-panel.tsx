@@ -29,7 +29,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface ClientDetailPanelProps {
   conversation: MCPConversation;
   onCloseConversation: (id: string) => void;
-  onPauseConversation: (id: string) => void;
+  onPauseConversation: (id: string, isEscalation?: boolean) => void;
 }
 
 export function ClientDetailPanel({
@@ -71,22 +71,32 @@ export function ClientDetailPanel({
       <Separator className="bg-border/50" />
 
       {/* Main Actions compactados */}
-      <div className="p-4 grid grid-cols-2 gap-2">
+      <div className="p-4 grid grid-cols-1 gap-2">
+        <div className="grid grid-cols-2 gap-2">
+          <Button 
+            variant="outline" 
+            className="h-auto py-2 flex flex-col gap-1 border-blue-500/20 bg-blue-500/5 text-blue-600 hover:bg-blue-500/10 hover:border-blue-500/40"
+            onClick={() => onPauseConversation(conversation.sessionId)}
+          >
+            <Pause className="h-4 w-4" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Pausar</span>
+          </Button>
+          <Button 
+            variant="outline"
+            className="h-auto py-2 flex flex-col gap-1 border-green-500/20 bg-green-500/5 text-green-600 hover:bg-green-500/10 hover:border-green-500/40"
+            onClick={() => onCloseConversation(conversation.sessionId)}
+          >
+            <CheckCircle className="h-4 w-4" />
+            <span className="text-[10px] font-bold uppercase tracking-widest">Cerrar</span>
+          </Button>
+        </div>
         <Button 
           variant="outline" 
-          className="h-auto py-2 flex flex-col gap-1 border-orange-500/20 bg-orange-500/5 text-orange-600 hover:bg-orange-500/10 hover:border-orange-500/40"
-          onClick={() => onPauseConversation(conversation.sessionId)}
+          className="h-auto py-2 flex flex-col gap-0.5 border-orange-500/20 bg-orange-500/5 text-orange-600 hover:bg-orange-500/10 hover:border-orange-500/40 w-full"
+          onClick={() => onPauseConversation(conversation.sessionId, true)}
         >
-          <Pause className="h-4 w-4" />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Pausar</span>
-        </Button>
-        <Button 
-          variant="outline"
-          className="h-auto py-2 flex flex-col gap-1 border-green-500/20 bg-green-500/5 text-green-600 hover:bg-green-500/10 hover:border-green-500/40"
-          onClick={() => onCloseConversation(conversation.sessionId)}
-        >
-          <CheckCircle className="h-4 w-4" />
-          <span className="text-[10px] font-bold uppercase tracking-widest">Cerrar</span>
+          <History className="h-3.5 w-3.5" />
+          <span className="text-[9px] font-black uppercase tracking-[0.1em]">Escalamiento GLPI</span>
         </Button>
       </div>
 
