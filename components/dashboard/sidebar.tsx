@@ -7,9 +7,7 @@ import {
   LayoutDashboard, 
   Settings, 
   Users, 
-  Search,
-  Radio,
-  Tag,
+  Calendar,
   LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -18,7 +16,7 @@ import { cn } from "@/lib/utils";
 const sidebarItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
   { icon: MessageSquare, label: "Conversaciones", href: "/dashboard/conversations" },
-  { icon: Search, label: "Búsqueda", href: "#" },
+  { icon: Calendar, label: "Soporte", href: "/dashboard/calendar" },
   { icon: Radio, label: "En vivo", href: "#" },
   { icon: Users, label: "Contactos", href: "#" },
   { icon: Tag, label: "Etiquetas", href: "#" },
