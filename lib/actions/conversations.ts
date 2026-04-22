@@ -210,10 +210,9 @@ export async function getConversationBySessionId(
   sessionId: string
 ): Promise<MCPConversation | null> {
   try {
-    const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) return null;
+    // Usamos supabaseAdmin para asegurar que el sistema pueda leer la conversación
+    // sin importar las políticas de RLS, confiando en que el llamador (Server Action)
+    // ya validó al Agente.
 
     // Búsqueda directa en Supabase (Usamos Admin para asegurar acceso total del Agente)
     const { data: conv, error } = await supabaseAdmin
