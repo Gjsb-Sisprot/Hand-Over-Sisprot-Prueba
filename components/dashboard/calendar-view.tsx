@@ -141,10 +141,6 @@ export function CalendarView({ technicians }: CalendarViewProps) {
     const startDate = startOfWeek(monthStart);
     const endDate = endOfWeek(monthEnd);
 
-    const rows = [];
-    let days = [];
-    let day = startDate;
-
     const calendarDays = eachDayOfInterval({
       start: startDate,
       end: endDate
