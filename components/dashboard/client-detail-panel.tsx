@@ -119,8 +119,8 @@ export function ClientDetailPanel({
       {/* Details Sections compactados */}
       <div className="px-4 pb-6 space-y-5 mt-4">
         <section className="space-y-3">
-          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-70">Datos de Contacto</h3>
-          <div className="space-y-3 pt-1">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/50">Datos de Contacto</h3>
+          <div className="grid grid-cols-1 gap-2 pt-1">
             <DetailItem icon={IdCard} label="Identificación" value={client.identification || "12339072"} />
             <DetailItem icon={Building} label="Contrato" value={client.contract || "4929"} />
             <DetailItem icon={Phone} label="Móvil" value={client.phone || "N/A"} />
@@ -131,8 +131,8 @@ export function ClientDetailPanel({
         <Separator className="bg-border/30" />
 
         <section className="space-y-3">
-          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-70">Información del Caso</h3>
-          <div className="space-y-3 pt-1">
+          <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/50">Información del Caso</h3>
+          <div className="grid grid-cols-1 gap-2 pt-1">
             <DetailItem icon={History} label="Conversación ID" value={conversation.sessionId} />
             <DetailItem icon={Clock} label="Iniciada" value={conversation.timestamps?.createdAt ? formatDateTime(new Date(conversation.timestamps.createdAt)) : "N/A"} />
           </div>
@@ -218,13 +218,13 @@ export function ClientDetailPanel({
 
 function DetailItem({ icon: Icon, label, value, isLink, href }: { icon: any, label: string, value: string, isLink?: boolean, href?: string }) {
   const content = (
-    <div className="flex items-center gap-3 group">
-      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary transition-colors">
+    <div className="flex items-center gap-3 p-2 rounded-xl bg-card/40 border border-border/40 backdrop-blur-sm group hover:border-primary/30 hover:bg-primary/5 transition-all duration-300">
+      <div className="h-8 w-8 rounded-lg bg-background flex items-center justify-center text-primary/70 group-hover:bg-primary/20 group-hover:text-primary transition-colors shadow-sm">
         <Icon className="h-4 w-4" />
       </div>
-      <div>
-        <p className="text-[10px] font-bold text-muted-foreground uppercase leading-none mb-1">{label}</p>
-        <p className="text-sm font-medium leading-none">{value}</p>
+      <div className="flex-1 min-w-0">
+        <p className="text-[9px] font-black text-primary/40 uppercase tracking-widest mb-0.5">{label}</p>
+        <p className="text-sm font-semibold truncate text-foreground/90">{value}</p>
       </div>
       {isLink && <ChevronRight className="h-3 w-3 ml-auto text-muted-foreground" />}
     </div>
