@@ -253,18 +253,25 @@ export function ConversationList({
     <button
       onClick={() => setActiveTab(id)}
       className={cn(
-        "flex items-center gap-2 px-4 py-3 text-[10px] font-bold uppercase tracking-widest transition-all border-b-2",
+        "flex flex-col items-center justify-center gap-1.5 px-4 py-3 text-[9px] font-black uppercase tracking-[0.2em] transition-all border-b-2 h-full min-w-[80px]",
         activeTab === id 
           ? "border-primary text-primary bg-primary/5 shadow-[inset_0_-2px_0_0_rgba(var(--primary),1)]" 
-          : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/50"
+          : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted/5 group"
       )}
     >
-      {icon}
+      <div className={cn(
+        "transition-transform duration-300",
+        activeTab === id ? "scale-110" : "group-hover:scale-110"
+      )}>
+        {icon}
+      </div>
       <span>{label}</span>
       {count > 0 && (
         <Badge 
-          variant={id === "escalated" ? "destructive" : "secondary"} 
-          className={cn("ml-1 h-4 min-w-[18px] justify-center px-1 text-[9px] rounded-full", id === "escalated" && "animate-pulse")}
+          className={cn(
+            "h-4 min-w-[18px] justify-center px-1 text-[8px] rounded-full font-bold", 
+            id === "escalated" ? "bg-red-600 hover:bg-red-700 animate-pulse" : "bg-primary/20 text-primary hover:bg-primary/30"
+          )}
         >
           {count}
         </Badge>
