@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import {
-  Headphones,
+  MessageSquareMore,
   LogOut,
   User,
   MessageSquare,
@@ -62,11 +62,11 @@ export function DashboardHeader({ agent }: DashboardHeaderProps) {
       <div className="container flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-6">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <div className="p-1.5 rounded-md bg-primary/10">
-              <Headphones className="h-5 w-5 text-primary" />
+            <div className="p-1.5 rounded-md bg-primary text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.3)]">
+              <MessageSquareMore className="h-5 w-5" />
             </div>
-            <span className="font-semibold text-lg hidden sm:inline-block">
-              Handover
+            <span className="font-black text-xl hidden sm:inline-block tracking-tighter uppercase">
+              Taurus Chat
             </span>
           </Link>
 
