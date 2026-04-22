@@ -126,6 +126,66 @@ export function ClientDetailPanel({
 
         <Separator className="bg-border/30" />
 
+        <section className="space-y-4">
+          <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-70">Contratos Asociados</h3>
+          <div className="space-y-3">
+            {(conversation.metadata as any)?.allContracts && (conversation.metadata as any).allContracts.length > 0 ? (
+              (conversation.metadata as any).allContracts.map((contract: any) => (
+                <div 
+                  key={contract.contractId} 
+                  className={`p-3 rounded-xl border transition-all ${
+                    contract.contractId.toString() === client.contract?.toString() 
+                      ? "bg-primary/5 border-primary/30 ring-1 ring-primary/20" 
+                      : "bg-muted/10 border-border/50"
+                  }`}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex items-center gap-2">
+                      <CreditCard className={`h-3.5 w-3.5 ${contract.contractId.toString() === client.contract?.toString() ? "text-primary" : "text-muted-foreground"}`} />
+                      <span className="text-sm font-bold">#{contract.contractId}</span>
+                    </div>
+                    <Badge 
+                      variant="outline" 
+                      className={`text-[9px] px-1.5 py-0 border-none uppercase ${
+                        contract.isActive 
+                          ? "bg-green-500/10 text-green-600" 
+                          : "bg-red-500/10 text-red-600"
+                      }`}
+                    >
+                      {contract.statusName || contract.status}
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-[11px]">
+                    <div className="space-y-0.5">
+                      <p className="text-muted-foreground opacity-70 font-semibold uppercase text-[8px]">Plan</p>
+                      <p className="font-medium truncate">{contract.planName || "N/A"}</p>
+                    </div>
+                    <div className="space-y-0.5 text-right">
+                      <p className="text-muted-foreground opacity-70 font-semibold uppercase text-[8px]">Deuda</p>
+                      <p className={`font-bold ${contract.hasDebt ? "text-orange-600" : "text-green-600"}`}>
+                        ${contract.debt}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-2 flex items-center gap-1.5 opacity-60">
+                    <Building className="h-3 w-3" />
+                    <span className="text-[10px] truncate">{contract.sector || "N/A"}</span>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="p-4 rounded-xl border border-dashed border-border flex flex-col items-center justify-center text-center space-y-2 opacity-50">
+                <CreditCard className="h-8 w-8 text-muted-foreground" />
+                <p className="text-xs">No hay información de otros contratos</p>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <Separator className="bg-border/30" />
+
         <section className="space-y-3">
           <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground opacity-70">Herramientas Externas</h3>
           <div className="space-y-2 pt-1">
