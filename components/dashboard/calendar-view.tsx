@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -44,18 +44,18 @@ export function CalendarView({ technicians }: CalendarViewProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedVisit, setSelectedVisit] = useState<SupportVisit | undefined>(undefined);
 
-  const fetchVisits = async () => {
+  const fetchVisits = useCallback(async () => {
     setLoading(true);
     const start = startOfWeek(startOfMonth(currentMonth)).toISOString();
     const end = endOfWeek(endOfMonth(currentMonth)).toISOString();
     const data = await getVisits(start, end);
     setVisits(data);
     setLoading(false);
-  };
+  }, [currentMonth]);
 
   useEffect(() => {
     fetchVisits();
-  }, [currentMonth]);
+  }, [currentMonth, fetchVisits]);
 
   const renderHeader = () => {
     return (
