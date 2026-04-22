@@ -394,6 +394,8 @@ export async function takeoverConversation(
       }
     }
 
+    if (!conversation) return { error: "Conversación no encontrada" };
+
     // ACTUALIZACIÓN DIRECTA EN SUPABASE
     const { error: updateError } = await supabaseAdmin
       .from("conversations")
@@ -404,7 +406,7 @@ export async function takeoverConversation(
         glpi_ticket_id: glpiTicketId ? glpiTicketId.toString() : conversation?.glpiTicketId?.toString(),
         updated_at: new Date().toISOString(),
       })
-      .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
+      .eq("id", conversation.id);
 
     if (updateError) throw updateError;
 
@@ -456,6 +458,8 @@ export async function pauseConversation(
       }
     }
 
+    if (!conversation) return { error: "Conversación no encontrada" };
+
     // ACTUALIZACIÓN DIRECTA EN SUPABASE
     const { error: updateError } = await supabaseAdmin
       .from("conversations")
@@ -464,7 +468,7 @@ export async function pauseConversation(
         updated_at: new Date().toISOString(),
         glpi_ticket_id: glpiTicketId ? glpiTicketId.toString() : conversation?.glpiTicketId?.toString(),
       })
-      .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
+      .eq("id", conversation.id);
 
     if (updateError) throw updateError;
 
@@ -507,6 +511,8 @@ export async function closeConversation(
       if (glpiResult.success) glpiTicketId = glpiResult.ticketId;
     }
 
+    if (!conversation) return { error: "Conversación no encontrada" };
+
     // ACTUALIZACIÓN DIRECTA EN SUPABASE
     const { error: updateError } = await supabaseAdmin
       .from("conversations")
@@ -517,7 +523,7 @@ export async function closeConversation(
         closed_by: options?.closedBy ?? "agent",
         glpi_ticket_id: glpiTicketId ? glpiTicketId.toString() : conversation?.glpiTicketId?.toString(),
       })
-      .or(`session_id.eq.${sessionId},id.eq.${sessionId}`);
+      .eq("id", conversation.id);
 
     if (updateError) throw updateError;
 
