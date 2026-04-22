@@ -8,6 +8,8 @@ import {
   Settings, 
   Users, 
   Calendar,
+  Radio,
+  Tag,
   LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
