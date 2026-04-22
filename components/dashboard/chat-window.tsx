@@ -87,7 +87,9 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
           </Avatar>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold">{conversation.client?.name || "Cliente"}</h3>
+              <h3 className="text-sm font-semibold truncate max-w-[150px] sm:max-w-[250px]" title={conversation.client?.name || "Cliente"}>
+                {conversation.client?.name || "Cliente"}
+              </h3>
               <Badge variant="outline" className={cn(
                 "text-[10px] px-1.5 py-0 h-4 border-primary/20",
                 conversation.status === "handed_over" ? "bg-primary/10 text-primary" : "bg-orange-500/10 text-orange-500 animate-pulse"
@@ -96,8 +98,22 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
               </Badge>
             </div>
             <div className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">En línea</span>
+              {(() => {
+                const lastSeen = conversation.timestamps?.updatedAt ? new Date(conversation.timestamps.updatedAt) : null;
+                const isOnline = lastSeen && (new Date().getTime() - lastSeen.getTime()) < 10 * 60 * 1000; // 10 mins
+                
+                return (
+                  <>
+                    <span className={cn(
+                      "h-2 w-2 rounded-full",
+                      isOnline ? "bg-green-500 animate-pulse" : "bg-gray-400"
+                    )} />
+                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                      {isOnline ? "En línea" : `Último msj: ${lastSeen ? lastSeen.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}`}
+                    </span>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>
@@ -159,7 +175,9 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
                     className={cn(
                       "px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm transition-all hover:shadow-md",
                       (isAI || isAgent) 
-                        ? "bg-primary text-primary-foreground rounded-tr-none shadow-primary/10" 
+                        ? (m.metadata?.attachments?.whatsapp_sent 
+                            ? "bg-[#25D366] text-white rounded-tr-none shadow-green-600/10" 
+                            : "bg-primary text-primary-foreground rounded-tr-none shadow-primary/10") 
                         : "bg-card text-foreground rounded-tl-none border border-border/60"
                     )}
                   >
@@ -170,7 +188,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
                     (isAI || isAgent) ? "flex-row-reverse" : "flex-row"
                   )}>
                     <span className="text-[10px] font-bold text-primary/70 uppercase">
-                      {isAI ? "Susana" : isAgent ? (m.authorName || "Agente") : "Cliente"}
+                      {isAI ? "Susana" : isAgent ? (m.metadata?.attachments?.whatsapp_sent ? "WhatsApp" : (m.authorName || "Agente")) : "Cliente"}
                     </span>
                     <span className="text-[9px] text-muted-foreground/60 font-medium">
                       {m.createdAt ? new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Reciente"}
@@ -212,7 +230,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
                     )}
                 >
                     <Globe className="h-3 w-3" />
-                    PY FAST
+                    SUSANA
                 </Button>
             </div>
             
