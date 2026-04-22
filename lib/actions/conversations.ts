@@ -98,7 +98,7 @@ export async function getConversations(
   try {
     const agent = await getCurrentAgent();
     
-    let query = supabaseAdmin
+    let query = (supabaseAdmin as any)
       .from("conversations")
       .select("*")
       .order("updated_at", { ascending: false });
@@ -144,7 +144,7 @@ export async function getConversationsPaginated(params: {
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
-    let query = supabaseAdmin
+    let query = (supabaseAdmin as any)
       .from("conversations")
       .select("*", { count: "exact" })
       .order("updated_at", { ascending: false });
@@ -215,7 +215,7 @@ export async function getConversationBySessionId(
     // ya validó al Agente.
 
     // Búsqueda directa en Supabase (Usamos Admin para asegurar acceso total del Agente)
-    const { data: conv, error } = await supabaseAdmin
+    const { data: conv, error } = await (supabaseAdmin as any)
       .from("conversations")
       .select("*")
       .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
@@ -271,7 +271,7 @@ export async function getChatHistory(
     if (!conversationId) return [];
 
     // 1. Intentar encontrar por ID (UUID) o SessionID (String) para obtener el UUID definitivo
-    const { data: conv } = await supabaseAdmin
+    const { data: conv } = await (supabaseAdmin as any)
       .from("conversations")
       .select("id, identification")
       .or(`id.eq.${conversationId},session_id.eq.${conversationId}`)
@@ -396,7 +396,7 @@ export async function takeoverConversation(
     if (!conversation) return { error: "Conversación no encontrada" };
 
     // ACTUALIZACIÓN DIRECTA EN SUPABASE
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await (supabaseAdmin as any)
       .from("conversations")
       .update({
         status: "handed_over",
@@ -410,7 +410,7 @@ export async function takeoverConversation(
     if (updateError) throw updateError;
 
     if (agent) {
-      await supabaseAdmin
+      await (supabaseAdmin as any)
         .from("agents")
         .update({ last_active_at: new Date().toISOString() })
         .eq("id", agent.id);
@@ -460,7 +460,7 @@ export async function pauseConversation(
     if (!conversation) return { error: "Conversación no encontrada" };
 
     // ACTUALIZACIÓN DIRECTA EN SUPABASE
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await (supabaseAdmin as any)
       .from("conversations")
       .update({ 
         status: "paused",
@@ -471,7 +471,7 @@ export async function pauseConversation(
 
     if (updateError) throw updateError;
 
-    await supabaseAdmin
+    await (supabaseAdmin as any)
       .from("agents")
       .update({ last_active_at: new Date().toISOString() })
       .eq("id", agent.id);
@@ -513,7 +513,7 @@ export async function closeConversation(
     if (!conversation) return { error: "Conversación no encontrada" };
 
     // ACTUALIZACIÓN DIRECTA EN SUPABASE
-    const { error: updateError } = await supabaseAdmin
+    const { error: updateError } = await (supabaseAdmin as any)
       .from("conversations")
       .update({ 
         status: "closed",
@@ -526,7 +526,7 @@ export async function closeConversation(
 
     if (updateError) throw updateError;
 
-    await supabaseAdmin
+    await (supabaseAdmin as any)
       .from("agents")
       .update({ last_active_at: new Date().toISOString() })
       .eq("id", agent.id);
@@ -541,7 +541,7 @@ export async function closeConversation(
 
 export async function getConversationStats() {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from("conversations")
       .select("status");
 
@@ -555,7 +555,7 @@ export async function getConversationStats() {
       total: data?.length || 0,
     };
 
-    data?.forEach((conv) => {
+    data?.forEach((conv: any) => {
       if (conv.status === "active") stats.active++;
       if (conv.status === "waiting_specialist" || conv.status === "waiting_agent") stats.waitingAgent++;
       if (conv.status === "handed_over") stats.handedOver++;
@@ -581,7 +581,7 @@ export async function searchConversations(params: {
   status?: string;
 }): Promise<MCPConversation[]> {
   try {
-    let query = supabaseAdmin
+    let query = (supabaseAdmin as any)
       .from("conversations")
       .select("*")
       .order("updated_at", { ascending: false });
@@ -617,7 +617,7 @@ export async function getPayFastConversation(identification: string): Promise<{
 }> {
   const supabase = await createClient();
   
-  const { data, error } = await supabase
+  const { data, error } = await (supabase as any)
     .from("conversations")
     .select("id, session_id, status, updated_at")
     .eq("identification", identification)
@@ -653,7 +653,7 @@ export async function sendPayFastBridgeMessage(conversationId: string, content: 
   if (error) return { success: false, error: "Error al enviar el mensaje" };
   
   // Actualizar status de la conversación para que el asistente no responda automáticamente
-  await supabase
+  await (supabase as any)
     .from("conversations")
     .update({ status: "handed_over", updated_at: new Date().toISOString() })
     .eq("id", conversationId);
@@ -680,7 +680,7 @@ export async function getMyAgentStats() {
   }
 
   try {
-    const { data: agent } = await supabase
+    const { data: agent } = await (supabase as any)
       .from("agents")
       .select("email, name")
       .eq("id", user.id)
@@ -689,7 +689,7 @@ export async function getMyAgentStats() {
     if (!agent) return null;
 
     // Obtener estadísticas reales de Supabase
-    const { data: conversations } = await supabaseAdmin
+    const { data: conversations } = await (supabaseAdmin as any)
       .from("conversations")
       .select("status")
       .eq("agent_email", agent.email);
@@ -697,9 +697,9 @@ export async function getMyAgentStats() {
     const stats = {
       agentEmail: agent.email,
       totalConversations: conversations?.length || 0,
-      activeConversations: conversations?.filter(c => c.status === 'handed_over').length || 0,
-      closedConversations: conversations?.filter(c => c.status === 'closed').length || 0,
-      pendingConversations: conversations?.filter(c => c.status === 'waiting_specialist').length || 0,
+      activeConversations: conversations?.filter((c: any) => c.status === 'handed_over').length || 0,
+      closedConversations: conversations?.filter((c: any) => c.status === 'closed').length || 0,
+      pendingConversations: conversations?.filter((c: any) => c.status === 'waiting_specialist').length || 0,
       avgClosureTimeMinutes: null,
       lastTakenAt: null,
     };
@@ -722,7 +722,7 @@ export async function updateAgentAvailability(isAvailable: boolean) {
     return { error: "No autenticado" };
   }
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("agents")
     .update({
       is_available: isAvailable,
@@ -749,7 +749,7 @@ export async function getUnreadNotifications() {
     return [];
   }
 
-  const { data } = await supabase
+  const { data } = await (supabase as any)
     .from("agent_notifications")
     .select("*")
     .eq("agent_id", user.id)
@@ -771,7 +771,7 @@ export async function markNotificationRead(notificationId: string) {
     return { error: "No autenticado" };
   }
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("agent_notifications")
     .update({ is_read: true })
     .eq("id", notificationId)
@@ -795,7 +795,7 @@ export async function markAllNotificationsRead() {
     return { error: "No autenticado" };
   }
 
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("agent_notifications")
     .update({ is_read: true })
     .eq("agent_id", user.id)
@@ -820,7 +820,7 @@ export async function sendMessage(conversationId: string, content: string, mode:
     const supabase = await createClient();
     
     // Buscar UUID de la conversación y toda la información necesaria
-    const { data: conv } = await supabase
+    const { data: conv } = await (supabase as any)
       .from("conversations")
       .select("*")
       .or(`id.eq.${conversationId},session_id.eq.${conversationId}`)
