@@ -33,7 +33,7 @@ export type Technician = {
 
 export async function getTechnicians(): Promise<Technician[]> {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from("technicians")
       .select("*")
       .eq("is_active", true)
@@ -49,7 +49,7 @@ export async function getTechnicians(): Promise<Technician[]> {
 
 export async function getVisits(startDate: string, endDate: string): Promise<SupportVisit[]> {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from("support_visits")
       .select("*, technicians(name)")
       .gte("visit_date", startDate)
@@ -69,7 +69,7 @@ export async function createVisit(visitData: Partial<SupportVisit>) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from("support_visits")
       .insert([{
         ...visitData,
@@ -90,7 +90,7 @@ export async function createVisit(visitData: Partial<SupportVisit>) {
 
 export async function updateVisit(id: string, visitData: Partial<SupportVisit>) {
   try {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from("support_visits")
       .update({
         ...visitData,
@@ -112,7 +112,7 @@ export async function updateVisit(id: string, visitData: Partial<SupportVisit>) 
 
 export async function deleteVisit(id: string) {
   try {
-    const { error } = await supabaseAdmin
+    const { error } = await (supabaseAdmin as any)
       .from("support_visits")
       .delete()
       .eq("id", id);
