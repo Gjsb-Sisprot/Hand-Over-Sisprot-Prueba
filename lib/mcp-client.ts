@@ -186,7 +186,7 @@ export async function getConversationHistory(
 
   if (!conv) return [];
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await (supabaseAdmin as any)
     .from("chat_logs")
     .select("*")
     .eq("conversation_id", conv.id)
