@@ -55,16 +55,30 @@ export function ClientDetailPanel({
           <p className="text-sm text-muted-foreground">Cliente Residencial</p>
         </div>
 
-        <div className="flex gap-4">
-          <Button variant="outline" size="icon" className="rounded-full h-10 w-10 border-border hover:border-primary hover:text-primary transition-all shadow-sm">
-            <Mail className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon" className="rounded-full h-10 w-10 border-border hover:border-primary hover:text-primary transition-all shadow-sm">
-            <MessageCircle className="h-4 w-4" />
-          </Button>
-          <Button variant="outline" size="icon" className="rounded-full h-10 w-10 border-border hover:border-primary hover:text-primary transition-all shadow-sm">
-            <Phone className="h-4 w-4" />
-          </Button>
+        <div className="grid grid-cols-2 gap-3 w-full px-2 mt-2">
+          <div className="bg-primary/5 rounded-2xl p-3 border border-primary/10 flex flex-col items-center justify-center space-y-1">
+             <p className="text-[8px] font-black uppercase tracking-widest text-primary/60">Racha</p>
+             <div className="flex gap-0.5">
+               {[1, 2, 3, 4].map(i => <div key={i} className="h-2 w-2 rounded-full bg-primary" />)}
+               {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <div key={i} className="h-2 w-2 rounded-full bg-primary/20" />)}
+             </div>
+             <p className="text-[10px] font-bold text-primary">4/12 meses</p>
+          </div>
+          
+          <div className="bg-green-500/5 rounded-2xl p-3 border border-green-500/10 flex flex-col items-center justify-center space-y-1">
+             <p className="text-[8px] font-black uppercase tracking-widest text-green-600/60">Estatus Pago</p>
+             <p className="text-lg font-black text-green-600">+5</p>
+          </div>
+
+          <div className="bg-orange-500/5 rounded-2xl p-3 border border-orange-500/10 flex flex-col items-center justify-center space-y-1">
+             <p className="text-[8px] font-black uppercase tracking-widest text-orange-600/60">Promedio Pago</p>
+             <p className="text-xs font-bold text-orange-700">Día 10</p>
+          </div>
+
+          <div className="bg-blue-500/5 rounded-2xl p-3 border border-blue-500/10 flex flex-col items-center justify-center space-y-1">
+             <p className="text-[8px] font-black uppercase tracking-widest text-blue-600/60">Ciclo</p>
+             <p className="text-xs font-bold text-blue-700">Día 15</p>
+          </div>
         </div>
       </div>
 
