@@ -158,10 +158,8 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
                   <div 
                     className={cn(
                       "px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm transition-all hover:shadow-md",
-                      isAI 
+                      (isAI || isAgent) 
                         ? "bg-primary text-primary-foreground rounded-tr-none shadow-primary/10" 
-                        : isAgent
-                        ? "bg-orange-600 text-white rounded-tr-none shadow-orange-600/10"
                         : "bg-card text-foreground rounded-tl-none border border-border/60"
                     )}
                   >
@@ -201,7 +199,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
                     )}
                 >
                     <MessageCircle className="h-3 w-3" />
-                    Evolution API
+                    Whatsapp
                 </Button>
                 <Button
                     type="button"
@@ -214,7 +212,7 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
                     )}
                 >
                     <Globe className="h-3 w-3" />
-                    Py Fast
+                    PY FAST
                 </Button>
             </div>
             
