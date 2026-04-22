@@ -280,7 +280,7 @@ export async function getChatHistory(
     const targetId = conv?.id || conversationId;
 
     // 2. Consultar chat_logs de forma estricta para esta sesión únicamente
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from("chat_logs")
       .select("*")
       .eq("conversation_id", targetId)
@@ -641,7 +641,7 @@ export async function sendPayFastBridgeMessage(conversationId: string, content: 
 
   const supabase = await createClient();
   
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("chat_logs")
     .insert({
       conversation_id: conversationId,
@@ -867,7 +867,7 @@ export async function sendMessage(conversationId: string, content: string, mode:
       } : { via: "bridge" }
     };
 
-    const { error: logError } = await supabase
+    const { error: logError } = await (supabase as any)
       .from("chat_logs")
       .insert([insertData]);
 
