@@ -136,7 +136,8 @@ export async function createVisitFromAI(params: {
           id_tickect: conv.glpi_ticket_id || conv.id,
           contrato: conv.contract || "N/A",
           fecha: params.visitDate.split('T')[0],
-          hora: params.visitDate.split('T')[1]?.substring(0, 5) || "Pendiente"
+          hora: params.visitDate.split('T')[1]?.substring(0, 5) || "Pendiente",
+          motivo: params.reason || "Agendado vía Dashboard"
         })
       });
     } catch (err) {
