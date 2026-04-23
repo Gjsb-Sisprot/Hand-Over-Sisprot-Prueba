@@ -275,22 +275,33 @@ export async function getChatHistory(
   try {
     if (!conversationId) return [];
 
-    // 1. Obtener tanto el ID como el SessionID para una búsqueda exhaustiva
-    const { data: conv } = await (supabaseAdmin as any)
-      .from("conversations")
-      .select("id, session_id")
-      .or(`id.eq.${conversationId},session_id.eq.${conversationId}`)
-      .maybeSingle();
+    // 1. Obtener tanto el ID como el SessionID de forma segura
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(conversationId);
+    
+    let convQuery = (supabaseAdmin as any).from("conversations").select("id, session_id");
+    
+    if (isUuid) {
+      convQuery = convQuery.or(`id.eq.${conversationId},session_id.eq.${conversationId}`);
+    } else {
+      convQuery = convQuery.eq("session_id", conversationId);
+    }
+    
+    const { data: conv } = await convQuery.maybeSingle();
+    const targetId = conv?.id; // UUID
+    const sessionId = conv?.session_id || conversationId; // Texto
 
-    const targetId = conv?.id || conversationId;
-    const sessionId = conv?.session_id || conversationId;
+    // 2. Consultar chat_logs de forma segura
+    let logsQuery = (supabaseAdmin as any).from("chat_logs").select("*");
+    
+    // Si tenemos UUID y es distinto al sessionId, buscamos por ambos con sintaxis segura
+    if (targetId && targetId !== sessionId) {
+      logsQuery = logsQuery.or(`conversation_id.eq.${targetId},conversation_id.eq."${sessionId}"`);
+    } else {
+      // Si solo tenemos uno o son iguales, usamos la búsqueda simple
+      logsQuery = logsQuery.eq("conversation_id", sessionId);
+    }
 
-    // 2. Consultar chat_logs permitiendo ambos identificadores (UUID y Texto)
-    // El filtro .in() es lo más seguro para manejar múltiples posibilidades de ID
-    const { data, error } = await (supabaseAdmin as any)
-      .from("chat_logs")
-      .select("*")
-      .in("conversation_id", [targetId, sessionId])
+    const { data, error } = await logsQuery
       .order("created_at", { ascending: true })
       .limit(limit || 250);
 
