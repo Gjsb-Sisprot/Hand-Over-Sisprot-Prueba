@@ -28,14 +28,43 @@ export function useDashboardMessages({
   const [messages, setMessages] = useState<MCPChatMessage[]>(initialMessages);
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const [resolvedUuid, setResolvedUuid] = useState<string | null>(null);
   const isFetchingRef = useRef(false);
+
+  // 1. Efecto para normalizar el ID: Asegurarnos de tener el UUID real
+  useEffect(() => {
+    async function resolveId() {
+      if (!conversationId) return;
+      
+      // Si ya parece un UUID, lo usamos directamente
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(conversationId);
+      if (isUuid) {
+        setResolvedUuid(conversationId);
+        return;
+      }
+
+      // Si es un session_id (texto), buscamos su UUID correspondiente
+      try {
+        const supabase = createClient();
+        const { data } = await supabase
+          .from("conversations")
+          .select("id")
+          .eq("session_id", conversationId)
+          .maybeSingle();
+        
+        if (data?.id) setResolvedUuid(data.id);
+      } catch (err) {
+        console.error("Error resolviendo UUID:", err);
+      }
+    }
+    resolveId();
+  }, [conversationId]);
 
   const fetchMessages = useCallback(async () => {
     if (!conversationId || isFetchingRef.current) return;
 
     isFetchingRef.current = true;
     try {
-      // Solo mostramos el cargador si no tenemos ningún mensaje aún
       if (messages.length === 0) setIsLoading(true);
       const newMessages = await getChatHistory(conversationId);
       setMessages(newMessages || []);
@@ -45,8 +74,7 @@ export function useDashboardMessages({
       isFetchingRef.current = false;
       setIsLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId]); // ELIMINADO messages.length para evitar bucles
+  }, [conversationId, messages.length]);
 
   useEffect(() => {
     if (conversationId && isActive) {
@@ -57,34 +85,25 @@ export function useDashboardMessages({
   }, [conversationId, isActive, fetchMessages]);
 
   useEffect(() => {
-    if (!conversationId || !isActive) return;
+    // Escuchamos solo si tenemos el UUID resuelto
+    const targetId = resolvedUuid;
+    if (!targetId || !isActive) return;
 
     const supabase = createClient();
     
-    // Para el tiempo real robusto, necesitamos saber si el mensaje viene por UUID o por SessionID
     const channel = supabase
-      .channel(`chat-monitor-${conversationId}`)
+      .channel(`chat-v3-${targetId}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
-          table: "chat_logs"
+          table: "chat_logs",
+          filter: `conversation_id=eq.${targetId}`
         },
         (payload) => {
-          const newMsg = payload.new as any;
-          // Validamos contra el ID actual del hook
-          // Si el mensaje entrante coincide con nuestra conversación (por cualquier ID), refrescamos
-          if (newMsg.conversation_id === conversationId) {
-             console.log("[REALTIME] Cambio detectado por ID");
-             fetchMessages();
-             return;
-          }
-
-          // Respaldo: Si no coincide el ID, puede ser que el webhook mandó el session_id
-          // Podríamos hacer un fetch adicional aquí, pero para velocidad simplemente refrescamos
-          // si detectamos actividad reciente en la tabla de nuestra conversación
-          fetchMessages();
+           console.log("[REALTIME] ¡Mensaje recibido via UUID!", payload.new);
+           fetchMessages();
         }
       )
       .subscribe((status) => {
@@ -94,7 +113,7 @@ export function useDashboardMessages({
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [conversationId, isActive, fetchMessages]);
+  }, [resolvedUuid, isActive, fetchMessages]);
 
   return {
     messages,
