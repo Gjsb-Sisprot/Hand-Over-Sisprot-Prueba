@@ -100,7 +100,7 @@ export async function createVisitFromAI(params: {
     // 1. Buscar la conversación para obtener los datos del cliente utilizando privilegios de admin
     const { data: conv, error: convError } = await supabaseAdmin
       .from("conversations")
-      .select("contact_name, identification, contract, name")
+      .select("id, glpi_ticket_id, contact_name, identification, contract, name")
       .or(`session_id.eq.${params.sessionId},id.eq.${params.sessionId}`)
       .maybeSingle();
 
