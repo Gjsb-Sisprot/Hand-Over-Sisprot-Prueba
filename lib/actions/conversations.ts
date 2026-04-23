@@ -214,12 +214,17 @@ export async function getConversationBySessionId(
     // sin importar las políticas de RLS, confiando en que el llamador (Server Action)
     // ya validó al Agente.
 
-    // Búsqueda directa en Supabase (Usamos Admin para asegurar acceso total del Agente)
-    const { data: conv, error } = await (supabaseAdmin as any)
-      .from("conversations")
-      .select("*")
-      .or(`session_id.eq.${sessionId},id.eq.${sessionId}`)
-      .maybeSingle();
+    // Búsqueda inteligente: Si es UUID buscamos en ambas columnas, si no solo en session_id
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sessionId);
+    let query = (supabaseAdmin as any).from("conversations").select("*");
+    
+    if (isUuid) {
+      query = query.or(`id.eq.${sessionId},session_id.eq.${sessionId}`);
+    } else {
+      query = query.eq("session_id", sessionId);
+    }
+    
+    const { data: conv, error } = await query.maybeSingle();
 
     if (error || !conv) return null;
 
