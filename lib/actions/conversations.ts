@@ -285,11 +285,12 @@ export async function getChatHistory(
     const targetId = conv?.id || conversationId;
     const sessionId = conv?.session_id || conversationId;
 
-    // 2. Consultar chat_logs permitiendo ambos identificadores (soporta Webhooks externos)
+    // 2. Consultar chat_logs permitiendo ambos identificadores (UUID y Texto)
+    // El filtro .in() es lo más seguro para manejar múltiples posibilidades de ID
     const { data, error } = await (supabaseAdmin as any)
       .from("chat_logs")
       .select("*")
-      .or(`conversation_id.eq.${targetId},conversation_id.eq.${sessionId}`)
+      .in("conversation_id", [targetId, sessionId])
       .order("created_at", { ascending: true })
       .limit(limit || 250);
 
