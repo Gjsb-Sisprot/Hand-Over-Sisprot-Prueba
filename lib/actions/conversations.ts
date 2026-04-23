@@ -275,20 +275,21 @@ export async function getChatHistory(
   try {
     if (!conversationId) return [];
 
-    // 1. Intentar encontrar por ID (UUID) o SessionID (String) para obtener el UUID definitivo
+    // 1. Obtener tanto el ID como el SessionID para una búsqueda exhaustiva
     const { data: conv } = await (supabaseAdmin as any)
       .from("conversations")
-      .select("id, identification")
+      .select("id, session_id")
       .or(`id.eq.${conversationId},session_id.eq.${conversationId}`)
       .maybeSingle();
 
     const targetId = conv?.id || conversationId;
+    const sessionId = conv?.session_id || conversationId;
 
-    // 2. Consultar chat_logs de forma estricta para esta sesión únicamente
+    // 2. Consultar chat_logs permitiendo ambos identificadores (soporta Webhooks externos)
     const { data, error } = await (supabaseAdmin as any)
       .from("chat_logs")
       .select("*")
-      .eq("conversation_id", targetId)
+      .or(`conversation_id.eq.${targetId},conversation_id.eq.${sessionId}`)
       .order("created_at", { ascending: true })
       .limit(limit || 250);
 
