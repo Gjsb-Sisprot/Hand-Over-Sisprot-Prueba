@@ -52,7 +52,7 @@ export function useDashboardMessages({
           .eq("session_id", conversationId)
           .maybeSingle();
         
-        if (data?.id) setResolvedUuid(data.id);
+        if ((data as any)?.id) setResolvedUuid((data as any).id);
       } catch (err) {
         console.error("Error resolviendo UUID:", err);
       }
