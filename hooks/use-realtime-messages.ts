@@ -62,23 +62,26 @@ export function useDashboardMessages({
     const supabase = createClient();
     
     const channel = supabase
-      .channel(`chat-messages-${conversationId}`)
+      .channel(`chat-changes-${conversationId}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
-          table: "chat_logs",
-          filter: `conversation_id=eq.${conversationId}`
+          table: "chat_logs"
+          // Eliminamos el filtro de columna aquí para evitar fallas por discrepancia de tipos UUID vs String
         },
         (payload) => {
-          console.log(`[REALTIME] EVENTO RECIBIDO en ${conversationId}:`, payload);
-          // Usamos la función de refresco aquí
-          fetchMessages();
+          const newMsg = payload.new as any;
+          // Solo refrescamos si el mensaje pertenece a nuestra conversación
+          // Comprobamos contra ambos posibles IDs
+          if (newMsg.conversation_id === conversationId || newMsg.session_id === conversationId) {
+             console.log(`[REALTIME] Nuevo mensaje detectado para ${conversationId}`);
+             fetchMessages();
+          }
         }
       )
       .subscribe((status) => {
-        console.log(`[REALTIME] Estado de suscripción para ${conversationId}:`, status);
         setIsConnected(status === "SUBSCRIBED");
       });
 
