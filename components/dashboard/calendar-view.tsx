@@ -31,6 +31,7 @@ import { SupportVisit, Technician, getVisits } from "@/lib/actions/visits";
 import { VisitDialog } from "./visit-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { createClient } from "@/lib/supabase/client";
 
 interface CalendarViewProps {
   technicians: Technician[];
@@ -56,6 +57,29 @@ export function CalendarView({ technicians }: CalendarViewProps) {
   useEffect(() => {
     fetchVisits();
   }, [currentMonth, fetchVisits]);
+
+  // Realtime subscription
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel("support_visits_changes")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "support_visits"
+        },
+        () => {
+          fetchVisits();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [fetchVisits]);
 
   const renderHeader = () => {
     return (
