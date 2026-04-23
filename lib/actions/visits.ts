@@ -88,6 +88,68 @@ export async function createVisit(visitData: Partial<SupportVisit>) {
   }
 }
 
+/**
+ * Crea una visita técnica desde el flujo de la IA (Susana)
+ */
+export async function createVisitFromAI(params: {
+  sessionId: string;
+  visitDate: string;
+  reason: string;
+}) {
+  try {
+    // 1. Buscar la conversación para obtener los datos del cliente utilizando privilegios de admin
+    const { data: conv, error: convError } = await supabaseAdmin
+      .from("conversations")
+      .select("contact_name, identification, contract, name")
+      .or(`session_id.eq.${params.sessionId},id.eq.${params.sessionId}`)
+      .maybeSingle();
+
+    if (convError || !conv) {
+      throw new Error(`No se pudo encontrar la conversación ${params.sessionId}`);
+    }
+
+    const clientName = conv.contact_name || conv.name || "Cliente AI";
+
+    // 2. Insertar directamente usando supabaseAdmin para evitar checks de RLS de usuario
+    const { data, error } = await (supabaseAdmin as any)
+      .from("support_visits")
+      .insert([{
+        client_name: clientName,
+        client_identification: conv.identification || "",
+        contract_number: conv.contract || "",
+        visit_date: params.visitDate,
+        reason: params.reason || "Agendado por Susana AI",
+        status: "scheduled",
+        created_at: new Date().toISOString()
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    // 🚀 NOTIFICACIÓN: Enviar confirmación a n8n para avisar al cliente
+    try {
+      fetch("https://n8n.sisprottaurus.com/webhook/envio_confirmacion_visita_tecnica", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id_tickect: conv.glpi_ticket_id || conv.id,
+          contrato: conv.contract || "N/A",
+          fecha: params.visitDate.split('T')[0],
+          hora: params.visitDate.split('T')[1]?.substring(0, 5) || "Pendiente"
+        })
+      }).catch(err => console.error("[WEBHOOK_NOTIFICATION_FAILED]", err));
+    } catch (err) {
+      console.error("[NOTIFY_N8N_ERROR]", err);
+    }
+
+    return { success: true, visitId: data.id };
+  } catch (error: any) {
+    console.error("[CREATE_VISIT_FROM_AI_ERROR]", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function updateVisit(id: string, visitData: Partial<SupportVisit>) {
   try {
     const { data, error } = await (supabaseAdmin as any)
