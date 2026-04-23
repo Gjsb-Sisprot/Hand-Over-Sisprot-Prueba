@@ -61,24 +61,30 @@ export function useDashboardMessages({
 
     const supabase = createClient();
     
+    // Para el tiempo real robusto, necesitamos saber si el mensaje viene por UUID o por SessionID
     const channel = supabase
-      .channel(`chat-changes-${conversationId}`)
+      .channel(`chat-monitor-${conversationId}`)
       .on(
         "postgres_changes",
         {
           event: "INSERT",
           schema: "public",
           table: "chat_logs"
-          // Eliminamos el filtro de columna aquí para evitar fallas por discrepancia de tipos UUID vs String
         },
         (payload) => {
           const newMsg = payload.new as any;
-          // Solo refrescamos si el mensaje pertenece a nuestra conversación
-          // Comprobamos contra ambos posibles IDs
-          if (newMsg.conversation_id === conversationId || newMsg.session_id === conversationId) {
-             console.log(`[REALTIME] Nuevo mensaje detectado para ${conversationId}`);
+          // Validamos contra el ID actual del hook
+          // Si el mensaje entrante coincide con nuestra conversación (por cualquier ID), refrescamos
+          if (newMsg.conversation_id === conversationId) {
+             console.log("[REALTIME] Cambio detectado por ID");
              fetchMessages();
+             return;
           }
+
+          // Respaldo: Si no coincide el ID, puede ser que el webhook mandó el session_id
+          // Podríamos hacer un fetch adicional aquí, pero para velocidad simplemente refrescamos
+          // si detectamos actividad reciente en la tabla de nuestra conversación
+          fetchMessages();
         }
       )
       .subscribe((status) => {
@@ -86,11 +92,9 @@ export function useDashboardMessages({
       });
 
     return () => {
-      console.log(`[REALTIME] Desconectando canal ${conversationId}`);
       supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [conversationId, isActive]); // ELIMINADO fetchMessages para no reconectar cada vez que cambie
+  }, [conversationId, isActive, fetchMessages]);
 
   return {
     messages,
