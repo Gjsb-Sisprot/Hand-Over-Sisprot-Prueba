@@ -131,6 +131,19 @@ export function useDashboardConversations({
       .on(
         "postgres_changes",
         {
+          event: "INSERT",
+          schema: "public",
+          table: "chat_logs",
+        },
+        async () => {
+          if (!isLoadingRef.current) {
+            fetchConversations(false);
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
           event: "*",
           schema: "public",
           table: "conversations",
