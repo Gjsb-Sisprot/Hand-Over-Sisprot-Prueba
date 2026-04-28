@@ -230,6 +230,8 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="scheduled">Agendada</SelectItem>
+                <SelectItem value="confirmed">Confirmada</SelectItem>
+                <SelectItem value="rescheduled">Reagendada</SelectItem>
                 <SelectItem value="in_progress">En Proceso</SelectItem>
                 <SelectItem value="completed">Realizada</SelectItem>
                 <SelectItem value="cancelled">Cancelada</SelectItem>
