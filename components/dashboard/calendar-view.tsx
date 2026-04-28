@@ -42,6 +42,7 @@ export function CalendarView({ technicians }: CalendarViewProps) {
   const [visits, setVisits] = useState<SupportVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTechnician, setSelectedTechnician] = useState<string>("all");
+  const [currentCategory, setCurrentCategory] = useState<'support' | 'administration'>('support');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedVisit, setSelectedVisit] = useState<SupportVisit | undefined>(undefined);
 
@@ -49,10 +50,10 @@ export function CalendarView({ technicians }: CalendarViewProps) {
     setLoading(true);
     const start = startOfWeek(startOfMonth(currentMonth)).toISOString();
     const end = endOfWeek(endOfMonth(currentMonth)).toISOString();
-    const data = await getVisits(start, end);
+    const data = await getVisits(start, end, currentCategory);
     setVisits(data);
     setLoading(false);
-  }, [currentMonth]);
+  }, [currentMonth, currentCategory]);
 
   useEffect(() => {
     fetchVisits();
@@ -117,6 +118,31 @@ export function CalendarView({ technicians }: CalendarViewProps) {
         </div>
 
         <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl mr-2">
+            <Button
+              variant={currentCategory === 'support' ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setCurrentCategory('support')}
+              className={cn(
+                "h-8 px-4 rounded-lg text-xs font-bold transition-all",
+                currentCategory === 'support' ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
+              )}
+            >
+              Soporte
+            </Button>
+            <Button
+              variant={currentCategory === 'administration' ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setCurrentCategory('administration')}
+              className={cn(
+                "h-8 px-4 rounded-lg text-xs font-bold transition-all",
+                currentCategory === 'administration' ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
+              )}
+            >
+              Administración
+            </Button>
+          </div>
+
           <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-xl border border-border/40">
             <Filter className="h-4 w-4 ml-2 text-muted-foreground" />
             <select
@@ -139,7 +165,7 @@ export function CalendarView({ technicians }: CalendarViewProps) {
             className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/20"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Agendar Visita
+            {currentCategory === 'support' ? 'Agendar Soporte' : 'Nueva Tarea Admin'}
           </Button>
         </div>
       </div>
@@ -251,6 +277,7 @@ export function CalendarView({ technicians }: CalendarViewProps) {
         onSuccess={fetchVisits}
         technicians={technicians}
         initialData={selectedVisit}
+        defaultCategory={currentCategory}
       />
     </div>
   );
