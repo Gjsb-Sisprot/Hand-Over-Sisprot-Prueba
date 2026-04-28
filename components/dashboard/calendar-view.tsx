@@ -236,7 +236,9 @@ export function CalendarView({ technicians }: CalendarViewProps) {
                       visit.status === 'completed' && "bg-green-500/10 border-green-500/50 text-green-700 dark:text-green-400 border-l-green-500",
                       visit.status === 'cancelled' && "bg-destructive/10 border-destructive/50 text-destructive border-l-destructive",
                       visit.status === 'scheduled' && "bg-primary/10 border-primary/50 text-primary border-l-primary",
-                      visit.status === 'in_progress' && "bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-400 border-l-amber-500"
+                      visit.status === 'in_progress' && "bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-400 border-l-amber-500",
+                      visit.status === 'confirmed' && "bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-400 border-l-emerald-500",
+                      visit.status === 'rescheduled' && "bg-violet-500/10 border-violet-500/50 text-violet-700 dark:text-violet-400 border-l-violet-500"
                     )}
                   >
                     <div className="font-bold truncate">{visit.client_name}</div>
