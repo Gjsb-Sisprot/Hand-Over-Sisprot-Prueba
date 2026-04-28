@@ -133,7 +133,7 @@ function ConfirmContent() {
 
             <div className="bg-primary p-6 rounded-3xl text-primary-foreground shadow-lg shadow-primary/30">
               <p className="text-center text-sm font-medium opacity-90 italic">
-                "Nuestro equipo llegará a tu domicilio en el bloque horario indicado. Por favor, asegúrate de que haya una persona mayor de edad presente."
+                &quot;Nuestro equipo llegará a tu domicilio en el bloque horario indicado. Por favor, asegúrate de que haya una persona mayor de edad presente.&quot;
               </p>
             </div>
           </CardContent>
