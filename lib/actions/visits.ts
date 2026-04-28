@@ -207,7 +207,7 @@ export async function deleteVisit(id: string) {
 export async function getVisitByTicketId(ticketId: string) {
   try {
     // Buscamos en la tabla support_visits donde metadata contenga el glpi_ticket_id
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await (supabaseAdmin as any)
       .from("support_visits")
       .select("*, technicians(name)")
       .filter("metadata->>glpi_ticket_id", "eq", ticketId)
