@@ -27,9 +27,10 @@ interface VisitDialogProps {
   onSuccess: () => void
   technicians: Technician[]
   initialData?: SupportVisit
+  defaultCategory?: 'support' | 'administration'
 }
 
-export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialData }: VisitDialogProps) {
+export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialData, defaultCategory = 'support' }: VisitDialogProps) {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState<Partial<SupportVisit>>({
     client_name: "",
@@ -38,7 +39,8 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
     visit_date: new Date().toISOString(),
     reason: "",
     technician_id: "",
-    status: "scheduled"
+    status: "scheduled",
+    category: defaultCategory
   })
 
   useEffect(() => {
@@ -52,10 +54,11 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
         visit_date: new Date().toISOString(),
         reason: "",
         technician_id: "",
-        status: "scheduled"
+        status: "scheduled",
+        category: defaultCategory
       })
     }
-  }, [initialData, isOpen])
+  }, [initialData, isOpen, defaultCategory])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
