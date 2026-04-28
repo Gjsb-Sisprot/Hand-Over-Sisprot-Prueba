@@ -12,7 +12,7 @@ export type SupportVisit = {
   visit_date: string;
   reason: string;
   technician_id: string | null;
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'confirmed' | 'rescheduled';
   category: 'support' | 'administration';
   agent_id: string | null;
   conversation_id: string | null;
@@ -127,6 +127,10 @@ export async function createVisitFromAI(params: {
         reason: params.reason || "Agendado por Susana AI",
         status: "scheduled",
         category: "support",
+        metadata: {
+          glpi_ticket_id: conv.glpi_ticket_id || conv.id,
+          source: "susana_ai"
+        },
         created_at: new Date().toISOString()
       }])
       .select()
@@ -194,5 +198,25 @@ export async function deleteVisit(id: string) {
   } catch (error: any) {
     console.error("[DELETE_VISIT_ERROR]", error);
     return { error: error.message };
+  }
+}
+
+/**
+ * Busca una visita técnica por el ID del ticket de GLPI guardado en metadata
+ */
+export async function getVisitByTicketId(ticketId: string) {
+  try {
+    // Buscamos en la tabla support_visits donde metadata contenga el glpi_ticket_id
+    const { data, error } = await supabaseAdmin
+      .from("support_visits")
+      .select("*, technicians(name)")
+      .filter("metadata->>glpi_ticket_id", "eq", ticketId)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data as SupportVisit | null;
+  } catch (error) {
+    console.error("[GET_VISIT_BY_TICKET_ERROR]", error);
+    return null;
   }
 }
