@@ -13,6 +13,7 @@ export type SupportVisit = {
   reason: string;
   technician_id: string | null;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  category: 'support' | 'administration';
   agent_id: string | null;
   conversation_id: string | null;
   metadata: any;
@@ -47,14 +48,19 @@ export async function getTechnicians(): Promise<Technician[]> {
   }
 }
 
-export async function getVisits(startDate: string, endDate: string): Promise<SupportVisit[]> {
+export async function getVisits(startDate: string, endDate: string, category?: 'support' | 'administration'): Promise<SupportVisit[]> {
   try {
-    const { data, error } = await (supabaseAdmin as any)
+    let query = (supabaseAdmin as any)
       .from("support_visits")
       .select("*, technicians(name)")
       .gte("visit_date", startDate)
-      .lte("visit_date", endDate)
-      .order("visit_date", { ascending: true });
+      .lte("visit_date", endDate);
+
+    if (category) {
+      query = query.eq("category", category);
+    }
+
+    const { data, error } = await query.order("visit_date", { ascending: true });
 
     if (error) throw error;
     return (data || []) as any;
@@ -120,6 +126,7 @@ export async function createVisitFromAI(params: {
         visit_date: params.visitDate,
         reason: params.reason || "Agendado por Susana AI",
         status: "scheduled",
+        category: "support",
         created_at: new Date().toISOString()
       }])
       .select()
