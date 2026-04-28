@@ -25,8 +25,8 @@ export default async function CalendarPage() {
         <div className="max-w-[1400px] mx-auto h-full flex flex-col">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h1 className="text-3xl font-bold text-foreground">Gestión de Soporte</h1>
-              <p className="text-sidebar-foreground/60">Organiza y supervisa las visitas técnicas de soporte.</p>
+              <h1 className="text-3xl font-bold text-foreground">Calendario de Actividades</h1>
+              <p className="text-sidebar-foreground/60">Organiza y supervisa las visitas de soporte y tareas administrativas.</p>
             </div>
           </div>
 
