@@ -53,7 +53,7 @@ export async function getVisits(startDate: string, endDate: string, category?: '
   try {
     let query = (supabaseAdmin as any)
       .from("support_visits")
-      .select("*, technicians(name)")
+      .select("*, technicians!technician_id(name)")
       .gte("visit_date", startDate)
       .lte("visit_date", endDate);
 
@@ -210,7 +210,7 @@ export async function getVisitByTicketId(ticketId: string) {
   try {
     const { data, error } = await (supabaseAdmin as any)
       .from("support_visits")
-      .select("*, technicians(name)")
+      .select("*, technicians!technician_id(name)")
       .eq("glpi_ticket_id", ticketId)
       .maybeSingle();
 
