@@ -10,7 +10,8 @@ import {
   Calendar,
   Radio,
   Tag,
-  LogOut
+  LogOut,
+  CalendarDays
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -19,6 +20,7 @@ const sidebarItems = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
   { icon: MessageSquare, label: "Conversaciones", href: "/dashboard/conversations" },
   { icon: Calendar, label: "Soporte", href: "/dashboard/calendar" },
+  { icon: CalendarDays, label: "Guardias", href: "/dashboard/guardias" },
   { icon: Radio, label: "En vivo", href: "#" },
   { icon: Users, label: "Contactos", href: "#" },
   { icon: Tag, label: "Etiquetas", href: "#" },
