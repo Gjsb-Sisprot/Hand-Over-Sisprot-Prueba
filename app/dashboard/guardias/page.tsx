@@ -237,7 +237,7 @@ export default function GuardiasPage() {
         </div>
         {data.length === 0 && (
           <div className="text-center p-12 text-muted-foreground border border-dashed rounded-xl mt-4">
-            No hay guardias registradas. Usa el botón "Agregar Semana" para comenzar.
+            No hay guardias registradas. Usa el botón &quot;Agregar Semana&quot; para comenzar.
           </div>
         )}
       </div>
