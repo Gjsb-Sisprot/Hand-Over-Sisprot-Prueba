@@ -16,6 +16,7 @@ export type SupportVisit = {
   category: 'support' | 'administration';
   agent_id: string | null;
   conversation_id: string | null;
+  glpi_ticket_id: string | null;
   metadata: any;
   created_at: string;
   updated_at: string;
@@ -127,8 +128,9 @@ export async function createVisitFromAI(params: {
         reason: params.reason || "Agendado por Susana AI",
         status: "scheduled",
         category: "support",
+        glpi_ticket_id: conv.glpi_ticket_id || conv.id,
+        conversation_id: conv.id,
         metadata: {
-          glpi_ticket_id: conv.glpi_ticket_id || conv.id,
           source: "susana_ai"
         },
         created_at: new Date().toISOString()
@@ -202,15 +204,14 @@ export async function deleteVisit(id: string) {
 }
 
 /**
- * Busca una visita técnica por el ID del ticket de GLPI guardado en metadata
+ * Busca una visita técnica por el ID del ticket de GLPI
  */
 export async function getVisitByTicketId(ticketId: string) {
   try {
-    // Buscamos en la tabla support_visits donde metadata contenga el glpi_ticket_id
     const { data, error } = await (supabaseAdmin as any)
       .from("support_visits")
       .select("*, technicians(name)")
-      .filter("metadata->>glpi_ticket_id", "eq", ticketId)
+      .eq("glpi_ticket_id", ticketId)
       .maybeSingle();
 
     if (error) throw error;
