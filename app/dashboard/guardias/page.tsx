@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Save, Plus, Trash2, CalendarDays } from "lucide-react";
+import { Save, Plus, Trash2, CalendarDays, Headphones, MapPin } from "lucide-react";
 import { toast } from "sonner";
 
 export default function GuardiasPage() {
@@ -77,7 +77,7 @@ export default function GuardiasPage() {
       <div className="flex h-full items-center justify-center bg-background">
         <div className="animate-pulse flex flex-col items-center">
           <CalendarDays className="w-12 h-12 text-primary/50 mb-4" />
-          <p className="text-muted-foreground">Cargando cronograma...</p>
+          <p className="text-muted-foreground">Cargando guardias...</p>
         </div>
       </div>
     );
@@ -91,7 +91,7 @@ export default function GuardiasPage() {
             <CalendarDays className="w-7 h-7 text-primary" /> 
             Gestión de Guardias
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">Reemplazo del Drive: Administra los horarios de CC, Monitoreo y Soporte Técnico.</p>
+          <p className="text-sm text-muted-foreground mt-1">Distribuye las guardias por departamento y semana.</p>
         </div>
         <div className="flex gap-3">
           <button onClick={addItem} className="flex items-center gap-2 px-4 py-2 bg-secondary text-secondary-foreground font-medium text-sm rounded-xl hover:bg-secondary/80 transition-colors">
@@ -104,142 +104,122 @@ export default function GuardiasPage() {
       </div>
       
       <div className="p-6">
-        <div className="overflow-x-auto border border-border/50 rounded-2xl bg-card shadow-sm">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-muted text-muted-foreground uppercase text-xs font-semibold">
-              <tr>
-                <th className="px-4 py-4 border-b border-border/50 text-center w-12">Item</th>
-                <th className="px-4 py-4 border-b border-border/50 border-l text-center">Lunes a Viernes</th>
-                <th className="px-4 py-4 border-b border-border/50 border-l text-center">Sábado / Domingo</th>
-                <th className="px-4 py-4 border-b border-border/50 border-l text-center w-48">Fecha</th>
-                <th className="px-4 py-4 border-b border-border/50 border-l text-center w-20">Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((row, idx) => (
-                <tr key={row.id} className="border-b border-border/50 group">
-                  <td className="px-4 py-2 text-center font-bold text-lg align-top pt-4">
-                    {idx + 1}
-                  </td>
-                  
-                  {/* LUNES A VIERNES */}
-                  <td className="p-0 border-l border-border/50 align-top">
-                    <div className="flex flex-col h-full">
-                      <div className="bg-green-50 dark:bg-green-950/20 p-2 text-center font-bold border-b border-border/50">
-                        <input className="bg-transparent w-full text-center outline-none text-green-800 dark:text-green-300 placeholder-green-800/50" placeholder="SEMANA DEL..." value={row.weekDaysText} onChange={e => updateItem(idx, 'weekDaysText', e.target.value)} />
-                      </div>
-                      
-                      {row.isSpecial ? (
-                         <div className="p-4 flex-1 flex flex-col items-center justify-center bg-muted/10 text-muted-foreground">
-                           <span className="italic mb-2 text-xs">Bloque ocupado por Feriado.</span>
-                           <button onClick={() => toggleSpecial(idx)} className="text-xs text-primary hover:underline">Quitar Feriado</button>
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+          {data.map((row, idx) => (
+            <div key={row.id} className="border border-border/50 bg-card rounded-2xl shadow-sm overflow-hidden flex flex-col">
+              {/* Header / Configuración de Semana */}
+              <div className={`p-5 flex justify-between items-start border-b border-border/50 ${row.isSpecial ? 'bg-red-500/5' : 'bg-muted/30'}`}>
+                <div className="flex-1 mr-4 space-y-2">
+                   <div className="flex items-center gap-2">
+                     <span className="bg-primary/10 text-primary text-xs font-bold px-2 py-1 rounded-md">Semana {idx + 1}</span>
+                     <input 
+                        className="text-lg font-bold bg-transparent outline-none w-full placeholder-muted-foreground/50 focus:border-b border-primary" 
+                        value={row.weekDaysText} 
+                        onChange={e => updateItem(idx, 'weekDaysText', e.target.value)} 
+                        placeholder="Título de la semana (Ej: SEMANA DEL 04 AL 08/05)" 
+                      />
+                   </div>
+                   <input 
+                      className="text-sm text-muted-foreground bg-transparent outline-none w-full placeholder-muted-foreground/30 focus:text-foreground" 
+                      value={row.fechaText} 
+                      onChange={e => updateItem(idx, 'fechaText', e.target.value)} 
+                      placeholder="Fecha de Fín de Semana (Ej: SABADO DOMINGO 9-10/05)" 
+                    />
+                </div>
+                <div className="flex items-center gap-4 bg-background p-2 rounded-xl border border-border/50 shadow-sm">
+                   <label className="flex items-center gap-2 text-sm cursor-pointer hover:opacity-80 transition-opacity">
+                     <input type="checkbox" checked={row.isSpecial} onChange={() => toggleSpecial(idx)} className="rounded border-border/50 accent-primary w-4 h-4" />
+                     <span className="font-semibold select-none">Día Feriado</span>
+                   </label>
+                   <div className="w-[1px] h-4 bg-border"></div>
+                   <button onClick={() => removeItem(idx)} title="Eliminar semana" className="text-destructive hover:bg-destructive/10 rounded-md p-1 transition-colors">
+                     <Trash2 className="w-4 h-4" />
+                   </button>
+                </div>
+              </div>
+
+              {/* Título Especial para Feriados */}
+              {row.isSpecial && (
+                 <div className="p-3 bg-red-500/10 border-b border-border/50 border-dashed">
+                   <input 
+                      className="w-full bg-transparent outline-none font-bold text-center text-red-700 dark:text-red-400 placeholder-red-700/50" 
+                      value={row.specialTitle || ""} 
+                      onChange={e => updateItem(idx, 'specialTitle', e.target.value)} 
+                      placeholder="Nombre del feriado (Ej: VIERNES 1° DE MAYO DIA DEL TRABAJADOR)" 
+                    />
+                 </div>
+              )}
+
+              {/* Contenido / Departamentos */}
+              <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-6 flex-1">
+                 
+                 {/* Call Center / Monitoreo */}
+                 <div className="flex flex-col gap-3">
+                    <h3 className="font-bold text-sm flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                      <Headphones className="w-4 h-4" /> CC & Monitoreo
+                    </h3>
+                    <div className="space-y-4 bg-muted/20 p-4 rounded-xl border border-border/50 h-full">
+                       {!row.isSpecial && (
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">L-V Call Center</label>
+                           <input className="w-full text-sm bg-background border border-border/50 rounded-lg p-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-muted-foreground/30" value={row.weekCallCenterPerson || ""} onChange={e => updateItem(idx, 'weekCallCenterPerson', e.target.value)} placeholder="Ej: MARTHA PINTO" />
                          </div>
-                      ) : (
-                        <div className="flex flex-col flex-1">
-                          <div className="bg-blue-50 dark:bg-blue-950/20 p-1.5 text-center text-xs font-bold border-b border-border/50 text-blue-800 dark:text-blue-300">
-                            <input className="bg-transparent w-full text-center outline-none" value={row.weekCallCenterText} onChange={e => updateItem(idx, 'weekCallCenterText', e.target.value)} />
-                          </div>
-                          <div className="p-3 border-b border-border/50">
-                             <input className="w-full outline-none bg-transparent text-center font-medium" placeholder="Personal Call Center" value={row.weekCallCenterPerson} onChange={e => updateItem(idx, 'weekCallCenterPerson', e.target.value)} />
-                          </div>
-                          
-                          <div className="bg-blue-50 dark:bg-blue-950/20 p-1.5 text-center text-xs font-bold border-b border-border/50 text-blue-800 dark:text-blue-300">
-                            <input className="bg-transparent w-full text-center outline-none" value={row.weekSoporteText} onChange={e => updateItem(idx, 'weekSoporteText', e.target.value)} />
-                          </div>
-                          <div className="p-3 flex-1 flex items-center">
-                             <input className="w-full outline-none bg-transparent text-center font-medium" placeholder="Personal Soporte Técnico" value={row.weekSoportePerson} onChange={e => updateItem(idx, 'weekSoportePerson', e.target.value)} />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </td>
-
-                  {/* SABADO DOMINGO / SPECIAL */}
-                  <td className="p-0 border-l border-border/50 align-top">
-                     {row.isSpecial && (
-                       <div className="flex flex-col border-b border-border/50 bg-red-50/50 dark:bg-red-950/10">
-                          <div className="p-1.5 text-center text-xs font-bold bg-red-100 dark:bg-red-950/40 border-b border-border/50 text-red-800 dark:text-red-300">
-                            <input className="bg-transparent w-full text-center outline-none" placeholder="Encabezado (Ej: CC Y MONITOREO...)" value={row.specialHeader || ''} onChange={e => updateItem(idx, 'specialHeader', e.target.value)} />
-                          </div>
-                          <div className="grid grid-cols-3 border-b border-border/50 text-xs">
-                             <div className="p-2 border-r border-border/50 font-bold flex items-center">CALL CENTER</div>
-                             <div className="col-span-2 p-2"><input className="w-full bg-transparent outline-none font-medium" placeholder="Personal" value={row.specialCallCenter || ''} onChange={e => updateItem(idx, 'specialCallCenter', e.target.value)} /></div>
-                          </div>
-                          <div className="grid grid-cols-3 border-b border-border/50 text-xs">
-                             <div className="p-2 border-r border-border/50 font-bold flex items-center">MONITOREO</div>
-                             <div className="col-span-2 p-2"><input className="w-full bg-transparent outline-none font-medium" placeholder="Personal" value={row.specialMonitoreo || ''} onChange={e => updateItem(idx, 'specialMonitoreo', e.target.value)} /></div>
-                          </div>
-                          <div className="bg-red-100/50 dark:bg-red-950/20 p-1.5 text-center text-xs font-bold border-b border-border/50 text-red-800 dark:text-red-300">SOPORTE TÉCNICO</div>
-                          <div className="p-3 border-b border-border/50 text-center text-sm">
-                            <input className="w-full bg-transparent outline-none text-center font-medium" placeholder="Personal" value={row.specialSoporte || ''} onChange={e => updateItem(idx, 'specialSoporte', e.target.value)} />
-                          </div>
-                          <div className="grid grid-cols-3 text-xs">
-                             <div className="p-2 border-r border-border/50 font-bold flex items-center">AGENCIA TURMERO</div>
-                             <div className="col-span-2 p-2"><input className="w-full bg-transparent outline-none font-medium" placeholder="Personal" value={row.specialAgencia || ''} onChange={e => updateItem(idx, 'specialAgencia', e.target.value)} /></div>
-                          </div>
+                       )}
+                       <div className="space-y-1.5">
+                           <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{row.isSpecial ? "Feriado CC" : "S-D Call Center"}</label>
+                           <input className="w-full text-sm bg-background border border-border/50 rounded-lg p-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-muted-foreground/30" value={row.isSpecial ? (row.specialCallCenter || "") : (row.weekendCallCenterPerson || "")} onChange={(e) => updateItem(idx, row.isSpecial ? 'specialCallCenter' : 'weekendCallCenterPerson', e.target.value)} placeholder="Personal Asignado" />
                        </div>
-                     )}
-
-                     <div className="flex flex-col bg-amber-50/50 dark:bg-amber-950/10">
-                        <div className="p-1.5 text-center text-xs font-bold bg-amber-100 dark:bg-amber-950/40 border-b border-border/50 text-amber-900 dark:text-amber-300">
-                          <input className="bg-transparent w-full text-center outline-none" value={row.weekendText} onChange={e => updateItem(idx, 'weekendText', e.target.value)} />
-                        </div>
-                        <div className="grid grid-cols-3 border-b border-border/50 text-xs">
-                           <div className="p-2 border-r border-border/50 font-bold flex items-center">CALL CENTER</div>
-                           <div className="col-span-2 p-2"><input className="w-full bg-transparent outline-none font-medium" placeholder="Personal" value={row.weekendCallCenterPerson} onChange={e => updateItem(idx, 'weekendCallCenterPerson', e.target.value)} /></div>
-                        </div>
-                        <div className="grid grid-cols-3 border-b border-border/50 text-xs">
-                           <div className="p-2 border-r border-border/50 font-bold flex items-center">MONITOREO</div>
-                           <div className="col-span-2 p-2"><input className="w-full bg-transparent outline-none font-medium" placeholder="Personal" value={row.weekendMonitoreoPerson} onChange={e => updateItem(idx, 'weekendMonitoreoPerson', e.target.value)} /></div>
-                        </div>
-                        <div className="bg-amber-100/50 dark:bg-amber-950/20 p-1.5 text-center text-xs font-bold border-b border-border/50 text-amber-900 dark:text-amber-300">SOPORTE TÉCNICO</div>
-                        <div className="p-3 border-b border-border/50 text-center text-sm">
-                          <input className="w-full bg-transparent outline-none text-center font-medium" placeholder="Personal" value={row.weekendSoportePerson} onChange={e => updateItem(idx, 'weekendSoportePerson', e.target.value)} />
-                        </div>
-                        <div className="grid grid-cols-3 text-xs">
-                           <div className="p-2 border-r border-border/50 font-bold flex items-center">AGENCIA TURMERO</div>
-                           <div className="col-span-2 p-2"><input className="w-full bg-transparent outline-none font-medium" placeholder="Personal" value={row.weekendAgenciaPerson} onChange={e => updateItem(idx, 'weekendAgenciaPerson', e.target.value)} /></div>
-                        </div>
-                     </div>
-                  </td>
-
-                  {/* FECHA */}
-                  <td className="p-0 border-l border-border/50 align-top text-center h-full bg-muted/5">
-                    <div className="flex flex-col h-full min-h-[150px]">
-                      {row.isSpecial && (
-                        <div className="p-3 bg-red-100/80 dark:bg-red-950/60 border-b border-border/50 flex items-center justify-center min-h-[100px]">
-                          <textarea className="bg-transparent w-full text-center outline-none font-bold resize-none text-red-900 dark:text-red-200" rows={3} placeholder="Texto Feriado" value={row.specialTitle || ''} onChange={e => updateItem(idx, 'specialTitle', e.target.value)} />
-                        </div>
-                      )}
-                      <div className="p-4 bg-amber-100/80 dark:bg-amber-950/40 flex-1 flex flex-col items-center justify-center h-full">
-                        <textarea className="bg-transparent w-full text-center outline-none font-bold resize-none text-amber-900 dark:text-amber-200" rows={2} placeholder="Fecha Sab/Dom" value={row.fechaText} onChange={e => updateItem(idx, 'fechaText', e.target.value)} />
-                      </div>
+                       <div className="space-y-1.5">
+                           <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{row.isSpecial ? "Feriado Monitoreo" : "S-D Monitoreo"}</label>
+                           <input className="w-full text-sm bg-background border border-border/50 rounded-lg p-2 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all placeholder-muted-foreground/30" value={row.isSpecial ? (row.specialMonitoreo || "") : (row.weekendMonitoreoPerson || "")} onChange={(e) => updateItem(idx, row.isSpecial ? 'specialMonitoreo' : 'weekendMonitoreoPerson', e.target.value)} placeholder="Personal Asignado" />
+                       </div>
                     </div>
-                  </td>
+                 </div>
 
-                  {/* ACCIÓN */}
-                  <td className="p-4 border-l border-border/50 text-center align-middle">
-                    <div className="flex flex-col items-center gap-3">
-                      <button onClick={() => removeItem(idx)} title="Eliminar semana" className="p-2.5 text-destructive hover:bg-destructive/10 rounded-xl transition-colors">
-                        <Trash2 className="w-5 h-5" />
-                      </button>
-                      {!row.isSpecial && (
-                        <button onClick={() => toggleSpecial(idx)} className="text-[10px] uppercase font-bold text-muted-foreground hover:text-primary transition-colors text-center leading-tight">
-                          Añadir<br/>Feriado
-                        </button>
-                      )}
+                 {/* Soporte Técnico */}
+                 <div className="flex flex-col gap-3">
+                    <h3 className="font-bold text-sm flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                      <span className="text-[14px] leading-none">🛠️</span> Soporte Técnico
+                    </h3>
+                    <div className="space-y-4 bg-muted/20 p-4 rounded-xl border border-border/50 h-full">
+                       {!row.isSpecial && (
+                         <div className="space-y-1.5">
+                           <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">L-V Soporte</label>
+                           <input className="w-full text-sm bg-background border border-border/50 rounded-lg p-2 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder-muted-foreground/30" value={row.weekSoportePerson || ""} onChange={e => updateItem(idx, 'weekSoportePerson', e.target.value)} placeholder="Ej: JONATHAN / KELVIN" />
+                         </div>
+                       )}
+                       <div className="space-y-1.5">
+                           <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{row.isSpecial ? "Feriado Soporte" : "S-D Soporte"}</label>
+                           <textarea rows={2} className="w-full text-sm bg-background border border-border/50 rounded-lg p-2 outline-none focus:border-amber-500 focus:ring-1 focus:ring-amber-500 transition-all placeholder-muted-foreground/30 resize-none" value={row.isSpecial ? (row.specialSoporte || "") : (row.weekendSoportePerson || "")} onChange={(e) => updateItem(idx, row.isSpecial ? 'specialSoporte' : 'weekendSoportePerson', e.target.value)} placeholder="Personal Asignado" />
+                       </div>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                 </div>
+
+                 {/* Administración / Agencia */}
+                 <div className="flex flex-col gap-3">
+                    <h3 className="font-bold text-sm flex items-center gap-2 text-green-600 dark:text-green-400">
+                      <MapPin className="w-4 h-4" /> Agencia / Admin
+                    </h3>
+                    <div className="space-y-4 bg-muted/20 p-4 rounded-xl border border-border/50 h-full">
+                       <div className="space-y-1.5">
+                           <label className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{row.isSpecial ? "Feriado Agencia" : "S-D Agencia Turmero"}</label>
+                           <input className="w-full text-sm bg-background border border-border/50 rounded-lg p-2 outline-none focus:border-green-500 focus:ring-1 focus:ring-green-500 transition-all placeholder-muted-foreground/30" value={row.isSpecial ? (row.specialAgencia || "") : (row.weekendAgenciaPerson || "")} onChange={(e) => updateItem(idx, row.isSpecial ? 'specialAgencia' : 'weekendAgenciaPerson', e.target.value)} placeholder="Ej: CERRADO / YHOSSELLYN" />
+                       </div>
+                    </div>
+                 </div>
+
+              </div>
+            </div>
+          ))}
+
+          {data.length === 0 && (
+            <div className="col-span-full text-center p-12 text-muted-foreground border border-dashed border-border/50 rounded-2xl bg-muted/5">
+              <CalendarDays className="w-12 h-12 mx-auto mb-4 opacity-20" />
+              <p className="font-medium text-lg mb-1">No hay guardias registradas</p>
+              <p className="text-sm">Usa el botón &quot;Agregar Semana&quot; para comenzar a planificar los horarios.</p>
+            </div>
+          )}
         </div>
-        {data.length === 0 && (
-          <div className="text-center p-12 text-muted-foreground border border-dashed rounded-xl mt-4">
-            No hay guardias registradas. Usa el botón &quot;Agregar Semana&quot; para comenzar.
-          </div>
-        )}
       </div>
     </div>
   );
