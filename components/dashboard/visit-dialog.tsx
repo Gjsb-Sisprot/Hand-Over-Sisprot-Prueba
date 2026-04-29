@@ -40,7 +40,8 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
     reason: "",
     technician_id: "",
     status: "scheduled",
-    category: defaultCategory
+    category: defaultCategory,
+    glpi_ticket_id: ""
   })
 
   useEffect(() => {
@@ -55,7 +56,8 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
         reason: "",
         technician_id: "",
         status: "scheduled",
-        category: defaultCategory
+        category: defaultCategory,
+        glpi_ticket_id: ""
       })
     }
   }, [initialData, isOpen, defaultCategory])
@@ -150,14 +152,25 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Contrato (Opcional)</Label>
-            <Input
-              placeholder="#4929"
-              className="bg-background/50 rounded-xl"
-              value={formData.contract_number || ""}
-              onChange={(e) => setFormData({ ...formData, contract_number: e.target.value })}
-            />
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Contrato (Opcional)</Label>
+              <Input
+                placeholder="#4929"
+                className="bg-background/50 rounded-xl"
+                value={formData.contract_number || ""}
+                onChange={(e) => setFormData({ ...formData, contract_number: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1 text-primary">ID Ticket GLPI</Label>
+              <Input
+                placeholder="Ej: 12345"
+                className="bg-background/50 rounded-xl border-primary/20 focus-visible:ring-primary/30"
+                value={formData.glpi_ticket_id || ""}
+                onChange={(e) => setFormData({ ...formData, glpi_ticket_id: e.target.value })}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
