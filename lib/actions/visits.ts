@@ -107,7 +107,7 @@ export async function createVisitFromAI(params: {
     // 1. Buscar la conversación para obtener los datos del cliente utilizando privilegios de admin
     const { data: conv, error: convError } = await supabaseAdmin
       .from("conversations")
-      .select("id, glpi_ticket_id, contact_name, identification, contract, name")
+      .select("id, glpi_ticket_id, contact_name, identification, contract")
       .or(`session_id.eq.${params.sessionId},id.eq.${params.sessionId}`)
       .maybeSingle();
 
@@ -115,7 +115,7 @@ export async function createVisitFromAI(params: {
       throw new Error(`No se pudo encontrar la conversación ${params.sessionId}`);
     }
 
-    const clientName = conv.contact_name || conv.name || "Cliente AI";
+    const clientName = conv.contact_name || "Cliente AI";
 
     // 2. Insertar directamente usando supabaseAdmin para evitar checks de RLS de usuario
     const { data, error } = await (supabaseAdmin as any)
