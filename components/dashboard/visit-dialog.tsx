@@ -41,7 +41,7 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
     technician_id: "",
     status: "scheduled",
     category: defaultCategory,
-    glpi_ticket_id: ""
+    team: null
   })
 
   useEffect(() => {
@@ -57,7 +57,7 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
         technician_id: "",
         status: "scheduled",
         category: defaultCategory,
-        glpi_ticket_id: ""
+        team: null
       })
     }
   }, [initialData, isOpen, defaultCategory])
@@ -152,25 +152,14 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Contrato (Opcional)</Label>
-              <Input
-                placeholder="#4929"
-                className="bg-background/50 rounded-xl"
-                value={formData.contract_number || ""}
-                onChange={(e) => setFormData({ ...formData, contract_number: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1 text-primary">ID Ticket GLPI</Label>
-              <Input
-                placeholder="Ej: 12345"
-                className="bg-background/50 rounded-xl border-primary/20 focus-visible:ring-primary/30"
-                value={formData.glpi_ticket_id || ""}
-                onChange={(e) => setFormData({ ...formData, glpi_ticket_id: e.target.value })}
-              />
-            </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Contrato (Opcional)</Label>
+            <Input
+              placeholder="#4929"
+              className="bg-background/50 rounded-xl"
+              value={formData.contract_number || ""}
+              onChange={(e) => setFormData({ ...formData, contract_number: e.target.value })}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -200,6 +189,22 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
                 />
               </div>
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Equipo Especializado</Label>
+            <Select
+              value={formData.team || ""}
+              onValueChange={(val: any) => setFormData({ ...formData, team: val })}
+            >
+              <SelectTrigger className="bg-background/50 rounded-xl">
+                <SelectValue placeholder="Seleccionar equipo..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Equipo A">Equipo A (Intermitencia / Internet Lento)</SelectItem>
+                <SelectItem value="Equipo B">Equipo B (ONU en Rojo / Sin Señal)</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
