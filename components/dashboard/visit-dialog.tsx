@@ -39,9 +39,13 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
     visit_date: new Date().toISOString(),
     reason: "",
     technician_id: "",
+    technician_id_2: "",
     status: "scheduled",
     category: defaultCategory,
-    team: null
+    team: null,
+    metadata: {
+      glpi_ticket_id: ""
+    }
   })
 
   useEffect(() => {
@@ -55,9 +59,13 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
         visit_date: new Date().toISOString(),
         reason: "",
         technician_id: "",
+        technician_id_2: "",
         status: "scheduled",
         category: defaultCategory,
-        team: null
+        team: null,
+        metadata: {
+          glpi_ticket_id: ""
+        }
       })
     }
   }, [initialData, isOpen, defaultCategory])
@@ -192,6 +200,19 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
           </div>
 
           <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">ID Ticket (GLPI)</Label>
+            <Input
+              placeholder="Ej: 2605"
+              className="bg-background/50 rounded-xl"
+              value={formData.metadata?.glpi_ticket_id || ""}
+              onChange={(e) => setFormData({ 
+                ...formData, 
+                metadata: { ...formData.metadata, glpi_ticket_id: e.target.value } 
+              })}
+            />
+          </div>
+
+          <div className="space-y-2">
             <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Equipo Especializado</Label>
             <Select
               value={formData.team || ""}
@@ -207,23 +228,45 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
             </Select>
           </div>
 
-          <div className="space-y-2">
-            <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Técnico Asignado</Label>
-            <Select
-              value={formData.technician_id || ""}
-              onValueChange={(val) => setFormData({ ...formData, technician_id: val })}
-            >
-              <SelectTrigger className="bg-background/50 rounded-xl">
-                <SelectValue placeholder="Seleccionar técnico..." />
-              </SelectTrigger>
-              <SelectContent>
-                {technicians.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    {t.name} ({t.area})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Técnico Principal</Label>
+              <Select
+                value={formData.technician_id || ""}
+                onValueChange={(val) => setFormData({ ...formData, technician_id: val })}
+              >
+                <SelectTrigger className="bg-background/50 rounded-xl">
+                  <SelectValue placeholder="Seleccionar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Ninguno</SelectItem>
+                  {technicians.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Técnico Auxiliar</Label>
+              <Select
+                value={formData.technician_id_2 || ""}
+                onValueChange={(val) => setFormData({ ...formData, technician_id_2: val })}
+              >
+                <SelectTrigger className="bg-background/50 rounded-xl">
+                  <SelectValue placeholder="Seleccionar..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Ninguno</SelectItem>
+                  {technicians.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      {t.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="space-y-2">
