@@ -109,6 +109,8 @@ export default function GuardiasPage() {
 
   // Selection
   const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [selectedDayName, setSelectedDayName] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   useEffect(() => {
@@ -163,6 +165,91 @@ export default function GuardiasPage() {
     } finally {
       setIsSaving(false);
     }
+  const handleDownload = () => {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const html = `
+      <html>
+        <head>
+          <title>Guardias Sisprot - ${MONTHS[currentMonth]} ${currentYear}</title>
+          <style>
+            body { font-family: 'Inter', sans-serif; padding: 40px; color: #333; line-height: 1.5; }
+            h1 { text-align: center; color: #000; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
+            .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 30px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
+            th, td { border: 1px solid #e2e8f0; padding: 14px 10px; text-align: left; font-size: 11px; }
+            th { background-color: #f8fafc; font-weight: 800; text-transform: uppercase; color: #475569; letter-spacing: 0.05em; }
+            tr:nth-child(even) { background-color: #fcfcfc; }
+            .special { background-color: #fff5f5 !important; }
+            .special td { color: #c53030; font-weight: 600; }
+            .header-info { margin-bottom: 30px; border-bottom: 4px solid #3b82f6; padding-bottom: 15px; }
+            .badge { padding: 4px 8px; rounded: 4px; font-size: 9px; font-weight: bold; text-transform: uppercase; }
+            .badge-guardia { background: #e0f2fe; color: #0369a1; }
+            .badge-feriado { background: #fee2e2; color: #b91c1c; }
+            .person-list { font-weight: 500; color: #1e293b; }
+          </style>
+        </head>
+        <body>
+          <div class="header-info">
+            <h1>ROL DE GUARDIAS - SISTEMA SISPROT</h1>
+            <p class="subtitle">${MONTHS[currentMonth].toUpperCase()} ${currentYear}</p>
+            <div style="display: flex; justify-content: space-between; font-size: 10px; color: #64748b;">
+              <span><strong>Empresa:</strong> Sisprot G.F</span>
+              <span><strong>Generado:</strong> ${new Date().toLocaleString()}</span>
+            </div>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th style="width: 15%">RANGO FECHAS</th>
+                <th style="width: 10%">ESTADO</th>
+                <th style="width: 20%">CALL CENTER</th>
+                <th style="width: 20%">MONITOREO</th>
+                <th style="width: 20%">SOPORTE TÉCNICO</th>
+                <th style="width: 15%">AGENCIA TURMERO</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredData.sort((a,b) => a.startDay - b.startDay).map(w => {
+                const isSpecial = w.isSpecial;
+                return `
+                <tr class="${isSpecial ? 'special' : ''}">
+                  <td>
+                    <strong>${w.startDay === w.endDay ? w.startDay : `${w.startDay} al ${w.endDay}`}</strong> ${MONTHS[w.month].substring(0,3)}
+                  </td>
+                  <td>
+                    <span class="badge ${isSpecial ? 'badge-feriado' : 'badge-guardia'}">
+                      ${isSpecial ? (w.specialTitle || 'FERIADO') : 'GUARDIA'}
+                    </span>
+                  </td>
+                  <td class="person-list">${isSpecial ? (w.specialCallCenter || '-') : `${w.weekCallCenterPerson}${w.weekendCallCenterPerson ? ' / '+w.weekendCallCenterPerson : ''}`}</td>
+                  <td class="person-list">${isSpecial ? (w.specialMonitoreo || '-') : (w.weekendMonitoreoPerson || '-')}</td>
+                  <td class="person-list">${isSpecial ? (w.specialSoporte || '-') : `${w.weekSoportePerson}${w.weekendSoportePerson ? ' / '+w.weekendSoportePerson : ''}`}</td>
+                  <td class="person-list">${isSpecial ? (w.specialAgencia || '-') : (w.weekendAgenciaPerson || '-')}</td>
+                </tr>
+              `}).join('')}
+            </tbody>
+          </table>
+          <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; display: flex; justify-content: space-between;">
+             <div style="font-size: 9px; color: #94a3b8;">
+                © ${new Date().getFullYear()} Sisprot - Control de Guardias Interno
+             </div>
+             <div style="font-size: 9px; color: #94a3b8; font-style: italic;">
+                Documento de uso administrativo
+             </div>
+          </div>
+          <script>
+            window.onload = () => {
+              setTimeout(() => { window.print(); window.close(); }, 500);
+            };
+          </script>
+        </body>
+      </html>
+    `;
+
+    printWindow.document.write(html);
+    printWindow.document.close();
   };
 
   const updateItem = (itemId: string, field: string, value: any) => {
@@ -316,6 +403,13 @@ export default function GuardiasPage() {
              >
                <Plus className="w-4 h-4" /> Nueva Semana
              </button>
+
+             <button 
+               onClick={handleDownload}
+               className="flex items-center gap-2 px-5 py-2.5 bg-white text-foreground border border-border/50 font-bold rounded-xl shadow-sm hover:bg-muted active:scale-95 transition-all text-sm"
+             >
+               <History className="w-4 h-4" /> Exportar PDF
+             </button>
           </div>
         </div>
 
@@ -361,6 +455,8 @@ export default function GuardiasPage() {
                   onClick={() => {
                     if (week) {
                       setSelectedWeekId(week.id);
+                      setSelectedDay(dateObj.day);
+                      setSelectedDayName(WEEKDAYS[i % 7]);
                       setIsDrawerOpen(true);
                     }
                   }}
@@ -470,10 +566,7 @@ export default function GuardiasPage() {
                     selectedWeek.isSpecial ? "bg-red-500" : "bg-primary"
                   )} />
                   <h2 className="text-xl font-black text-foreground uppercase tracking-tight">
-                    {selectedWeek.startDay === selectedWeek.endDay 
-                      ? `${selectedWeek.startDay} de ${MONTHS[selectedWeek.month]}`
-                      : `Del ${selectedWeek.startDay} al ${selectedWeek.endDay} de ${MONTHS[selectedWeek.month]}`
-                    }
+                    {selectedDayName} {selectedDay?.toString().padStart(2, '0')}/{ (currentMonth + 1).toString().padStart(2, '0') }
                   </h2>
                 </div>
                 <button
@@ -484,9 +577,14 @@ export default function GuardiasPage() {
                 </button>
               </div>
 
-              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest bg-white/50 px-3 py-1.5 rounded-lg border border-border/20 inline-block">
-                {selectedWeek.isSpecial ? "Horario Especial / Feriado" : "Guardia de Semana"}
-              </p>
+              <div className="flex items-center gap-2">
+                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-white/50 px-3 py-1 rounded-lg border border-border/20">
+                    {selectedWeek.isSpecial ? "Horario Especial" : "Guardia Regular"}
+                 </p>
+                 <span className="text-[10px] text-muted-foreground font-medium">
+                    (Semana {selectedWeek.startDay}-{selectedWeek.endDay})
+                 </span>
+              </div>
             </div>
 
             {/* Drawer Content */}
