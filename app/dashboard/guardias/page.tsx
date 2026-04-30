@@ -112,6 +112,7 @@ export default function GuardiasPage() {
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
   const [selectedDayName, setSelectedDayName] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState<string>("Administrador");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -137,6 +138,8 @@ export default function GuardiasPage() {
           fetchedAgents.push({ id: 'missing-henyerbeth', name: 'HENYERBETH ARRIECHE' });
         }
         setAgents(fetchedAgents);
+        const { data: { user } } = await createClient().auth.getUser();
+        if (user?.email) setCurrentUser(user.email.split('@')[0].toUpperCase());
       } catch (e) {
         toast.error("Error cargando los datos");
       } finally {
@@ -179,146 +182,113 @@ export default function GuardiasPage() {
             @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
             body { font-family: 'Inter', sans-serif; padding: 30px; color: #1e293b; background: white; }
             .container { max-width: 1100px; margin: 0 auto; }
-            .header { border-bottom: 4px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
-            .header-title h1 { font-size: 28px; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: -0.02em; color: #0f172a; }
-            .header-title p { font-size: 16px; color: #64748b; margin: 5px 0 0; font-weight: 700; }
-            .meta { text-align: right; font-size: 11px; color: #94a3b8; }
+            .header { border-bottom: 4px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
+            .logo-area img { height: 60px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
+            .header-title h1 { font-size: 24px; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: -0.02em; color: #0f172a; text-align: right; }
+            .header-title p { font-size: 14px; color: #64748b; margin: 5px 0 0; font-weight: 700; text-align: right; }
             
             table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 1px solid #e2e8f0; }
             th { background: #f8fafc; color: #475569; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; padding: 12px 10px; border-bottom: 2px solid #e2e8f0; text-align: left; }
             td { padding: 12px 10px; font-size: 11px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
             
-            .week-row { background: #fdfdfd; }
             .type-badge { display: inline-block; padding: 3px 8px; border-radius: 5px; font-size: 9px; font-weight: 900; text-transform: uppercase; }
             .type-semana { background: #dbeafe; color: #1e40af; }
             .type-weekend { background: #fef3c7; color: #92400e; }
             .type-special { background: #fee2e2; color: #b91c1c; }
             
-            .role-box { margin-bottom: 4px; }
-            .role-label { font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 1px; }
             .names { font-weight: 700; color: #334155; }
-            .no-names { color: #cbd5e1; font-style: italic; }
-            
             .day-range { font-weight: 900; font-size: 13px; color: #0f172a; }
-            .day-month { font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase; }
             
-            .footer { margin-top: 40px; font-size: 10px; color: #94a3b8; display: flex; justify-content: space-between; border-top: 1px solid #f1f5f9; padding-top: 20px; }
+            .footer { margin-top: 50px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .signature { border-top: 2px solid #0f172a; width: 250px; padding-top: 10px; text-align: center; }
+            .signature p { margin: 2px 0; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+            .meta-info { font-size: 9px; color: #94a3b8; font-style: italic; }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
+              <div class="logo-area">
+                <img src="/logo.png" onerror="this.style.display='none'" />
+              </div>
               <div class="header-title">
                 <h1>Rol de Guardias y Turnos</h1>
                 <p>${MONTHS[currentMonth].toUpperCase()} ${currentYear} • SISPROT G.F</p>
-              </div>
-              <div class="meta">
-                Generado el: ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}<br>
-                Estado: Planificación Final
               </div>
             </div>
 
             <table>
               <thead>
                 <tr>
-                  <th style="width: 15%">Período / Días</th>
-                  <th style="width: 12%">Turno / Horario</th>
-                  <th style="width: 18%">Call Center & Monitoreo</th>
-                  <th style="width: 22%">Soporte Técnico</th>
-                  <th style="width: 18%">Agencia Turmero</th>
-                  <th style="width: 15%">Notas / Especial</th>
+                  <th style="width: 15%">Período</th>
+                  <th style="width: 12%">Turno</th>
+                  <th style="width: 20%">Call Center & Monitoreo</th>
+                  <th style="width: 20%">Soporte Técnico</th>
+                  <th style="width: 15%">Agencia</th>
+                  <th style="width: 18%">Observaciones</th>
                 </tr>
               </thead>
               <tbody>
                 ${filteredData.sort((a,b) => a.startDay - b.startDay).map(w => {
                   let rows = [];
-                  
-                  // Row for Weekdays (if exists)
                   if (!w.isSpecial && w.startDay <= 5) {
                     rows.push(`
-                      <tr class="week-row">
-                        <td>
-                          <div class="day-range">${w.startDay} al ${Math.min(w.endDay, 5)}</div>
-                          <div class="day-month">${MONTHS[w.month]}</div>
-                        </td>
-                        <td>
-                          <span class="type-badge type-semana">Días Semana</span>
-                          <div style="font-size: 9px; margin-top: 4px; font-weight: 700; color: #64748b;">8:00 AM - 5:00 PM</div>
-                        </td>
-                        <td><div class="names">${w.weekCallCenterPerson || '<span class="no-names">No asig.</span>'}</div></td>
-                        <td><div class="names">${w.weekSoportePerson || '<span class="no-names">No asig.</span>'}</div></td>
-                        <td><div class="names">-</div></td>
-                        <td><div style="font-size: 10px; color: #94a3b8;">Turno administrativo regular</div></td>
+                      <tr>
+                        <td><div class="day-range">${w.startDay} al ${Math.min(w.endDay, 5)}</div></td>
+                        <td><span class="type-badge type-semana">Días Semana</span></td>
+                        <td class="names">${w.weekCallCenterPerson || '-'}</td>
+                        <td class="names">${w.weekSoportePerson || '-'}</td>
+                        <td class="names">-</td>
+                        <td>8:00 AM - 5:00 PM</td>
                       </tr>
                     `);
                   }
-
-                  // Row for Special (if exists)
                   if (w.isSpecial) {
                     rows.push(`
                       <tr style="background: #fffafa;">
-                        <td>
-                          <div class="day-range">${w.startDay === w.endDay ? w.startDay : `${w.startDay} al ${w.endDay}`}</div>
-                          <div class="day-month">${MONTHS[w.month]}</div>
-                        </td>
-                        <td>
-                          <span class="type-badge type-special">Feriado</span>
-                          <div style="font-size: 9px; margin-top: 4px; font-weight: 700; color: #b91c1c;">8:00 AM - 8:00 PM</div>
-                        </td>
-                        <td><div class="names" style="color: #b91c1c;">${w.specialCallCenter || '<span class="no-names">No asig.</span>'}</div></td>
-                        <td><div class="names" style="color: #b91c1c;">${w.specialSoporte || '<span class="no-names">No asig.</span>'}</div></td>
-                        <td><div class="names" style="color: #b91c1c;">${w.specialAgencia || '<span class="no-names">No asig.</span>'}</div></td>
-                        <td><div style="font-size: 10px; font-weight: bold; color: #b91c1c;">${w.specialTitle || 'FESTIVO'}</div></td>
+                        <td><div class="day-range">${w.startDay === w.endDay ? w.startDay : `${w.startDay} al ${w.endDay}`}</div></td>
+                        <td><span class="type-badge type-special">Feriado</span></td>
+                        <td class="names" style="color: #b91c1c;">${w.specialCallCenter || '-'}</td>
+                        <td class="names" style="color: #b91c1c;">${w.specialSoporte || '-'}</td>
+                        <td class="names" style="color: #b91c1c;">${w.specialAgencia || '-'}</td>
+                        <td><strong style="color: #b91c1c;">${w.specialTitle || 'FESTIVO'}</strong></td>
                       </tr>
                     `);
                   }
-
-                  // Row for Weekend (if exists in this block)
-                  if (w.endDay >= 6 || (w.isSpecial && w.endDay >= 6)) {
-                     const startWeekend = Math.max(w.startDay, 6);
-                     if (startWeekend <= w.endDay) {
-                        rows.push(`
-                          <tr style="background: #fffcf5;">
-                            <td>
-                              <div class="day-range">${startWeekend === w.endDay ? startWeekend : `${startWeekend} al ${w.endDay}`}</div>
-                              <div class="day-month">${MONTHS[w.month]}</div>
-                            </td>
-                            <td>
-                              <span class="type-badge type-weekend">Sábado-Domingo</span>
-                              <div style="font-size: 9px; margin-top: 4px; font-weight: 700; color: #92400e;">8:00 AM - 8:00 PM</div>
-                            </td>
-                            <td>
-                              <div class="role-box">
-                                <div class="role-label">Call Center</div>
-                                <div class="names">${w.weekendCallCenterPerson || '<span class="no-names">No asig.</span>'}</div>
-                              </div>
-                              <div class="role-box">
-                                <div class="role-label">Monitoreo</div>
-                                <div class="names">${w.weekendMonitoreoPerson || '<span class="no-names">No asig.</span>'}</div>
-                              </div>
-                            </td>
-                            <td><div class="names">${w.weekendSoportePerson || '<span class="no-names">No asig.</span>'}</div></td>
-                            <td><div class="names">${w.weekendAgenciaPerson || '<span class="no-names">No asig.</span>'}</div></td>
-                            <td><div style="font-size: 10px; color: #92400e;">Guardia de fin de semana</div></td>
-                          </tr>
-                        `);
-                     }
+                  if (w.endDay >= 6) {
+                    rows.push(`
+                      <tr style="background: #fffcf5;">
+                        <td><div class="day-range">${Math.max(w.startDay, 6)} al ${w.endDay}</div></td>
+                        <td><span class="type-badge type-weekend">Fín de Semana</span></td>
+                        <td>
+                           <div style="font-size: 9px; font-weight: 800; color: #94a3b8;">CALL: <span class="names" style="color: #1e293b;">${w.weekendCallCenterPerson || '-'}</span></div>
+                           <div style="font-size: 9px; font-weight: 800; color: #94a3b8;">MONIT: <span class="names" style="color: #1e293b;">${w.weekendMonitoreoPerson || '-'}</span></div>
+                        </td>
+                        <td class="names">${w.weekendSoportePerson || '-'}</td>
+                        <td class="names">${w.weekendAgenciaPerson || '-'}</td>
+                        <td>8:00 AM - 8:00 PM</td>
+                      </tr>
+                    `);
                   }
-
                   return rows.join('');
                 }).join('')}
               </tbody>
             </table>
 
             <div class="footer">
-              <div>Sisprot G.F - Control de Personal y Guardias v2.0</div>
-              <div>Este documento es un rol oficial de trabajo y debe ser respetado por todo el personal.</div>
+              <div class="meta-info">
+                Documento generado el ${new Date().toLocaleString()}<br>
+                Sisprot G.F - Sistema de Control Interno
+              </div>
+              <div class="signature">
+                <p>Elaborado por:</p>
+                <div style="font-size: 14px; font-weight: 900; margin: 10px 0;">${currentUser}</div>
+                <p>SUPERVISOR DE OPERACIONES</p>
+              </div>
             </div>
           </div>
           <script>
-            window.onload = () => {
-              setTimeout(() => { window.print(); window.close(); }, 800);
-            };
+            window.onload = () => { window.print(); setTimeout(() => window.close(), 500); };
           </script>
         </body>
       </html>
@@ -612,275 +582,248 @@ export default function GuardiasPage() {
             {isSaving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5 group-hover:rotate-12 transition-transform" />}
             GUARDAR CAMBIOS
           </button>
-        </div>
-      </div>
-
-      {/* --- Right Side: The "Leaf" / Assignment Drawer --- */}
-      <div className={cn(
-        "fixed inset-y-0 right-0 w-full md:w-[400px] lg:w-[450px] bg-white shadow-[-20px_0_50px_-20px_rgba(0,0,0,0.1)] z-50 transform transition-all duration-700 ease-out border-l border-border/30",
-        isDrawerOpen ? "translate-x-0" : "translate-x-full"
-      )}>
-        {/* Drawer Handle/Toggle for mobile */}
-        <button
-          onClick={() => setIsDrawerOpen(false)}
-          className="absolute -left-12 top-1/2 -translate-y-1/2 w-12 h-24 bg-white border border-r-0 border-border/30 rounded-l-3xl flex items-center justify-center text-muted-foreground hover:text-primary transition-colors shadow-[-10px_0_20px_rgba(0,0,0,0.05)] md:flex hidden"
-        >
-          <ArrowRight className="w-6 h-6" />
-        </button>
-
-        {selectedWeek ? (() => {
-          const isWeekend = selectedDayName === 'SÁBADO' || selectedDayName === 'DOMINGO';
-          return (
-            <div className="flex flex-col h-full overflow-y-auto">
-            {/* Drawer Header */}
-            <div className={cn(
-              "p-8 border-b border-border/40 sticky top-0 bg-white/80 backdrop-blur-md z-10",
-              selectedWeek.isSpecial ? "bg-red-50/50" : "bg-primary/5"
-            )}>
-              <div className="flex justify-between items-center mb-4">
-                <div className="flex items-center gap-2">
-                  <div className={cn(
-                    "w-3 h-3 rounded-full",
-                    selectedWeek.isSpecial ? "bg-red-500" : "bg-primary"
-                  )} />
-                  <h2 className="text-xl font-black text-foreground uppercase tracking-tight">
-                    {selectedDayName} {selectedDay?.toString().padStart(2, '0')}/{ (currentMonth + 1).toString().padStart(2, '0') }
-                  </h2>
-                </div>
-                <button
-                  onClick={() => setIsDrawerOpen(false)}
-                  className="p-2 hover:bg-muted rounded-full transition-colors"
-                >
-                  <X className="w-6 h-6" />
+                       <span className="text-sm font-black text-foreground">
+                         {week.startDay === week.endDay ? `Día ${week.startDay}` : `${week.startDay} al ${week.endDay}`}
+                       </span>
+                    </div>
+                    {week.isSpecial && (
+                      <span className="text-[9px] font-black text-red-600 bg-red-100 px-2 py-0.5 rounded-full uppercase">Especial</span>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 opacity-70 group-hover:opacity-100 transition-opacity">
+                       <Headphones className="w-3 h-3 text-blue-500" />
+                       <p className="text-[10px] font-bold text-muted-foreground truncate uppercase">
+                         {week.isSpecial ? (week.specialCallCenter || 'Sin asignar') : (week.weekCallCenterPerson || 'Sin asignar')}
+                       </p>
+                    </div>
+                    <div className="flex items-center gap-2 opacity-70 group-hover:opacity-100 transition-opacity">
+                       <div className="w-3 h-3 flex items-center justify-center text-[10px]">🛠️</div>
+                       <p className="text-[10px] font-bold text-muted-foreground truncate uppercase">
+                         {week.isSpecial ? (week.specialSoporte || 'Sin asignar') : (week.weekSoportePerson || 'Sin asignar')}
+                       </p>
+                    </div>
+                  </div>
                 </button>
-              </div>
-
-              <div className="flex items-center gap-2">
-                 <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest bg-white/50 px-3 py-1 rounded-lg border border-border/20">
-                    {selectedWeek.isSpecial ? "Horario Especial" : "Guardia Regular"}
-                 </p>
-                 <span className="text-[10px] text-muted-foreground font-medium">
-                    (Semana {selectedWeek.startDay}-{selectedWeek.endDay})
-                 </span>
-              </div>
-            </div>
-
-            {/* Drawer Content */}
-            <div className="p-8 space-y-8 pb-32">
-
-              {/* Special Toggle */}
-              <div className={cn(
-                "p-5 rounded-2xl border-2 transition-all flex items-center justify-between",
-                selectedWeek.isSpecial ? "bg-red-500/5 border-red-500/20" : "bg-muted/5 border-border/40"
-              )}>
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "p-3 rounded-xl",
-                    selectedWeek.isSpecial ? "bg-red-500 text-white" : "bg-muted text-muted-foreground"
-                  )}>
-                    <AlertCircle className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <p className="font-black text-sm uppercase">Día Feriado / Especial</p>
-                    <p className="text-xs text-muted-foreground">Activa para horarios especiales</p>
-                  </div>
-                </div>
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selectedWeek.isSpecial}
-                    onChange={() => updateItem(selectedWeek.id, 'isSpecial', !selectedWeek.isSpecial)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-14 h-7 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-6 after:transition-all peer-checked:bg-red-500"></div>
-                </label>
-              </div>
-
-              {selectedWeek.isSpecial && (
-                <div className="space-y-2 animate-in slide-in-from-top-4 duration-300">
-                  <label className="text-[10px] font-black text-red-600 uppercase tracking-widest ml-1 flex items-center gap-2">
-                    <History className="w-3 h-3" /> Nombre de la Festividad
-                  </label>
-                  <input
-                    className="w-full bg-red-50 border-2 border-red-200 focus:border-red-500 rounded-xl px-4 py-3 outline-none font-bold text-sm text-red-900 transition-all placeholder:text-red-300"
-                    placeholder="Ej: Día del Trabajador"
-                    value={selectedWeek.specialTitle}
-                    onChange={e => updateItem(selectedWeek.id, 'specialTitle', e.target.value)}
-                  />
+              ))}
+              
+              {filteredData.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+                   <div className="w-16 h-16 bg-muted/50 rounded-full flex items-center justify-center mb-4">
+                      <CalendarIcon className="w-8 h-8 text-muted-foreground/30" />
+                   </div>
+                   <p className="text-xs font-bold text-muted-foreground uppercase">No hay semanas para este mes</p>
+                   <button onClick={addItem} className="text-[10px] font-black text-primary hover:underline mt-2 uppercase">Crear Primera Semana</button>
                 </div>
               )}
+           </div>
+        </aside>
 
-              {/* Assignment Sections */}
-              <div className="space-y-10">
-                
-                {/* Section 1: Call Center */}
-                <div className="space-y-4">
-                  <h3 className="font-black text-xs uppercase tracking-widest flex items-center gap-2 text-blue-600">
-                    <div className="p-1.5 bg-blue-50 rounded-lg"><Headphones className="w-4 h-4" /></div>
-                    Call Center & Monitoreo
-                  </h3>
-                  <div className="space-y-4 pl-2 border-l-2 border-blue-100">
+        {/* Detail View */}
+        <section className="flex-1 bg-white overflow-y-auto">
+          {selectedWeek ? (() => {
+            const isWeekend = false;
+            return (
+              <div className="max-w-4xl mx-auto p-12">
+                 <div className="flex justify-between items-start mb-12">
+                    <div>
+                       <div className="flex items-center gap-3 mb-2">
+                          <span className={cn(
+                            "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                            selectedWeek.isSpecial ? "bg-red-100 text-red-600" : "bg-primary/10 text-primary"
+                          )}>
+                            {selectedWeek.isSpecial ? "Planificación Especial / Feriado" : "Guardia Regular de Semana"}
+                          </span>
+                       </div>
+                       <h2 className="text-4xl font-black text-foreground tracking-tighter uppercase">
+                         Semana del {selectedWeek.startDay} al {selectedWeek.endDay}
+                       </h2>
+                       <p className="text-muted-foreground font-medium mt-2">{MONTHS[currentMonth]} {currentYear} • Sisprot Control System</p>
+                    </div>
                     
-                    {/* L-V (Solo si no es fin de semana) */}
-                    {(!isWeekend || selectedDayName === null) && (
-                      <div className={cn(
-                        "space-y-2 p-3 rounded-xl transition-all border border-transparent",
-                        !isWeekend && "bg-blue-50/50 border-blue-100 ring-4 ring-blue-500/5"
-                      )}>
-                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-tight">Lunes a Viernes</p>
-                        <MultiSelect 
-                          value={selectedWeek.weekCallCenterPerson} 
-                          onChange={v => updateItem(selectedWeek.id, 'weekCallCenterPerson', v)} 
-                          options={agents} placeholder="Seleccionar..." 
-                        />
-                      </div>
-                    )}
+                    <button 
+                      onClick={() => removeItem(selectedWeek.id)}
+                      className="p-3 text-muted-foreground hover:text-destructive hover:bg-destructive/5 rounded-2xl transition-all"
+                      title="Eliminar esta semana"
+                    >
+                      <Trash2 className="w-6 h-6" />
+                    </button>
+                 </div>
 
-                    {/* S-D (Solo si es fin de semana o si queremos ver todo) */}
-                    {(isWeekend || selectedDayName === null) && (
-                      <div className={cn(
-                        "space-y-2 p-3 rounded-xl transition-all border border-transparent",
-                        isWeekend && "bg-amber-50/50 border-amber-100 ring-4 ring-amber-500/5"
-                      )}>
-                        <p className="text-[10px] font-black text-amber-600 uppercase tracking-tight">Sábado y Domingo</p>
-                        <MultiSelect 
-                          value={selectedWeek.weekendCallCenterPerson} 
-                          onChange={v => updateItem(selectedWeek.id, 'weekendCallCenterPerson', v)} 
-                          options={agents} placeholder="Seleccionar..." 
-                        />
-                      </div>
-                    )}
-
-                    {/* Feriado (Solo si está marcado como especial) */}
-                    {selectedWeek.isSpecial && (
-                      <div className="space-y-2 p-3 bg-red-50/50 rounded-xl border border-red-100">
-                        <p className="text-[10px] font-black text-red-600 uppercase tracking-tight flex items-center gap-1.5">
-                          <AlertCircle className="w-3 h-3" /> Guardia Feriado / Especial
-                        </p>
-                        <MultiSelect 
-                          value={selectedWeek.specialCallCenter} 
-                          onChange={v => updateItem(selectedWeek.id, 'specialCallCenter', v)} 
-                          options={agents} placeholder="Personal de guardia..." 
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Section 2: Soporte */}
-                <div className="space-y-4">
-                  <h3 className="font-black text-xs uppercase tracking-widest flex items-center gap-2 text-amber-600">
-                    <div className="p-1.5 bg-amber-50 rounded-lg">🛠️</div>
-                    Soporte Técnico
-                  </h3>
-                  <div className="space-y-4 pl-2 border-l-2 border-amber-100">
-                    {!isWeekend && (
-                      <div className={cn(
-                        "space-y-2 p-3 rounded-xl transition-all border border-transparent",
-                        !isWeekend && "bg-blue-50/50 border-blue-100 ring-4 blue-500/5"
-                      )}>
-                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-tight">Lunes a Viernes</p>
-                        <MultiSelect 
-                          value={selectedWeek.weekSoportePerson} 
-                          onChange={v => updateItem(selectedWeek.id, 'weekSoportePerson', v)} 
-                          options={agents} placeholder="Seleccionar..." 
-                        />
-                      </div>
-                    )}
-
-                    {(isWeekend || selectedDayName === null) && (
-                      <div className={cn(
-                        "space-y-2 p-3 rounded-xl transition-all border border-transparent",
-                        isWeekend && "bg-amber-50/50 border-amber-100 ring-4 ring-amber-500/5"
-                      )}>
-                        <p className="text-[10px] font-black text-amber-600 uppercase tracking-tight">Sábado y Domingo</p>
-                        <MultiSelect 
-                          value={selectedWeek.weekendSoportePerson} 
-                          onChange={v => updateItem(selectedWeek.id, 'weekendSoportePerson', v)} 
-                          options={agents} placeholder="Seleccionar..." 
-                        />
-                      </div>
-                    )}
-
-                    {selectedWeek.isSpecial && (
-                      <div className="space-y-2 p-3 bg-red-50/50 rounded-xl border border-red-100">
-                        <p className="text-[10px] font-black text-red-600 uppercase tracking-tight flex items-center gap-1.5">
-                          <AlertCircle className="w-3 h-3" /> Soporte Feriado
-                        </p>
-                        <MultiSelect 
-                          value={selectedWeek.specialSoporte} 
-                          onChange={v => updateItem(selectedWeek.id, 'specialSoporte', v)} 
-                          options={agents} placeholder="Seleccionar soporte..." 
-                        />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Section 3: Agencia */}
-                <div className="space-y-4">
-                  <h3 className="font-black text-xs uppercase tracking-widest flex items-center gap-2 text-green-600">
-                    <div className="p-1.5 bg-green-50 rounded-lg"><MapPin className="w-4 h-4" /></div>
-                    Agencia & Admin
-                  </h3>
-                  <div className="space-y-4 pl-2 border-l-2 border-green-100">
+                 <div className="grid grid-cols-1 gap-12">
+                    {/* Special Toggle */}
                     <div className={cn(
-                      "space-y-2 p-3 rounded-xl transition-all border border-transparent",
-                      isWeekend && "bg-green-50/50 border-green-100 ring-4 ring-green-500/5"
+                      "p-6 rounded-3xl border-2 transition-all flex items-center justify-between",
+                      selectedWeek.isSpecial ? "bg-red-500/5 border-red-500/20 shadow-lg shadow-red-500/5" : "bg-muted/5 border-border/40"
                     )}>
-                      <p className="text-[10px] font-black text-green-600 uppercase tracking-tight">Fin de Semana (S-D)</p>
-                      <MultiSelect 
-                        value={selectedWeek.weekendAgenciaPerson} 
-                        onChange={v => updateItem(selectedWeek.id, 'weekendAgenciaPerson', v)} 
-                        options={[{id: 'cerrado', name: 'CERRADO'}, ...agents]} placeholder="Estado agencia..." 
-                      />
+                      <div className="flex items-center gap-5">
+                        <div className={cn(
+                          "w-14 h-14 rounded-2xl flex items-center justify-center",
+                          selectedWeek.isSpecial ? "bg-red-500 text-white" : "bg-muted text-muted-foreground"
+                        )}>
+                          <AlertCircle className="w-8 h-8" />
+                        </div>
+                        <div>
+                          <p className="font-black text-lg uppercase tracking-tight">Modo Feriado / Festivo</p>
+                          <p className="text-sm text-muted-foreground font-medium">Habilita campos de guardia para días especiales.</p>
+                        </div>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer scale-125 mr-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedWeek.isSpecial}
+                          onChange={() => updateItem(selectedWeek.id, 'isSpecial', !selectedWeek.isSpecial)}
+                          className="sr-only peer"
+                        />
+                        <div className="w-14 h-7 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-6 after:transition-all peer-checked:bg-red-500"></div>
+                      </label>
                     </div>
 
                     {selectedWeek.isSpecial && (
-                      <div className="space-y-2 p-3 bg-red-50/50 rounded-xl border border-red-100">
-                        <p className="text-[10px] font-black text-red-600 uppercase tracking-tight">Agencia Feriado</p>
-                        <MultiSelect 
-                          value={selectedWeek.specialAgencia} 
-                          onChange={v => updateItem(selectedWeek.id, 'specialAgencia', v)} 
-                          options={[{id: 'cerrado', name: 'CERRADO'}, ...agents]} placeholder="Estado agencia..." 
+                      <div className="space-y-3 animate-in slide-in-from-top-4 duration-500">
+                        <label className="text-xs font-black text-red-600 uppercase tracking-widest ml-1 flex items-center gap-2">
+                          <History className="w-3 h-3" /> Título de la Festividad
+                        </label>
+                        <input
+                          className="w-full bg-red-50 border-2 border-red-100 focus:border-red-500 focus:bg-white rounded-2xl px-6 py-4 outline-none font-bold text-lg text-red-900 transition-all placeholder:text-red-200"
+                          placeholder="Ej: Viernes 1 de Mayo - Día del Trabajador"
+                          value={selectedWeek.specialTitle}
+                          onChange={e => updateItem(selectedWeek.id, 'specialTitle', e.target.value)}
                         />
                       </div>
                     )}
-                  </div>
-                </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                       {/* Role Card 1 */}
+                       <div className="bg-[#fcfcfc] border border-border/40 rounded-[2rem] p-8 space-y-8 hover:shadow-xl hover:shadow-blue-500/5 transition-all">
+                          <div className="flex items-center gap-3">
+                             <div className="p-3 bg-blue-100 text-blue-600 rounded-2xl">
+                                <Headphones className="w-6 h-6" />
+                             </div>
+                             <h3 className="text-xl font-black uppercase tracking-tighter">Call Center</h3>
+                          </div>
+                          
+                          <div className="space-y-6">
+                             <div className="space-y-2">
+                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Lunes a Viernes</p>
+                                <MultiSelect 
+                                  value={selectedWeek.weekCallCenterPerson} 
+                                  onChange={v => updateItem(selectedWeek.id, 'weekCallCenterPerson', v)} 
+                                  options={agents} placeholder="Sin asignar" 
+                                />
+                             </div>
+                             <div className="space-y-2">
+                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">Fin de Semana (S-D)</p>
+                                <MultiSelect 
+                                  value={selectedWeek.weekendCallCenterPerson} 
+                                  onChange={v => updateItem(selectedWeek.id, 'weekendCallCenterPerson', v)} 
+                                  options={agents} placeholder="Sin asignar" 
+                                />
+                             </div>
+                             {selectedWeek.isSpecial && (
+                               <div className="space-y-2 p-4 bg-red-50 rounded-2xl border border-red-100">
+                                  <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">Guardia Feriado</p>
+                                  <MultiSelect 
+                                    value={selectedWeek.specialCallCenter} 
+                                    onChange={v => updateItem(selectedWeek.id, 'specialCallCenter', v)} 
+                                    options={agents} placeholder="Sin asignar" 
+                                  />
+                               </div>
+                             )}
+                          </div>
+                       </div>
+
+                       {/* Role Card 2 */}
+                       <div className="bg-[#fcfcfc] border border-border/40 rounded-[2rem] p-8 space-y-8 hover:shadow-xl hover:shadow-amber-500/5 transition-all">
+                          <div className="flex items-center gap-3">
+                             <div className="p-3 bg-amber-100 text-amber-600 rounded-2xl text-xl flex items-center justify-center">🛠️</div>
+                             <h3 className="text-xl font-black uppercase tracking-tighter">Soporte Técnico</h3>
+                          </div>
+                          
+                          <div className="space-y-6">
+                             <div className="space-y-2">
+                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Lunes a Viernes</p>
+                                <MultiSelect 
+                                  value={selectedWeek.weekSoportePerson} 
+                                  onChange={v => updateItem(selectedWeek.id, 'weekSoportePerson', v)} 
+                                  options={agents} placeholder="Sin asignar" 
+                                />
+                             </div>
+                             <div className="space-y-2">
+                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">Fin de Semana (S-D)</p>
+                                <MultiSelect 
+                                  value={selectedWeek.weekendSoportePerson} 
+                                  onChange={v => updateItem(selectedWeek.id, 'weekendSoportePerson', v)} 
+                                  options={agents} placeholder="Sin asignar" 
+                                />
+                             </div>
+                             {selectedWeek.isSpecial && (
+                               <div className="space-y-2 p-4 bg-red-50 rounded-2xl border border-red-100">
+                                  <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">Soporte Feriado</p>
+                                  <MultiSelect 
+                                    value={selectedWeek.specialSoporte} 
+                                    onChange={v => updateItem(selectedWeek.id, 'specialSoporte', v)} 
+                                    options={agents} placeholder="Sin asignar" 
+                                  />
+                               </div>
+                             )}
+                          </div>
+                       </div>
+
+                       {/* Role Card 3 */}
+                       <div className="bg-[#fcfcfc] border border-border/40 rounded-[2rem] p-8 space-y-8 hover:shadow-xl hover:shadow-green-500/5 transition-all md:col-span-2">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                               <div className="p-3 bg-green-100 text-green-600 rounded-2xl"><MapPin className="w-6 h-6" /></div>
+                               <h3 className="text-xl font-black uppercase tracking-tighter">Agencia & Monitoreo FDS</h3>
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                             <div className="space-y-2">
+                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Monitoreo (S-D)</p>
+                                <MultiSelect 
+                                  value={selectedWeek.weekendMonitoreoPerson} 
+                                  onChange={v => updateItem(selectedWeek.id, 'weekendMonitoreoPerson', v)} 
+                                  options={agents} placeholder="Sin asignar" 
+                                />
+                             </div>
+                             <div className="space-y-2">
+                                <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">Agencia (S-D)</p>
+                                <MultiSelect 
+                                  value={selectedWeek.weekendAgenciaPerson} 
+                                  onChange={v => updateItem(selectedWeek.id, 'weekendAgenciaPerson', v)} 
+                                  options={[{id: 'cerrado', name: 'CERRADO'}, ...agents]} placeholder="Estado" 
+                                />
+                             </div>
+                             {selectedWeek.isSpecial && (
+                               <div className="space-y-2">
+                                  <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">Agencia Feriado</p>
+                                  <MultiSelect 
+                                    value={selectedWeek.specialAgencia} 
+                                    onChange={v => updateItem(selectedWeek.id, 'specialAgencia', v)} 
+                                    options={[{id: 'cerrado', name: 'CERRADO'}, ...agents]} placeholder="Estado" 
+                                  />
+                               </div>
+                             )}
+                          </div>
+                       </div>
+                    </div>
+                 </div>
               </div>
-
-              {/* Danger Zone */}
-              <div className="pt-10 border-t border-border/40">
-                <button
-                  onClick={() => removeItem(selectedWeek.id)}
-                  className="w-full flex items-center justify-center gap-3 p-4 border-2 border-destructive/20 text-destructive font-black text-xs rounded-2xl hover:bg-destructive hover:text-white transition-all uppercase tracking-widest"
-                >
-                  <Trash2 className="w-4 h-4" /> Eliminar Registro
-                </button>
+            );
+          })() : (
+            <div className="flex flex-col items-center justify-center h-full p-20 text-center bg-muted/5">
+              <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center mb-8 shadow-xl shadow-black/5">
+                <CalendarIcon className="w-16 h-16 text-muted-foreground/20" />
               </div>
+              <h3 className="text-3xl font-black text-foreground uppercase tracking-tighter">Centro de Control</h3>
+              <p className="text-muted-foreground font-medium max-w-sm mt-4">
+                Selecciona una semana de la lista lateral para gestionar los turnos de guardia, personal y feriados.
+              </p>
             </div>
-          </div>
-          );
-        })() : (
-          <div className="flex flex-col items-center justify-center h-full p-12 text-center">
-            <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mb-6">
-              <CalendarIcon className="w-10 h-10 text-muted-foreground/30" />
-            </div>
-            <h3 className="text-xl font-black text-foreground/80 mb-2 uppercase">Selecciona una Semana</h3>
-            <p className="text-sm text-muted-foreground font-medium">Toca un día asignado en el calendario para editar el personal de guardia.</p>
-          </div>
-        )}
-      </div>
-
-      {/* Backdrop for mobile */}
-      {isDrawerOpen && (
-        <div
-          onClick={() => setIsDrawerOpen(false)}
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[40] md:hidden"
-        />
-      )}
-
+          )}
+        </section>
+      </main>
     </div>
-  );
-}
