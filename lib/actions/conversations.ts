@@ -488,6 +488,33 @@ export async function pauseConversation(
     return { error: "Error al pausar la conversación" };
   }
 }
+export async function reactivateConversation(sessionId: string) {
+  const agent = await getCurrentAgent();
+  if (!agent) {
+    return { error: "No autenticado" };
+  }
+
+  try {
+    const conversation = await getConversationBySessionId(sessionId);
+    if (!conversation) return { error: "Conversación no encontrada" };
+
+    const { error: updateError } = await (supabaseAdmin as any)
+      .from("conversations")
+      .update({ 
+        status: "active",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", conversation.id);
+
+    if (updateError) throw updateError;
+
+    revalidatePath("/dashboard/conversations");
+    return { success: true };
+  } catch (error) {
+    console.error("[REACTIVATE_ERROR]", error);
+    return { error: "Error al reactivar la conversación" };
+  }
+}
 
 export async function closeConversation(
   sessionId: string,
