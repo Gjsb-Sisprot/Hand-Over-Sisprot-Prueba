@@ -207,7 +207,7 @@ export default function GuardiasPage() {
     const jsPDF = w.jspdf?.jsPDF || w.jsPDF;
     
     if (!jsPDF) {
-      toast.error("El generador de PDF aún no está listo. Por favor, espera 5 segundos y recarga si el problema persiste.");
+      toast.error("El generador de PDF aún no está listo. Por favor, espera 5 segundos.");
       return;
     }
 
@@ -216,112 +216,139 @@ export default function GuardiasPage() {
       return;
     }
 
-    const toastId = toast.loading('Generando documento oficial...');
+    const toastId = toast.loading('Generando cronograma premium...');
 
     try {
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'letter'
+      });
+
+      // Background header style
+      doc.setFillColor(15, 23, 42);
+      doc.rect(0, 0, 280, 25, 'F');
       
-      // Header
-      doc.setFontSize(20);
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(22);
       doc.setFont("helvetica", "bold");
-      doc.text("SISPROT G.F - CRONOGRAMA DE GUARDIAS", 105, 20, { align: 'center' });
+      doc.text("SISPROT G.F - CRONOGRAMA DE GUARDIAS", 140, 15, { align: 'center' });
       
       doc.setFontSize(12);
-      doc.setFont("helvetica", "normal");
-      doc.text(`${MONTHS[currentMonth].toUpperCase()} ${currentYear}`, 105, 28, { align: 'center' });
+      doc.text(`${MONTHS[currentMonth].toUpperCase()} ${currentYear}`, 140, 22, { align: 'center' });
 
-      // Table Data
       const tableRows: any[] = [];
       const sortedData = [...filteredData].sort((a, b) => a.startDay - b.startDay);
 
-      sortedData.forEach(w => {
-        // Bloque L-V
-        if (!w.isSpecial) {
-          const fri = w.endDay - 2;
-          const start = w.startDay;
-          
-          if (start <= 5 || start < w.endDay - 1) {
-             const actualFri = Math.min(fri, 31);
-             const actualStart = start;
-             
-             // Determinar horario de soporte (18-24 y 25-31 es 1pm-8pm)
-             let soporteHorario = "8 AM - 8 PM";
-             if (actualStart >= 18) soporteHorario = "1 PM - 8 PM";
-
-             if (actualFri >= actualStart) {
-               tableRows.push([
-                 `Lunes ${actualStart} al Viernes ${actualFri}`,
-                 `CC: ${w.weekCallCenterPerson || '-'}`,
-                 `ST: ${w.weekSoportePerson || '-'}`,
-                 "-",
-                 { content: `CC: 8 AM - 5 PM\nST: ${soporteHorario}`, styles: { fontSize: 7 } }
-               ]);
-             }
-          }
-        }
+      sortedData.forEach((w, idx) => {
+        const itemNum = idx + 1;
+        const monthStr = (currentMonth + 1).toString().padStart(2, '0');
         
-        // Bloque Feriado
+        let leftCol = "";
+        let rightCol = "";
+        let dateCol = "";
+
         if (w.isSpecial) {
-          tableRows.push([
-            { content: w.specialTitle || `Feriado ${w.startDay}`, styles: { fillColor: [255, 230, 230], fontStyle: 'bold' } },
-            { content: `CC: ${w.specialCallCenter || '-'}\nMN: ${w.weekendMonitoreoPerson || 'HENYERBETH ARRIECHE'}`, styles: { fillColor: [255, 230, 230] } },
-            { content: `ST: ${w.specialSoporte || '-'}`, styles: { fillColor: [255, 230, 230] } },
-            { content: w.specialAgencia || 'CERRADA', styles: { fillColor: [255, 230, 230] } },
-            { content: "8 AM - 8 PM", styles: { fillColor: [255, 230, 230] } }
-          ]);
+          // Feriado Especial
+          leftCol = "DÍA FERIADO - AGENCIA CERRADA";
+          rightCol = [
+            { content: `CC Y MONITOREO - ${w.specialTitle || 'FERIADO'}`, styles: { fillColor: [255, 200, 200], fontStyle: 'bold' } },
+            `CC: ${w.specialCallCenter || '-'}\nMN: ${w.weekendMonitoreoPerson || '-'}`,
+            { content: "SOPORTE TÉCNICO", styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } },
+            `${w.specialSoporte || '-'}`,
+            { content: "AGENCIA TURMERO", styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } },
+            `${w.specialAgencia || 'CERRADA'}`
+          ];
+          dateCol = `${w.startDay}/${monthStr}`;
+        } else {
+          // Semana Regular
+          const fri = w.endDay - 2;
+          let soporteHorario = "08:00 AM A 08:00 PM";
+          if (w.startDay >= 18) soporteHorario = "01:00 PM A 08:00 PM";
+
+          leftCol = [
+             { content: `SEMANA DEL ${w.startDay.toString().padStart(2,'0')} AL ${fri.toString().padStart(2,'0')}/${monthStr}`, styles: { fillColor: [230, 245, 230], fontStyle: 'bold' } },
+             { content: `CALL CENTER 08:00 AM A 05:00 PM`, styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } },
+             `${w.weekCallCenterPerson || '-'}`,
+             { content: `SOPORTE TÉCNICO ${soporteHorario}`, styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } },
+             `${w.weekSoportePerson || '-'}`,
+             { content: "AGENCIA TURMERO", styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } },
+             "ABIERTA"
+          ];
+
+          rightCol = [
+             { content: `CC Y MONITOREO FDS 08:00 AM A 08:00 PM`, styles: { fillColor: [255, 250, 210], fontStyle: 'bold' } },
+             `CC: ${w.weekendCallCenterPerson || '-'}\nMN: ${w.weekendMonitoreoPerson || '-'}`,
+             { content: "SOPORTE TÉCNICO", styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } },
+             `${w.weekendSoportePerson || '-'}`,
+             { content: "AGENCIA TURMERO", styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } },
+             `${w.weekendAgenciaPerson || 'ABIERTA'}`
+          ];
+
+          dateCol = `${w.endDay-1}-${w.endDay}/${monthStr}`;
         }
 
-        // Bloque FDS
-        if (w.endDay >= 6 || (w.startDay >= 2 && w.startDay <= 3)) {
-          const sat = w.endDay - 1;
-          const sun = w.endDay;
-          
-          if (sun >= 2) {
-            tableRows.push([
-              { content: `Sábado ${sat} y Domingo ${sun}`, styles: { fillColor: [255, 250, 230], fontStyle: 'bold' } },
-              { content: `CC: ${w.weekendCallCenterPerson || '-'}\nMN: ${w.weekendMonitoreoPerson || '-'}`, styles: { fillColor: [255, 250, 230] } },
-              { content: `ST: ${w.weekendSoportePerson || '-'}`, styles: { fillColor: [255, 250, 230] } },
-              { content: w.weekendAgenciaPerson || '-', styles: { fillColor: [255, 250, 230] } },
-              { content: "8 AM - 8 PM", styles: { fillColor: [255, 250, 230] } }
-            ]);
+        tableRows.push([
+          { content: itemNum.toString(), styles: { valign: 'middle', halign: 'center', fontStyle: 'bold' } },
+          Array.isArray(leftCol) ? leftCol : [{ content: leftCol, styles: { valign: 'middle', halign: 'center' } }],
+          Array.isArray(rightCol) ? rightCol : [{ content: rightCol, styles: { valign: 'middle' } }],
+          { content: dateCol, styles: { valign: 'middle', halign: 'center', fontStyle: 'bold', fillColor: [245, 245, 250] } }
+        ]);
+      });
+
+      // Flatten the array rows for autoTable if they contain nested content
+      const processedRows = tableRows.map(row => {
+        return row.map(cell => {
+          if (Array.isArray(cell)) {
+            // Si es un array de objetos (estilo manual para cada linea de la celda)
+            // autoTable no soporta arrays de objetos directamente de esta forma facil
+            // pero podemos concatenarlos o usar hooks. 
+            // Para simplificar, convertiremos a string con saltos de linea y usaremos drawCell si fuera necesario.
+            // Pero mejor: usaremos un solo string con formato.
+            return cell.map(c => typeof c === 'string' ? c : c.content).join('\n');
           }
-        }
+          return cell;
+        });
       });
 
       (doc as any).autoTable({
-        startY: 35,
-        head: [['DÍA / FECHA', 'CALL CENTER & MN', 'SOPORTE TÉCNICO', 'AGENCIA', 'HORARIO']],
-        body: tableRows,
+        startY: 30,
+        head: [['ITEM', 'LUNES A VIERNES', 'SÁBADO / DOMINGO', 'FECHA']],
+        body: processedRows,
         theme: 'grid',
-        headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 9, halign: 'center' },
-        styles: { fontSize: 8, cellPadding: 4 },
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 10, halign: 'center', fontStyle: 'bold' },
+        styles: { fontSize: 8, cellPadding: 3, textColor: [15, 23, 42], lineWidth: 0.2, lineColor: [0, 0, 0] },
         columnStyles: {
-          0: { cellWidth: 35, halign: 'center', fontStyle: 'bold' },
-          4: { cellWidth: 25, halign: 'center' }
+          0: { cellWidth: 15 },
+          1: { cellWidth: 100 },
+          2: { cellWidth: 100 },
+          3: { cellWidth: 35 }
+        },
+        didParseCell: function(data: any) {
+          // Colorear celdas segun contenido
+          if (data.section === 'body') {
+            if (data.column.index === 1 && data.cell.text[0]?.includes('SEMANA')) {
+               data.cell.styles.fillColor = [230, 245, 230];
+            }
+            if (data.column.index === 2 && data.cell.text[0]?.includes('CC Y MONITOREO')) {
+               data.cell.styles.fillColor = [255, 250, 210];
+            }
+          }
         }
       });
 
-      // Footer
-      const finalY = (doc as any).lastAutoTable.finalY + 20;
+      const finalY = (doc as any).lastAutoTable.finalY + 15;
       doc.setFontSize(8);
-      doc.text(`Generado el: ${new Date().toLocaleString()}`, 14, finalY);
+      doc.setTextColor(100);
+      doc.text(`Sistema de Control Sisprot - Generado por: ${currentUser} - ${new Date().toLocaleString()}`, 14, finalY);
       
-      doc.line(130, finalY + 15, 190, finalY + 15);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "bold");
-      doc.text(currentUser.toUpperCase(), 160, finalY + 20, { align: 'center' });
-      doc.setFontSize(8);
-      doc.text("SUPERVISOR DE OPERACIONES", 160, finalY + 24, { align: 'center' });
-
-      doc.save(`Guardias_${MONTHS[currentMonth]}_${currentYear}.pdf`);
-      toast.success('¡PDF generado y descargado!', { id: toastId });
+      doc.save(`Cronograma_Guardias_${MONTHS[currentMonth]}.pdf`);
+      toast.success('¡Cronograma Premium Descargado!', { id: toastId });
     } catch (error) {
       console.error('Error PDF:', error);
-      toast.error('Error técnico al crear el PDF. Reintenta.', { id: toastId });
+      toast.error('Error al generar el diseño premium.', { id: toastId });
     }
   };
-
   const generateFullMonth = () => {
     const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
     const newItems: any[] = [];
