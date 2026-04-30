@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { 
   MessageSquare, 
   LayoutDashboard, 
@@ -9,11 +9,11 @@ import {
   Users, 
   LogOut,
   CalendarDays,
-  Radio,
-  Tag
+  Radio
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/use-permissions";
+import { createClient } from "@/lib/supabase/client";
 
 const WrenchEmoji = ({ className }: { className?: string }) => (
   <span className={cn("flex items-center justify-center text-lg", className)} style={{ lineHeight: 1 }}>🛠️</span>
@@ -21,7 +21,15 @@ const WrenchEmoji = ({ className }: { className?: string }) => (
 
 export function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
   const { role, loading } = usePermissions();
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/login");
+    router.refresh();
+  };
 
   const sidebarItems = [
     // Dashboard y Conversaciones: Call Center (operador) y Supervisor
@@ -38,9 +46,7 @@ export function Sidebar() {
     // Guardias y Usuarios: Solo Supervisor
     ...(role === "supervisor" ? [
       { icon: CalendarDays, label: "Guardias", href: "/dashboard/guardias" },
-      { icon: Users, label: "Usuarios", href: "#" },
-      { icon: Radio, label: "En vivo", href: "#" },
-      { icon: Tag, label: "Etiquetas", href: "#" }
+      { icon: Users, label: "Usuarios", href: "/dashboard/users" }
     ] : []),
   ];
 
@@ -52,7 +58,7 @@ export function Sidebar() {
 
       <nav className="flex-1 flex flex-col items-center gap-4">
         {!loading && sidebarItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
             <Link
               key={item.label}
@@ -84,7 +90,8 @@ export function Sidebar() {
         
         <button 
           title="Cerrar Sesión"
-          className="p-3 rounded-xl text-destructive hover:bg-destructive/10 transition-all"
+          onClick={handleLogout}
+          className="p-3 rounded-xl text-destructive hover:bg-destructive/10 transition-all cursor-pointer"
         >
           <LogOut className="h-5 w-5" />
         </button>
