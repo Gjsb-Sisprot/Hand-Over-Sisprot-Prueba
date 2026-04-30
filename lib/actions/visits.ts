@@ -227,37 +227,53 @@ export async function deleteVisit(id: string) {
   }
 }
 
-/**
- * Busca una visita técnica por el ID del ticket de GLPI guardado en metadata
- * O por ID de Supabase si es un UUID válido
- */
 export async function getVisitByTicketId(ticketId: string) {
   try {
-    // Si ticketId es un número, intentamos buscarlo en metadata->>glpi_ticket_id
-    // También buscamos por contract_number como fallback si es necesario
-    let query = (supabaseAdmin as any)
+    console.log(`[GET_VISIT] Buscando ticket: ${ticketId}`);
+    
+    // 1. Intentar buscar por metadata->>glpi_ticket_id (Texto)
+    const { data: byMetadata, error: error1 } = await (supabaseAdmin as any)
       .from("support_visits")
-      .select("*, technicians(name), technician_2:technician_id_2(name)");
-
-    // Intentamos buscar por glpi_ticket_id en metadata
-    const { data, error } = await query
-      .or(`metadata->>glpi_ticket_id.eq.${ticketId},id.eq.${ticketId.length > 20 ? ticketId : '00000000-0000-0000-0000-000000000000'}`)
+      .select("*, technicians(name), technician_2:technician_id_2(name)")
+      .filter("metadata->>glpi_ticket_id", "eq", ticketId)
       .maybeSingle();
 
-    if (error) throw error;
-    
-    if (!data) {
-      // Fallback: intentar buscar por contract_number si no se encontró por ticket
-      const { data: fallbackData } = await (supabaseAdmin as any)
+    if (byMetadata) return byMetadata as SupportVisit;
+
+    // 2. Intentar buscar por ID de Supabase (si es UUID)
+    if (ticketId.length > 30) {
+      const { data: byId, error: error2 } = await (supabaseAdmin as any)
         .from("support_visits")
         .select("*, technicians(name), technician_2:technician_id_2(name)")
-        .eq("contract_number", ticketId)
+        .eq("id", ticketId)
         .maybeSingle();
       
-      return fallbackData as SupportVisit | null;
+      if (byId) return byId as SupportVisit;
     }
 
-    return data as SupportVisit | null;
+    // 3. Fallback: buscar por contract_number
+    const { data: byContract, error: error3 } = await (supabaseAdmin as any)
+      .from("support_visits")
+      .select("*, technicians(name), technician_2:technician_id_2(name)")
+      .eq("contract_number", ticketId)
+      .maybeSingle();
+
+    if (byContract) return byContract as SupportVisit;
+
+    // 4. Búsqueda profunda en metadata por si el ticket está en otro campo
+    // Esto es más lento pero útil como último recurso
+    const { data: allVisits } = await (supabaseAdmin as any)
+      .from("support_visits")
+      .select("*, technicians(name), technician_2:technician_id_2(name)")
+      .limit(100);
+    
+    const deepSearch = (allVisits || []).find((v: any) => 
+      v.metadata?.glpi_ticket_id?.toString() === ticketId || 
+      v.metadata?.ticket_id?.toString() === ticketId ||
+      v.metadata?.id?.toString() === ticketId
+    );
+
+    return deepSearch as SupportVisit || null;
   } catch (error) {
     console.error("[GET_VISIT_BY_TICKET_ERROR]", error);
     return null;
@@ -275,7 +291,7 @@ async function notifyN8N(visit: SupportVisit) {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        id_ticket: ticketId, // Corregido el nombre del campo si es necesario, o mantenemos compatibilidad
+        id_tickect: ticketId, // Revertido a la ortografía original por compatibilidad con n8n
         contrato: visit.contract_number || "N/A",
         fecha: visit.visit_date.split('T')[0],
         hora: visit.visit_date.split('T')[1]?.substring(0, 5) || "Pendiente",
