@@ -12,6 +12,7 @@ export type SupportVisit = {
   visit_date: string;
   reason: string;
   technician_id: string | null;
+  technician_id_2: string | null;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'confirmed' | 'rescheduled';
   category: 'support' | 'administration';
   team: 'Equipo A' | 'Equipo B' | null;
@@ -21,6 +22,9 @@ export type SupportVisit = {
   created_at: string;
   updated_at: string;
   technicians?: {
+    name: string;
+  };
+  technician_2?: {
     name: string;
   };
 };
@@ -54,7 +58,7 @@ export async function getVisits(startDate: string, endDate: string, category?: '
   try {
     let query = (supabaseAdmin as any)
       .from("support_visits")
-      .select("*, technicians(name)")
+      .select("*, technicians(name), technician_2:technician_id_2(name)")
       .gte("visit_date", startDate)
       .lte("visit_date", endDate);
 
@@ -81,17 +85,30 @@ export async function createVisit(visitData: Partial<SupportVisit>) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
+    // Validar disponibilidad
+    if (visitData.visit_date) {
+      const isAvailable = await checkAvailability(visitData.visit_date);
+      if (!isAvailable) {
+        return { data: null, error: "Este horario ya está ocupado. Por favor selecciona otra hora." };
+      }
+    }
+
     const { data, error } = await (supabaseAdmin as any)
       .from("support_visits")
       .insert([{
         ...visitData,
         agent_id: user?.id
       }])
-      .select()
+      .select("*, technicians(name), technician_2:technician_id_2(name)")
       .single();
 
     if (error) throw error;
     
+    // Notificar a n8n
+    if (data) {
+      await notifyN8N(data);
+    }
+
     revalidatePath("/dashboard/calendar");
     return { data, error: null };
   } catch (error: any) {
@@ -146,17 +163,7 @@ export async function createVisitFromAI(params: {
 
     // 🚀 NOTIFICACIÓN: Enviar confirmación a n8n para avisar al cliente
     try {
-      await fetch("https://n8n.sisprottaurus.com/webhook/envio_confirmacion_visita_tecnica", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id_tickect: conv.glpi_ticket_id || conv.id,
-          contrato: conv.contract || "N/A",
-          fecha: params.visitDate.split('T')[0],
-          hora: params.visitDate.split('T')[1]?.substring(0, 5) || "Pendiente",
-          motivo: params.reason || "Agendado vía Dashboard"
-        })
-      });
+      await notifyN8N(data as any);
     } catch (err) {
       console.error("[NOTIFY_N8N_ERROR]", err);
     }
@@ -170,6 +177,14 @@ export async function createVisitFromAI(params: {
 
 export async function updateVisit(id: string, visitData: Partial<SupportVisit>) {
   try {
+    // Validar disponibilidad si se está cambiando la fecha
+    if (visitData.visit_date) {
+      const isAvailable = await checkAvailability(visitData.visit_date, id);
+      if (!isAvailable) {
+        return { data: null, error: "Este horario ya está ocupado. Por favor selecciona otra hora." };
+      }
+    }
+
     const { data, error } = await (supabaseAdmin as any)
       .from("support_visits")
       .update({
@@ -177,11 +192,16 @@ export async function updateVisit(id: string, visitData: Partial<SupportVisit>) 
         updated_at: new Date().toISOString()
       })
       .eq("id", id)
-      .select()
+      .select("*, technicians(name), technician_2:technician_id_2(name)")
       .single();
 
     if (error) throw error;
     
+    // Notificar a n8n si el estado es confirmado o si hay cambios relevantes
+    if (data) {
+      await notifyN8N(data);
+    }
+
     revalidatePath("/dashboard/calendar");
     return { data, error: null };
   } catch (error: any) {
@@ -209,20 +229,90 @@ export async function deleteVisit(id: string) {
 
 /**
  * Busca una visita técnica por el ID del ticket de GLPI guardado en metadata
+ * O por ID de Supabase si es un UUID válido
  */
 export async function getVisitByTicketId(ticketId: string) {
   try {
-    // Buscamos en la tabla support_visits donde metadata contenga el glpi_ticket_id
-    const { data, error } = await (supabaseAdmin as any)
+    // Si ticketId es un número, intentamos buscarlo en metadata->>glpi_ticket_id
+    // También buscamos por contract_number como fallback si es necesario
+    let query = (supabaseAdmin as any)
       .from("support_visits")
-      .select("*, technicians(name)")
-      .filter("metadata->>glpi_ticket_id", "eq", ticketId)
+      .select("*, technicians(name), technician_2:technician_id_2(name)");
+
+    // Intentamos buscar por glpi_ticket_id en metadata
+    const { data, error } = await query
+      .or(`metadata->>glpi_ticket_id.eq.${ticketId},id.eq.${ticketId.length > 20 ? ticketId : '00000000-0000-0000-0000-000000000000'}`)
       .maybeSingle();
 
     if (error) throw error;
+    
+    if (!data) {
+      // Fallback: intentar buscar por contract_number si no se encontró por ticket
+      const { data: fallbackData } = await (supabaseAdmin as any)
+        .from("support_visits")
+        .select("*, technicians(name), technician_2:technician_id_2(name)")
+        .eq("contract_number", ticketId)
+        .maybeSingle();
+      
+      return fallbackData as SupportVisit | null;
+    }
+
     return data as SupportVisit | null;
   } catch (error) {
     console.error("[GET_VISIT_BY_TICKET_ERROR]", error);
     return null;
+  }
+}
+
+/**
+ * Función auxiliar para notificar a n8n
+ */
+async function notifyN8N(visit: SupportVisit) {
+  try {
+    const ticketId = visit.metadata?.glpi_ticket_id || visit.id;
+    
+    await fetch("https://n8n.sisprottaurus.com/webhook/envio_confirmacion_visita_tecnica", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id_ticket: ticketId, // Corregido el nombre del campo si es necesario, o mantenemos compatibilidad
+        contrato: visit.contract_number || "N/A",
+        fecha: visit.visit_date.split('T')[0],
+        hora: visit.visit_date.split('T')[1]?.substring(0, 5) || "Pendiente",
+        motivo: visit.reason || "Agendado vía Dashboard",
+        tecnico: visit.technicians?.name || "Por asignar",
+        tecnico_2: visit.technician_2?.name || "N/A",
+        estado: visit.status
+      })
+    });
+  } catch (err) {
+    console.error("[NOTIFY_N8N_ERROR]", err);
+  }
+}
+
+/**
+ * Verifica si un horario está disponible
+ */
+async function checkAvailability(visitDate: string, excludeId?: string): Promise<boolean> {
+  try {
+    let query = (supabaseAdmin as any)
+      .from("support_visits")
+      .select("id")
+      .eq("visit_date", visitDate)
+      .neq("status", "cancelled");
+
+    if (excludeId) {
+      query = query.neq("id", excludeId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) throw error;
+    
+    // Si hay algún registro a la misma hora que no esté cancelado, no está disponible
+    return (data || []).length === 0;
+  } catch (error) {
+    console.error("[CHECK_AVAILABILITY_ERROR]", error);
+    return true; // En caso de error, permitimos para no bloquear, pero logueamos
   }
 }
