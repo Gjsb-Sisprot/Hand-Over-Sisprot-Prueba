@@ -136,8 +136,8 @@ export default function GuardiasPage() {
       script.async = true;
       document.body.appendChild(script);
     };
-    loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js", "jspdf-lib");
-    loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js", "autotable-lib");
+    loadScript("https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js", "jspdf-lib");
+    loadScript("https://unpkg.com/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js", "autotable-lib");
 
     const fetchData = async () => {
       try {
@@ -203,22 +203,23 @@ export default function GuardiasPage() {
   }, [data, selectedWeekId]);
 
   const handleDownload = async () => {
-    const lib = (window as any).jspdf;
+    const w = window as any;
+    const jsPDF = w.jspdf?.jsPDF || w.jsPDF;
     
-    if (!lib || !lib.jsPDF) {
-      toast.error("El motor de PDF se está cargando. Reintenta en 5 segundos.");
+    if (!jsPDF) {
+      toast.error("El generador de PDF aún no está listo. Por favor, espera 5 segundos y recarga si el problema persiste.");
       return;
     }
 
     if (filteredData.length === 0) {
-      toast.error("No hay datos para exportar en este mes. Pulsa 'Generar Mes' primero.");
+      toast.error("No hay datos en este mes. Pulsa 'Generar Mes' primero.");
       return;
     }
 
     const toastId = toast.loading('Generando documento oficial...');
 
     try {
-      const doc = new lib.jsPDF();
+      const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       
       // Header
