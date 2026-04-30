@@ -348,7 +348,7 @@ export type AgentNotificationInsert = TablesInsert<"agent_notifications">;
 
 export type AgentUpdate = TablesUpdate<"agents">;
 
-export type AgentRole = "admin" | "supervisor" | "agent";
+export type AgentRole = "operador" | "supervisor" | "agent";
 
 export type NotificationType = "new_escalation" | "conversation_update" | "system";
 
