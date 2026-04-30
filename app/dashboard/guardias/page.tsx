@@ -190,19 +190,28 @@ export default function GuardiasPage() {
       return;
     }
 
-    const opt = {
-      margin:       [10, 10, 10, 10],
-      filename:     `Guardias_${MONTHS[currentMonth]}_${currentYear}.pdf`,
-      image:        { type: 'jpeg', quality: 0.98 },
-      html2canvas:  { scale: 2, useCORS: true },
-      jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
-    };
+    const toastId = toast.loading('Generando PDF...');
 
-    toast.promise((window as any).html2pdf().set(opt).from(element).save(), {
-      loading: 'Generando PDF...',
-      success: 'PDF descargado correctamente',
-      error: 'Error al generar el PDF'
-    });
+    try {
+      const opt = {
+        margin:       [10, 10, 10, 10],
+        filename:     `Guardias_${MONTHS[currentMonth]}_${currentYear}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { 
+          scale: 2, 
+          useCORS: true,
+          logging: false,
+          letterRendering: true
+        },
+        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+      };
+
+      await (window as any).html2pdf().set(opt).from(element).save();
+      toast.success('PDF descargado correctamente', { id: toastId });
+    } catch (error) {
+      console.error('PDF Error:', error);
+      toast.error('Error al generar el PDF. Intenta de nuevo.', { id: toastId });
+    }
   };
 
   const updateItem = (itemId: string, field: string, value: any) => {
