@@ -461,16 +461,17 @@ export default function GuardiasPage() {
               "p-8 border-b border-border/40 sticky top-0 bg-white/80 backdrop-blur-md z-10",
               selectedWeek.isSpecial ? "bg-red-50/50" : "bg-primary/5"
             )}>
-              <div className="flex justify-between items-start mb-6">
-                <div className="space-y-1">
-                  <span className={cn(
-                    "text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest",
-                    selectedWeek.isSpecial ? "bg-red-500 text-white" : "bg-primary text-white"
-                  )}>
-                    Ref. {selectedWeek.item}
-                  </span>
-                  <h2 className="text-2xl font-black text-foreground pt-2">
-                    Asignación de Personal
+              <div className="flex justify-between items-center mb-4">
+                <div className="flex items-center gap-2">
+                  <div className={cn(
+                    "w-3 h-3 rounded-full",
+                    selectedWeek.isSpecial ? "bg-red-500" : "bg-primary"
+                  )} />
+                  <h2 className="text-xl font-black text-foreground uppercase tracking-tight">
+                    {selectedWeek.startDay === selectedWeek.endDay 
+                      ? `${selectedWeek.startDay} de ${MONTHS[selectedWeek.month]}`
+                      : `Del ${selectedWeek.startDay} al ${selectedWeek.endDay} de ${MONTHS[selectedWeek.month]}`
+                    }
                   </h2>
                 </div>
                 <button
@@ -481,24 +482,9 @@ export default function GuardiasPage() {
                 </button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest ml-1">Título Visual</label>
-                  <input
-                    className="w-full bg-white border-2 border-border/40 focus:border-primary rounded-xl px-4 py-3 outline-none font-bold text-sm transition-all"
-                    value={selectedWeek.weekDaysText}
-                    onChange={e => updateItem(selectedWeek.id, 'weekDaysText', e.target.value)}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest ml-1">Fecha Rango</label>
-                  <input
-                    className="w-full bg-white border-2 border-border/40 focus:border-primary rounded-xl px-4 py-3 outline-none font-bold text-sm transition-all"
-                    value={selectedWeek.fechaText}
-                    onChange={e => updateItem(selectedWeek.id, 'fechaText', e.target.value)}
-                  />
-                </div>
-              </div>
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-widest bg-white/50 px-3 py-1.5 rounded-lg border border-border/20 inline-block">
+                {selectedWeek.isSpecial ? "Horario Especial / Feriado" : "Guardia de Semana"}
+              </p>
             </div>
 
             {/* Drawer Content */}
