@@ -18,6 +18,19 @@ const MONTHS = [
 
 const WEEKDAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo"];
 
+const VENEZUELA_HOLIDAYS: { [key: string]: string } = {
+  "0-1": "Año Nuevo",
+  "3-19": "Proclamación de la Independencia",
+  "4-1": "Día del Trabajador",
+  "5-24": "Batalla de Carabobo",
+  "6-5": "Día de la Independencia",
+  "6-24": "Natalicio del Libertador",
+  "9-12": "Día de la Resistencia Indígena",
+  "11-24": "Víspera de Navidad",
+  "11-25": "Navidad",
+  "11-31": "Fin de Año"
+};
+
 // --- Helper Components ---
 
 function MultiSelect({
@@ -228,6 +241,53 @@ export default function GuardiasPage() {
     }
   };
 
+  const generateFullMonth = () => {
+    const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const newItems: any[] = [];
+    
+    // 1. Detectar Feriados automáticos
+    for (let d = 1; d <= lastDay; d++) {
+      const key = `${currentMonth}-${d}`;
+      if (VENEZUELA_HOLIDAYS[key]) {
+        newItems.push({
+          id: `holiday-${d}-${Date.now()}`,
+          month: currentMonth,
+          year: currentYear,
+          startDay: d,
+          endDay: d,
+          isSpecial: true,
+          specialTitle: `${WEEKDAYS[(new Date(currentYear, currentMonth, d).getDay() + 6) % 7]} ${d} de ${MONTHS[currentMonth]}: ${VENEZUELA_HOLIDAYS[key]}`,
+          specialCallCenter: "",
+          specialSoporte: "",
+          specialAgencia: "CERRADA"
+        });
+      }
+    }
+
+    // 2. Generar Semanas (bloques de 7 días o hasta fin de mes)
+    for (let d = 1; d <= lastDay; d += 7) {
+      const end = Math.min(d + 6, lastDay);
+      // No duplicar si ya existe un feriado exacto (opcional, mejor dejarlos)
+      newItems.push({
+        id: `week-${d}-${Date.now()}`,
+        month: currentMonth,
+        year: currentYear,
+        startDay: d,
+        endDay: end,
+        isSpecial: false,
+        weekCallCenterPerson: "",
+        weekSoportePerson: "",
+        weekendCallCenterPerson: "",
+        weekendMonitoreoPerson: "",
+        weekendSoportePerson: "",
+        weekendAgenciaPerson: ""
+      });
+    }
+
+    setData([...newItems, ...data]);
+    toast.success(`Se han generado los bloques para ${MONTHS[currentMonth]}`);
+  };
+
   const updateItem = (itemId: string, field: string, value: any) => {
     setData(prev => prev.map(item => item.id === itemId ? { ...item, [field]: value } : item));
   };
@@ -329,6 +389,13 @@ export default function GuardiasPage() {
            </button>
 
            <button 
+             onClick={generateFullMonth}
+             className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 text-white font-bold rounded-xl shadow-lg shadow-blue-600/10 hover:bg-blue-500 active:scale-95 transition-all text-sm"
+           >
+             <History className="w-4 h-4" /> Generar Mes
+           </button>
+
+           <button 
              onClick={addItem}
              className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all text-sm"
            >
@@ -349,7 +416,35 @@ export default function GuardiasPage() {
         <aside className="w-96 border-r border-border/40 bg-white flex flex-col">
            <div className="p-6 border-b border-border/40 bg-muted/20">
               <h2 className="text-xs font-black text-muted-foreground uppercase tracking-widest">Cronograma Mensual</h2>
-              <p className="text-[10px] font-medium text-muted-foreground/60 mt-1">Selecciona una semana para ver y editar detalles.</p>
+              <p className="text-[10px] font-medium text-muted-foreground/60 mt-1">Semanas y Feriados detectados.</p>
+              
+              {/* Mini Calendar Visualization */}
+              <div className="mt-4 grid grid-cols-7 gap-1">
+                 {['L','M','M','J','V','S','D'].map((d,i) => (
+                   <div key={i} className="text-[8px] font-black text-center text-muted-foreground/40">{d}</div>
+                 ))}
+                 {Array.from({ length: new Date(currentYear, currentMonth + 1, 0).getDate() }).map((_, i) => {
+                   const day = i + 1;
+                   const date = new Date(currentYear, currentMonth, day);
+                   const isHoliday = !!VENEZUELA_HOLIDAYS[`${currentMonth}-${day}`];
+                   const hasData = filteredData.some(w => day >= w.startDay && day <= w.endDay);
+                   const startOffset = (new Date(currentYear, currentMonth, 1).getDay() + 6) % 7;
+                   
+                   return (
+                     <div 
+                       key={i} 
+                       style={{ gridColumnStart: day === 1 ? startOffset + 1 : 'auto' }}
+                       className={cn(
+                         "h-6 rounded-md flex items-center justify-center text-[9px] font-bold border transition-all",
+                         isHoliday ? "bg-red-100 border-red-200 text-red-600 shadow-sm shadow-red-100" : 
+                         hasData ? "bg-primary/10 border-primary/20 text-primary" : "bg-muted/30 border-transparent text-muted-foreground/40"
+                       )}
+                     >
+                       {day}
+                     </div>
+                   );
+                 })}
+              </div>
            </div>
            
            <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
