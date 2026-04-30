@@ -229,36 +229,55 @@ export default function GuardiasPage() {
 
       sortedData.forEach(w => {
         // Bloque L-V
-        if (!w.isSpecial && w.startDay <= 5) {
-          tableRows.push([
-            `Lunes ${w.startDay} al Viernes ${Math.min(w.endDay, 5)}`,
-            `CC: ${w.weekCallCenterPerson || '-'}`,
-            `ST: ${w.weekSoportePerson || '-'}`,
-            "-",
-            "8 AM - 5 PM"
-          ]);
+        if (!w.isSpecial) {
+          const fri = w.endDay - 2;
+          const start = w.startDay;
+          
+          if (start <= 5 || start < w.endDay - 1) {
+             const actualFri = Math.min(fri, 31);
+             const actualStart = start;
+             
+             // Determinar horario de soporte (18-24 y 25-31 es 1pm-8pm)
+             let soporteHorario = "8 AM - 8 PM";
+             if (actualStart >= 18) soporteHorario = "1 PM - 8 PM";
+
+             if (actualFri >= actualStart) {
+               tableRows.push([
+                 `Lunes ${actualStart} al Viernes ${actualFri}`,
+                 `CC: ${w.weekCallCenterPerson || '-'}`,
+                 `ST: ${w.weekSoportePerson || '-'}`,
+                 "-",
+                 { content: `CC: 8 AM - 5 PM\nST: ${soporteHorario}`, styles: { fontSize: 7 } }
+               ]);
+             }
+          }
         }
         
         // Bloque Feriado
         if (w.isSpecial) {
           tableRows.push([
             { content: w.specialTitle || `Feriado ${w.startDay}`, styles: { fillColor: [255, 230, 230], fontStyle: 'bold' } },
-            { content: `CC: ${w.specialCallCenter || '-'}\nMN: ${w.weekendMonitoreoPerson || '-'}`, styles: { fillColor: [255, 230, 230] } },
+            { content: `CC: ${w.specialCallCenter || '-'}\nMN: ${w.weekendMonitoreoPerson || 'HENYERBETH ARRIECHE'}`, styles: { fillColor: [255, 230, 230] } },
             { content: `ST: ${w.specialSoporte || '-'}`, styles: { fillColor: [255, 230, 230] } },
-            { content: w.specialAgencia || '-', styles: { fillColor: [255, 230, 230] } },
+            { content: w.specialAgencia || 'CERRADA', styles: { fillColor: [255, 230, 230] } },
             { content: "8 AM - 8 PM", styles: { fillColor: [255, 230, 230] } }
           ]);
         }
 
         // Bloque FDS
-        if (w.endDay >= 6) {
-          tableRows.push([
-            { content: `Sábado ${Math.max(6, w.startDay)} y Domingo ${w.endDay}`, styles: { fillColor: [255, 250, 230], fontStyle: 'bold' } },
-            { content: `CC: ${w.weekendCallCenterPerson || '-'}\nMN: ${w.weekendMonitoreoPerson || '-'}`, styles: { fillColor: [255, 250, 230] } },
-            { content: `ST: ${w.weekendSoportePerson || '-'}`, styles: { fillColor: [255, 250, 230] } },
-            { content: w.weekendAgenciaPerson || '-', styles: { fillColor: [255, 250, 230] } },
-            { content: "8 AM - 8 PM", styles: { fillColor: [255, 250, 230] } }
-          ]);
+        if (w.endDay >= 6 || (w.startDay >= 2 && w.startDay <= 3)) {
+          const sat = w.endDay - 1;
+          const sun = w.endDay;
+          
+          if (sun >= 2) {
+            tableRows.push([
+              { content: `Sábado ${sat} y Domingo ${sun}`, styles: { fillColor: [255, 250, 230], fontStyle: 'bold' } },
+              { content: `CC: ${w.weekendCallCenterPerson || '-'}\nMN: ${w.weekendMonitoreoPerson || '-'}`, styles: { fillColor: [255, 250, 230] } },
+              { content: `ST: ${w.weekendSoportePerson || '-'}`, styles: { fillColor: [255, 250, 230] } },
+              { content: w.weekendAgenciaPerson || '-', styles: { fillColor: [255, 250, 230] } },
+              { content: "8 AM - 8 PM", styles: { fillColor: [255, 250, 230] } }
+            ]);
+          }
         }
       });
 
@@ -299,7 +318,7 @@ export default function GuardiasPage() {
     const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
     const newItems: any[] = [];
     
-    // 1. Detectar Feriados automáticos
+    // 1. Detectar Feriados automáticos (Venezuela)
     for (let d = 1; d <= lastDay; d++) {
       const key = `${currentMonth}-${d}`;
       if (VENEZUELA_HOLIDAYS[key]) {
@@ -310,18 +329,45 @@ export default function GuardiasPage() {
           startDay: d,
           endDay: d,
           isSpecial: true,
-          specialTitle: `${WEEKDAYS[(new Date(currentYear, currentMonth, d).getDay() + 6) % 7]} ${d} de ${MONTHS[currentMonth]}: ${VENEZUELA_HOLIDAYS[key]}`,
-          specialCallCenter: "",
-          specialSoporte: "",
-          specialAgencia: "CERRADA"
+          specialTitle: `VIERNES ${d}° DE MAYO: ${VENEZUELA_HOLIDAYS[key]}`,
+          specialCallCenter: "GEORGINA BALADI",
+          specialSoporte: "CARLOS OVALLES / ARNALDO ROJAS",
+          specialAgencia: "CERRADA",
+          weekendMonitoreoPerson: "HENYERBETH ARRIECHE" // Según solicitud del usuario
         });
       }
     }
 
-    // 2. Generar Semanas (bloques de 7 días o hasta fin de mes)
-    for (let d = 1; d <= lastDay; d += 7) {
+    // 2. Generar Semanas basadas en LUNES a DOMINGO
+    let d = 1;
+    // Primera semana (puede ser corta si el mes no empieza en lunes)
+    const firstDayObj = new Date(currentYear, currentMonth, 1);
+    const firstDayOfWeek = (firstDayObj.getDay() + 6) % 7; // 0=L, 6=D
+    const daysToFirstSun = 6 - firstDayOfWeek;
+    const firstEnd = Math.min(1 + daysToFirstSun, lastDay);
+    
+    // Solo agregar si no es solo el día 1 (que ya es feriado) o si tiene fin de semana
+    if (firstEnd > 1) {
+      newItems.push({
+        id: `week-init-${Date.now()}`,
+        month: currentMonth,
+        year: currentYear,
+        startDay: firstDayOfWeek === 0 ? 1 : 2, // Empezar después del feriado del 1
+        endDay: firstEnd,
+        isSpecial: false,
+        weekCallCenterPerson: "",
+        weekSoportePerson: "",
+        weekendCallCenterPerson: "",
+        weekendMonitoreoPerson: "",
+        weekendSoportePerson: "",
+        weekendAgenciaPerson: ""
+      });
+    }
+
+    // Semanas completas restantes
+    d = firstEnd + 1;
+    while (d <= lastDay) {
       const end = Math.min(d + 6, lastDay);
-      // No duplicar si ya existe un feriado exacto (opcional, mejor dejarlos)
       newItems.push({
         id: `week-${d}-${Date.now()}`,
         month: currentMonth,
@@ -336,10 +382,11 @@ export default function GuardiasPage() {
         weekendSoportePerson: "",
         weekendAgenciaPerson: ""
       });
+      d = end + 1;
     }
 
     setData([...newItems, ...data]);
-    toast.success(`Se han generado los bloques para ${MONTHS[currentMonth]}`);
+    toast.success(`Se han generado los bloques de Mayo 2026 correctamente`);
   };
 
   const updateItem = (itemId: string, field: string, value: any) => {
