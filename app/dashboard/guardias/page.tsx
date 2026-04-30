@@ -114,6 +114,12 @@ export default function GuardiasPage() {
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean, id: string | null }>({ isOpen: false, id: null });
 
   useEffect(() => {
+    // Cargar libreria para descarga de PDF
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
+    script.async = true;
+    document.body.appendChild(script);
+
     const fetchData = async () => {
       try {
         const [resGuardias, resAgents] = await Promise.all([
@@ -178,114 +184,25 @@ export default function GuardiasPage() {
   }, [data, selectedWeekId]);
 
   const handleDownload = () => {
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+    const element = document.getElementById('pdf-report-content');
+    if (!element || !(window as any).html2pdf) {
+      toast.error("Preparando descargador... intenta de nuevo en un segundo.");
+      return;
+    }
 
-    const html = `
-      <html>
-        <head>
-          <title>Cronograma de Guardias - ${MONTHS[currentMonth]} ${currentYear}</title>
-          <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
-            body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; background: white; line-height: 1.5; }
-            .container { max-width: 900px; margin: 0 auto; }
-            
-            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 40px; }
-            .logo-area img { height: 50px; }
-            .header-info { text-align: right; }
-            .header-info h1 { margin: 0; font-size: 20px; font-weight: 900; color: #0f172a; text-transform: uppercase; }
-            .header-info p { margin: 5px 0 0; font-size: 12px; color: #64748b; font-weight: 600; }
+    const opt = {
+      margin:       [10, 10, 10, 10],
+      filename:     `Guardias_${MONTHS[currentMonth]}_${currentYear}.pdf`,
+      image:        { type: 'jpeg', quality: 0.98 },
+      html2canvas:  { scale: 2, useCORS: true },
+      jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
+    };
 
-            .week-block { margin-bottom: 35px; page-break-inside: avoid; }
-            .week-title { font-size: 16px; font-weight: 900; color: #2563eb; text-transform: uppercase; border-left: 4px solid #2563eb; padding-left: 15px; margin-bottom: 15px; background: #f8fafc; padding-top: 8px; padding-bottom: 8px; }
-            .special-title { color: #dc2626; border-left-color: #dc2626; background: #fef2f2; }
-
-            .shift-section { margin-left: 20px; margin-bottom: 20px; }
-            .shift-label { font-size: 13px; font-weight: 800; color: #475569; margin-bottom: 10px; display: block; text-decoration: underline; }
-            
-            .role-item { display: flex; margin-bottom: 6px; font-size: 13px; }
-            .role-name { font-weight: 800; color: #0f172a; width: 140px; flex-shrink: 0; }
-            .role-value { color: #334155; font-weight: 500; }
-
-            .footer { margin-top: 60px; display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid #e2e8f0; padding-top: 30px; }
-            .signature { text-align: center; width: 250px; }
-            .sig-line { border-top: 2px solid #0f172a; margin-bottom: 10px; }
-            .sig-name { font-size: 14px; font-weight: 900; text-transform: uppercase; margin: 0; }
-            .sig-title { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 0; }
-            
-            .meta { font-size: 10px; color: #94a3b8; font-style: italic; }
-
-            @media print {
-              body { padding: 20px; }
-              .week-block { break-inside: avoid; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <div class="logo-area">
-                <img src="/logo.png" onerror="this.style.display='none'" />
-              </div>
-              <div class="header-info">
-                <h1>Cronograma de Guardias</h1>
-                <p>${MONTHS[currentMonth].toUpperCase()} ${currentYear} • SISPROT G.F</p>
-              </div>
-            </div>
-
-            ${filteredData.sort((a,b) => a.startDay - b.startDay).map(w => `
-              <div class="week-block">
-                <div class="week-title ${w.isSpecial ? 'special-title' : ''}">
-                  ${w.isSpecial ? (w.specialTitle || `Feriado: ${w.startDay} de ${MONTHS[w.month]}`) : `Semana del ${w.startDay} al ${w.endDay} de ${MONTHS[w.month]}`}
-                </div>
-
-                ${w.isSpecial ? `
-                  <div class="shift-section">
-                    <span class="shift-label">HORARIO: 8:00 AM - 8:00 PM</span>
-                    <div class="role-item"><span class="role-name">Call Center:</span><span class="role-value">${w.specialCallCenter || '-'}</span></div>
-                    <div class="role-item"><span class="role-name">Monitoreo:</span><span class="role-value">${w.weekendMonitoreoPerson || '-'}</span></div>
-                    <div class="role-item"><span class="role-name">Soporte Técnico:</span><span class="role-value">${w.specialSoporte || '-'}</span></div>
-                    <div class="role-item"><span class="role-name">Agencia:</span><span class="role-value">${w.specialAgencia || '-'}</span></div>
-                  </div>
-                ` : `
-                  <div class="shift-section">
-                    <span class="shift-label">Lunes a Viernes (8:00 AM - 5:00 PM):</span>
-                    <div class="role-item"><span class="role-name">Call Center:</span><span class="role-value">${w.weekCallCenterPerson || '-'}</span></div>
-                    <div class="role-item"><span class="role-name">Soporte Técnico:</span><span class="role-value">${w.weekSoportePerson || '-'}</span></div>
-                  </div>
-
-                  <div class="shift-section">
-                    <span class="shift-label">Sábado y Domingo (8:00 AM - 8:00 PM):</span>
-                    <div class="role-item"><span class="role-name">Call Center:</span><span class="role-value">${w.weekendCallCenterPerson || '-'}</span></div>
-                    <div class="role-item"><span class="role-name">Monitoreo:</span><span class="role-value">${w.weekendMonitoreoPerson || '-'}</span></div>
-                    <div class="role-item"><span class="role-name">Soporte Técnico:</span><span class="role-value">${w.weekendSoportePerson || '-'}</span></div>
-                    <div class="role-item"><span class="role-name">Agencia:</span><span class="role-value">${w.weekendAgenciaPerson || '-'}</span></div>
-                  </div>
-                `}
-              </div>
-            `).join('')}
-
-            <div class="footer">
-              <div class="meta">
-                Generado el ${new Date().toLocaleString()}<br>
-                Sistema de Control Interno Sisprot
-              </div>
-              <div class="signature">
-                <div class="sig-line"></div>
-                <p class="sig-name">${currentUser}</p>
-                <p class="sig-title">Supervisor de Operaciones</p>
-              </div>
-            </div>
-          </div>
-          <script>
-            window.onload = () => { window.print(); setTimeout(() => window.close(), 500); };
-          </script>
-        </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
+    toast.promise((window as any).html2pdf().set(opt).from(element).save(), {
+      loading: 'Generando PDF...',
+      success: 'PDF descargado correctamente',
+      error: 'Error al generar el PDF'
+    });
   };
 
   const updateItem = (itemId: string, field: string, value: any) => {
@@ -399,7 +316,7 @@ export default function GuardiasPage() {
              onClick={handleDownload}
              className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white font-bold rounded-xl shadow-lg shadow-slate-900/10 hover:bg-slate-800 active:scale-95 transition-all text-sm"
            >
-             <History className="w-4 h-4" /> Exportar PDF
+             <History className="w-4 h-4" /> Descargar PDF
            </button>
         </div>
       </header>
@@ -427,16 +344,19 @@ export default function GuardiasPage() {
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex items-center gap-2">
                        <div className={cn(
-                         "w-2 h-2 rounded-full",
+                         "w-2.5 h-2.5 rounded-full",
                          week.isSpecial ? "bg-red-500 animate-pulse" : "bg-primary"
                        )} />
                        <span className="text-sm font-black text-foreground">
-                         {week.startDay === week.endDay ? `Día ${week.startDay}` : `${week.startDay} al ${week.endDay}`}
+                         {week.isSpecial ? (week.specialTitle || `Día ${week.startDay}`) : `${week.startDay} al ${week.endDay}`}
                        </span>
                     </div>
-                    {week.isSpecial && (
-                      <span className="text-[9px] font-black text-red-600 bg-red-100 px-2 py-0.5 rounded-full uppercase">Especial</span>
-                    )}
+                    <div className="flex flex-col items-end">
+                       <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-tighter">Mayo 2026</span>
+                       {week.isSpecial && (
+                         <span className="text-[8px] font-black text-red-600 bg-red-100 px-2 py-0.5 rounded-md uppercase mt-1">Feriado</span>
+                       )}
+                    </div>
                   </div>
                   
                   <div className="space-y-2">
@@ -482,10 +402,12 @@ export default function GuardiasPage() {
                             {selectedWeek.isSpecial ? "Planificación Especial / Feriado" : "Guardia Regular de Semana"}
                           </span>
                        </div>
-                       <h2 className="text-4xl font-black text-foreground tracking-tighter uppercase">
-                         Semana del {selectedWeek.startDay} al {selectedWeek.endDay}
+                       <h2 className="text-4xl font-black text-foreground tracking-tighter uppercase leading-[0.9]">
+                         {selectedWeek.isSpecial ? (selectedWeek.specialTitle || "Día Especial") : `Semana ${selectedWeek.startDay} al ${selectedWeek.endDay}`}
                        </h2>
-                       <p className="text-muted-foreground font-medium mt-2">{MONTHS[currentMonth]} {currentYear} • Sisprot Control System</p>
+                       <p className="text-muted-foreground font-bold text-sm mt-3 flex items-center gap-2">
+                         <Clock className="w-4 h-4" /> {MONTHS[currentMonth].toUpperCase()} {currentYear} • SISPROT G.F
+                       </p>
                     </div>
                     
                     <button 
@@ -526,19 +448,27 @@ export default function GuardiasPage() {
                       </label>
                     </div>
 
-                    {selectedWeek.isSpecial && (
-                      <div className="space-y-3 animate-in slide-in-from-top-4 duration-500">
+                    <div className="space-y-4">
                         <label className="text-xs font-black text-red-600 uppercase tracking-widest ml-1 flex items-center gap-2">
-                          <History className="w-3 h-3" /> Título de la Festividad
+                           Título y Fecha del Evento
                         </label>
                         <input
-                          className="w-full bg-red-50 border-2 border-red-100 focus:border-red-500 focus:bg-white rounded-2xl px-6 py-4 outline-none font-bold text-lg text-red-900 transition-all placeholder:text-red-200"
-                          placeholder="Ej: Viernes 1 de Mayo - Día del Trabajador"
+                          className="w-full bg-red-50 border-2 border-red-100 focus:border-red-500 focus:bg-white rounded-2xl px-6 py-4 outline-none font-black text-xl text-red-900 transition-all placeholder:text-red-200"
+                          placeholder="Ej: Miércoles 1 de Mayo: Feriado"
                           value={selectedWeek.specialTitle}
                           onChange={e => updateItem(selectedWeek.id, 'specialTitle', e.target.value)}
                         />
+                        <div className="flex gap-4">
+                           <div className="flex-1">
+                              <p className="text-[10px] font-black text-muted-foreground uppercase mb-1 ml-1">Día de Inicio</p>
+                              <input type="number" value={selectedWeek.startDay} onChange={e => updateItem(selectedWeek.id, 'startDay', parseInt(e.target.value))} className="w-full p-3 rounded-xl border border-border/40 font-bold" />
+                           </div>
+                           <div className="flex-1">
+                              <p className="text-[10px] font-black text-muted-foreground uppercase mb-1 ml-1">Día Final</p>
+                              <input type="number" value={selectedWeek.endDay} onChange={e => updateItem(selectedWeek.id, 'endDay', parseInt(e.target.value))} className="w-full p-3 rounded-xl border border-border/40 font-bold" />
+                           </div>
+                        </div>
                       </div>
-                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                        {/* Role Card 1 */}
@@ -552,7 +482,7 @@ export default function GuardiasPage() {
                           
                           <div className="space-y-6">
                              <div className="space-y-2">
-                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Lunes a Viernes (8am - 5pm)</p>
+                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">L-V (8:00 AM - 5:00 PM)</p>
                                 <MultiSelect 
                                   value={selectedWeek.weekCallCenterPerson} 
                                   onChange={v => updateItem(selectedWeek.id, 'weekCallCenterPerson', v)} 
@@ -560,7 +490,7 @@ export default function GuardiasPage() {
                                 />
                              </div>
                              <div className="space-y-2">
-                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">Sábado y Domingo (8am - 8pm)</p>
+                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">SÁB-DOM (8:00 AM - 8:00 PM)</p>
                                 <MultiSelect 
                                   value={selectedWeek.weekendCallCenterPerson} 
                                   onChange={v => updateItem(selectedWeek.id, 'weekendCallCenterPerson', v)} 
@@ -589,7 +519,7 @@ export default function GuardiasPage() {
                           
                           <div className="space-y-6">
                              <div className="space-y-2">
-                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Lunes a Viernes (8am - 8pm)</p>
+                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">L-V (8:00 AM - 8:00 PM)</p>
                                 <MultiSelect 
                                   value={selectedWeek.weekSoportePerson} 
                                   onChange={v => updateItem(selectedWeek.id, 'weekSoportePerson', v)} 
@@ -597,7 +527,7 @@ export default function GuardiasPage() {
                                 />
                              </div>
                              <div className="space-y-2">
-                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">Sábado y Domingo (8am - 8pm)</p>
+                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">SÁB-DOM (8:00 AM - 8:00 PM)</p>
                                 <MultiSelect 
                                   value={selectedWeek.weekendSoportePerson} 
                                   onChange={v => updateItem(selectedWeek.id, 'weekendSoportePerson', v)} 
@@ -706,6 +636,90 @@ export default function GuardiasPage() {
            </div>
         </div>
       )}
+      {/* Hidden Content for PDF Generation */}
+      <div style={{ position: 'absolute', left: '-9999px', top: '-9999px' }}>
+        <div id="pdf-report-content" style={{ 
+          width: '750px', 
+          padding: '40px', 
+          background: 'white', 
+          fontFamily: 'Inter, sans-serif',
+          color: '#1e293b'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px solid #2563eb', paddingBottom: '15px', marginBottom: '20px' }}>
+             <img src="/logo.png" style={{ height: '50px' }} />
+             <div style={{ textAlign: 'right' }}>
+                <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 900, color: '#0f172a', textTransform: 'uppercase' }}>Cronograma de Guardias</h1>
+                <p style={{ margin: 2, fontSize: '12px', fontWeight: 700, color: '#64748b' }}>{MONTHS[currentMonth].toUpperCase()} {currentYear} • SISPROT G.F</p>
+             </div>
+          </div>
+
+          <table style={{ width: '100%', borderCollapse: 'collapse', border: '2px solid #0f172a' }}>
+             <thead>
+                <tr style={{ background: '#f1f5f9' }}>
+                   <th style={{ border: '1px solid #0f172a', padding: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }}>Día / Fecha</th>
+                   <th style={{ border: '1px solid #0f172a', padding: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }}>Call Center & Monitoreo</th>
+                   <th style={{ border: '1px solid #0f172a', padding: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }}>Soporte Técnico</th>
+                   <th style={{ border: '1px solid #0f172a', padding: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }}>Agencia</th>
+                   <th style={{ border: '1px solid #0f172a', padding: '10px', fontSize: '10px', fontWeight: 900, textTransform: 'uppercase' }}>Horario</th>
+                </tr>
+             </thead>
+             <tbody>
+                {filteredData.sort((a,b) => a.startDay - b.startDay).map((w, idx) => {
+                  const items = [];
+                  if (!w.isSpecial && w.startDay <= 5) {
+                    items.push(
+                      <tr key={`${w.id}-lv`}>
+                        <td style={{ border: '1px solid #0f172a', padding: '10px', fontWeight: 900, textAlign: 'center', fontSize: '11px', background: '#f8fafc' }}>
+                          Lunes {w.startDay} al Viernes {Math.min(w.endDay, 5)}
+                        </td>
+                        <td style={{ border: '1px solid #0f172a', padding: '10px', fontWeight: 700, fontSize: '11px' }}>{w.weekCallCenterPerson || '-'}</td>
+                        <td style={{ border: '1px solid #0f172a', padding: '10px', fontWeight: 700, fontSize: '11px' }}>{w.weekSoportePerson || '-'}</td>
+                        <td style={{ border: '1px solid #0f172a', padding: '10px', textAlign: 'center' }}>-</td>
+                        <td style={{ border: '1px solid #0f172a', padding: '10px', fontSize: '9px', fontWeight: 800, color: '#64748b' }}>8:00 AM - 5:00 PM</td>
+                      </tr>
+                    );
+                  }
+                  if (w.isSpecial) {
+                    items.push(
+                      <tr key={`${w.id}-sp`} style={{ background: '#fee2e2' }}>
+                        <td style={{ border: '1px solid #0f172a', padding: '10px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>{w.specialTitle || `Feriado ${w.startDay}`}</td>
+                        <td style={{ border: '1px solid #0f172a', padding: '10px', fontWeight: 700, fontSize: '11px' }}>
+                          CC: {w.specialCallCenter || '-'}<br/>MN: {w.weekendMonitoreoPerson || '-'}
+                        </td>
+                        <td style={{ border: '1px solid #0f172a', padding: '10px', fontWeight: 700, fontSize: '11px' }}>{w.specialSoporte || '-'}</td>
+                        <td style={{ border: '1px solid #0f172a', padding: '10px', fontWeight: 700, fontSize: '11px' }}>{w.specialAgencia || '-'}</td>
+                        <td style={{ border: '1px solid #0f172a', padding: '10px', fontSize: '9px', fontWeight: 900 }}>8:00 AM - 8:00 PM</td>
+                      </tr>
+                    );
+                  }
+                  if (w.endDay >= 6) {
+                    items.push(
+                      <tr key={`${w.id}-we`} style={{ background: '#fffbeb' }}>
+                        <td style={{ border: '1px solid #0f172a', padding: '10px', fontWeight: 900, textAlign: 'center', fontSize: '11px' }}>Sábado {Math.max(w.startDay, 6)} y Domingo {w.endDay}</td>
+                        <td style={{ border: '1px solid #0f172a', padding: '10px', fontWeight: 700, fontSize: '11px' }}>
+                          CC: {w.weekendCallCenterPerson || '-'}<br/>MN: {w.weekendMonitoreoPerson || '-'}
+                        </td>
+                        <td style={{ border: '1px solid #0f172a', padding: '10px', fontWeight: 700, fontSize: '11px' }}>{w.weekendSoportePerson || '-'}</td>
+                        <td style={{ border: '1px solid #0f172a', padding: '10px', fontWeight: 700, fontSize: '11px' }}>{w.weekendAgenciaPerson || '-'}</td>
+                        <td style={{ border: '1px solid #0f172a', padding: '10px', fontSize: '9px', fontWeight: 900 }}>8:00 AM - 8:00 PM</td>
+                      </tr>
+                    );
+                  }
+                  return items;
+                })}
+             </tbody>
+          </table>
+
+          <div style={{ marginTop: '40px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+             <div style={{ fontSize: '10px', color: '#94a3b8' }}>Generado por Sisprot Control System</div>
+             <div style={{ textAlign: 'center', width: '250px' }}>
+                <div style={{ borderTop: '2px solid #0f172a', marginBottom: '5px' }}></div>
+                <p style={{ margin: 0, fontSize: '14px', fontWeight: 900, textTransform: 'uppercase' }}>{currentUser}</p>
+                <p style={{ margin: 0, fontSize: '10px', fontWeight: 700, color: '#64748b' }}>SUPERVISOR DE OPERACIONES</p>
+             </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
