@@ -104,8 +104,8 @@ export default function GuardiasPage() {
   const [isSaving, setIsSaving] = useState(false);
   
   // Navigation
-  const [currentMonth, setCurrentMonth] = useState(new Date().getMonth());
-  const [currentYear, setCurrentYear] = useState(new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(4); // Mayo
+  const [currentYear, setCurrentYear] = useState(2026);
   
   // Selection
   const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
@@ -123,15 +123,18 @@ export default function GuardiasPage() {
           ...item,
           month: item.month ?? 4,
           year: item.year ?? 2026,
-          // Add default range if missing (simplified for this demo logic)
           startDay: item.startDay ?? 1,
           endDay: item.endDay ?? 7
         }));
 
         setData(initializedData);
-        if (resAgents.data) {
-          setAgents(resAgents.data);
+        
+        let fetchedAgents = resAgents.data || [];
+        // Asegurar que Henyerbeth esté en la lista aunque falte en Supabase
+        if (!fetchedAgents.find((a: any) => a.name.includes("HENYERBETH ARRIECHE"))) {
+          fetchedAgents.push({ id: 'missing-henyerbeth', name: 'HENYERBETH ARRIECHE' });
         }
+        setAgents(fetchedAgents);
       } catch (e) {
         toast.error("Error cargando los datos");
       } finally {
