@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { 
-  Save, Plus, Trash2, CalendarDays, Headphones, MapPin, 
-  AlertCircle, Clock, ChevronDown, ChevronUp, Users, 
-  Calendar as CalendarIcon, ChevronLeft, ChevronRight, 
+import {
+  Save, Plus, Trash2, CalendarDays, Headphones, MapPin,
+  AlertCircle, Clock, ChevronDown, ChevronUp, Users,
+  Calendar as CalendarIcon, ChevronLeft, ChevronRight,
   History, X, Check, ArrowRight
 } from "lucide-react";
 import { toast } from "sonner";
@@ -20,16 +20,16 @@ const WEEKDAYS = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado
 
 // --- Helper Components ---
 
-function MultiSelect({ 
-  value, 
-  onChange, 
-  options, 
+function MultiSelect({
+  value,
+  onChange,
+  options,
   placeholder,
   className
-}: { 
-  value: string; 
-  onChange: (val: string) => void; 
-  options: {id: string, name: string}[]; 
+}: {
+  value: string;
+  onChange: (val: string) => void;
+  options: { id: string, name: string }[];
   placeholder: string;
   className?: string;
 }) {
@@ -48,7 +48,7 @@ function MultiSelect({
 
   return (
     <div className="relative">
-      <div 
+      <div
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "w-full text-sm font-medium border-2 border-transparent hover:border-border rounded-xl p-2.5 outline-none transition-all shadow-sm flex flex-wrap gap-1 min-h-[44px] cursor-pointer items-center bg-background",
@@ -57,7 +57,7 @@ function MultiSelect({
         )}
       >
         {selectedNames.length === 0 ? (
-          <span className="text-muted-foreground/40 font-normal flex items-center gap-2"><Users className="w-4 h-4"/> {placeholder}</span>
+          <span className="text-muted-foreground/40 font-normal flex items-center gap-2"><Users className="w-4 h-4" /> {placeholder}</span>
         ) : (
           selectedNames.map(name => (
             <span key={name} className="bg-primary/10 text-primary px-2.5 py-0.5 rounded-md text-[10px] font-bold border border-primary/20 flex items-center">
@@ -66,7 +66,7 @@ function MultiSelect({
           ))
         )}
       </div>
-      
+
       {isOpen && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border/60 rounded-xl shadow-xl z-[100] max-h-60 overflow-y-auto p-1 backdrop-blur-xl">
           <div className="fixed inset-0 z-[-1]" onClick={(e) => { e.stopPropagation(); setIsOpen(false); }} />
@@ -74,7 +74,7 @@ function MultiSelect({
             <div className="p-3 text-sm text-muted-foreground text-center">No hay agentes disponibles</div>
           ) : (
             options.map(opt => (
-              <div 
+              <div
                 key={opt.id}
                 onClick={(e) => { e.stopPropagation(); toggleName(opt.name); }}
                 className="flex items-center gap-3 p-2.5 hover:bg-muted/50 rounded-lg cursor-pointer transition-colors"
@@ -99,14 +99,14 @@ function MultiSelect({
 
 export default function GuardiasPage() {
   const [data, setData] = useState<any[]>([]);
-  const [agents, setAgents] = useState<{id: string, name: string}[]>([]);
+  const [agents, setAgents] = useState<{ id: string, name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Navigation
   const [currentMonth, setCurrentMonth] = useState(4); // Mayo
   const [currentYear, setCurrentYear] = useState(2026);
-  
+
   // Selection
   const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -118,7 +118,7 @@ export default function GuardiasPage() {
           fetch('/api/guardias').then(res => res.json()),
           createClient().from('agents').select('id, name').order('name')
         ]);
-        
+
         const initializedData = resGuardias.map((item: any) => ({
           ...item,
           month: item.month ?? 4,
@@ -128,8 +128,8 @@ export default function GuardiasPage() {
         }));
 
         setData(initializedData);
-        
-        let fetchedAgents: {id: string, name: string}[] = resAgents.data || [];
+
+        let fetchedAgents: { id: string, name: string }[] = resAgents.data || [];
         // Asegurar que Henyerbeth esté en la lista aunque falte en Supabase
         if (!fetchedAgents.find((a: any) => a.name && a.name.includes("HENYERBETH ARRIECHE"))) {
           fetchedAgents.push({ id: 'missing-henyerbeth', name: 'HENYERBETH ARRIECHE' });
@@ -141,7 +141,7 @@ export default function GuardiasPage() {
         setLoading(false);
       }
     };
-    
+
     fetchData();
   }, []);
 
@@ -211,14 +211,14 @@ export default function GuardiasPage() {
   const calendarDays = useMemo(() => {
     const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
     const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
-    
+
     const daysInMonth = lastDayOfMonth.getDate();
     let startingDay = firstDayOfMonth.getDay(); // 0 (Sun) to 6 (Sat)
     // Convert to 0 (Mon) to 6 (Sun)
     startingDay = startingDay === 0 ? 6 : startingDay - 1;
 
     const days = [];
-    
+
     // Previous month days
     const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
     for (let i = startingDay - 1; i >= 0; i--) {
@@ -238,22 +238,9 @@ export default function GuardiasPage() {
     }
 
     return days;
-  }, [currentMonth, currentYear]);
-
-  const getWeekForDay = (day: number, monthType: string) => {
+  }, [currentMonth, currentYea  const getWeekForDay = (day: number, monthType: string) => {
     if (monthType !== 'current') return null;
-    // This is a simplified mapping. Ideally we use proper Date ranges.
-    // For now, we search for a week that "might" cover this day based on index or text.
-    // Let's assume each record in filteredData covers a range.
-    // For the sake of the visual, we'll map week 1 to days 1-7, week 2 to 8-14, etc.
-    // Or better: show markers for all weeks that have data for this month.
-    return filteredData.find(w => {
-       // logic: if it's the Nth week of the month data
-       const weekIdx = filteredData.indexOf(w);
-       const start = weekIdx * 7 + 1;
-       const end = start + 6;
-       return day >= start && day <= end;
-    });
+    return filteredData.find(w => day >= (w.startDay || 0) && day <= (w.endDay || 0));
   };
 
   const selectedWeek = useMemo(() => {
@@ -347,6 +334,25 @@ export default function GuardiasPage() {
               const week = getWeekForDay(dateObj.day, dateObj.month);
               const isSelected = week && selectedWeekId === week.id;
 
+              // Determine person to show
+              let personToShow = "No asig.";
+              let typeLabel = "GUARDIA";
+              let isFeriado = false;
+
+              if (week) {
+                const isWeekend = i % 7 >= 5; // 5=Saturday, 6=Sunday
+                isFeriado = week.isSpecial && !isWeekend;
+                typeLabel = isFeriado ? "FERIADO" : "GUARDIA";
+
+                if (isFeriado) {
+                   personToShow = week.specialSoporte?.split(" / ")[0] || "No asig.";
+                } else if (isWeekend) {
+                   personToShow = week.weekendSoportePerson?.split(" / ")[0] || "No asig.";
+                } else {
+                   personToShow = week.weekSoportePerson?.split(" / ")[0] || "No asig.";
+                }
+              }
+
               return (
                 <div 
                   key={i}
@@ -376,15 +382,21 @@ export default function GuardiasPage() {
                     <div className="space-y-1 mt-2">
                        <div className={cn(
                          "h-1.5 w-full rounded-full transition-all",
-                         week.isSpecial ? "bg-red-500" : "bg-primary/40",
+                         isFeriado ? "bg-red-500" : "bg-primary/40",
                          isSelected && "h-2"
                        )} />
                        <div className="hidden md:block">
-                          <p className="text-[9px] font-bold text-foreground/50 truncate uppercase tracking-tighter">
-                            {week.isSpecial ? "FERIADO" : "GUARDIA"}
+                          <p className={cn(
+                            "text-[9px] font-bold truncate uppercase tracking-tighter",
+                            isFeriado ? "text-red-500" : "text-foreground/50"
+                          )}>
+                            {typeLabel}
                           </p>
-                          <p className="text-[8px] text-muted-foreground truncate leading-tight">
-                            {week.weekSoportePerson?.split(" / ")[0] || "No asig."}
+                          <p className={cn(
+                            "text-[8px] truncate leading-tight font-bold",
+                            personToShow === "No asig." ? "text-muted-foreground/30" : "text-muted-foreground"
+                          )}>
+                            {personToShow}
                           </p>
                        </div>
                     </div>
@@ -403,29 +415,29 @@ export default function GuardiasPage() {
             })}
           </div>
         </div>
-        
+
         {/* Footer Actions */}
         <div className="mt-6 flex justify-end gap-4">
-           <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground mr-auto bg-white/80 p-3 rounded-2xl border border-border/40">
-              <div className="flex items-center gap-1.5">
-                 <div className="w-3 h-3 bg-primary/40 rounded-full"></div>
-                 <span>Guardia Normal</span>
-              </div>
-              <div className="w-[1px] h-4 bg-border/40 mx-2"></div>
-              <div className="flex items-center gap-1.5">
-                 <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                 <span>Feriado</span>
-              </div>
-           </div>
+          <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground mr-auto bg-white/80 p-3 rounded-2xl border border-border/40">
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-primary/40 rounded-full"></div>
+              <span>Guardia Normal</span>
+            </div>
+            <div className="w-[1px] h-4 bg-border/40 mx-2"></div>
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+              <span>Feriado</span>
+            </div>
+          </div>
 
-           <button 
-             onClick={handleSave}
-             disabled={isSaving}
-             className="flex items-center gap-3 px-8 py-4 bg-foreground text-background font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 group"
-           >
-             {isSaving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5 group-hover:rotate-12 transition-transform" />}
-             GUARDAR CAMBIOS
-           </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className="flex items-center gap-3 px-8 py-4 bg-foreground text-background font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 group"
+          >
+            {isSaving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5 group-hover:rotate-12 transition-transform" />}
+            GUARDAR CAMBIOS
+          </button>
         </div>
       </div>
 
@@ -435,7 +447,7 @@ export default function GuardiasPage() {
         isDrawerOpen ? "translate-x-0" : "translate-x-full"
       )}>
         {/* Drawer Handle/Toggle for mobile */}
-        <button 
+        <button
           onClick={() => setIsDrawerOpen(false)}
           className="absolute -left-12 top-1/2 -translate-y-1/2 w-12 h-24 bg-white border border-r-0 border-border/30 rounded-l-3xl flex items-center justify-center text-muted-foreground hover:text-primary transition-colors shadow-[-10px_0_20px_rgba(0,0,0,0.05)] md:flex hidden"
         >
@@ -450,71 +462,71 @@ export default function GuardiasPage() {
               selectedWeek.isSpecial ? "bg-red-50/50" : "bg-primary/5"
             )}>
               <div className="flex justify-between items-start mb-6">
-                 <div className="space-y-1">
-                    <span className={cn(
-                      "text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest",
-                      selectedWeek.isSpecial ? "bg-red-500 text-white" : "bg-primary text-white"
-                    )}>
-                      Ref. {selectedWeek.item}
-                    </span>
-                    <h2 className="text-2xl font-black text-foreground pt-2">
-                       Asignación de Personal
-                    </h2>
-                 </div>
-                 <button 
-                   onClick={() => setIsDrawerOpen(false)}
-                   className="p-2 hover:bg-muted rounded-full transition-colors"
-                 >
-                   <X className="w-6 h-6" />
-                 </button>
+                <div className="space-y-1">
+                  <span className={cn(
+                    "text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest",
+                    selectedWeek.isSpecial ? "bg-red-500 text-white" : "bg-primary text-white"
+                  )}>
+                    Ref. {selectedWeek.item}
+                  </span>
+                  <h2 className="text-2xl font-black text-foreground pt-2">
+                    Asignación de Personal
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setIsDrawerOpen(false)}
+                  className="p-2 hover:bg-muted rounded-full transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                 <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest ml-1">Título Visual</label>
-                    <input 
-                      className="w-full bg-white border-2 border-border/40 focus:border-primary rounded-xl px-4 py-3 outline-none font-bold text-sm transition-all"
-                      value={selectedWeek.weekDaysText}
-                      onChange={e => updateItem(selectedWeek.id, 'weekDaysText', e.target.value)}
-                    />
-                 </div>
-                 <div className="space-y-1.5">
-                    <label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest ml-1">Fecha Rango</label>
-                    <input 
-                      className="w-full bg-white border-2 border-border/40 focus:border-primary rounded-xl px-4 py-3 outline-none font-bold text-sm transition-all"
-                      value={selectedWeek.fechaText}
-                      onChange={e => updateItem(selectedWeek.id, 'fechaText', e.target.value)}
-                    />
-                 </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest ml-1">Título Visual</label>
+                  <input
+                    className="w-full bg-white border-2 border-border/40 focus:border-primary rounded-xl px-4 py-3 outline-none font-bold text-sm transition-all"
+                    value={selectedWeek.weekDaysText}
+                    onChange={e => updateItem(selectedWeek.id, 'weekDaysText', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-widest ml-1">Fecha Rango</label>
+                  <input
+                    className="w-full bg-white border-2 border-border/40 focus:border-primary rounded-xl px-4 py-3 outline-none font-bold text-sm transition-all"
+                    value={selectedWeek.fechaText}
+                    onChange={e => updateItem(selectedWeek.id, 'fechaText', e.target.value)}
+                  />
+                </div>
               </div>
             </div>
 
             {/* Drawer Content */}
             <div className="p-8 space-y-8 pb-32">
-              
+
               {/* Special Toggle */}
               <div className={cn(
                 "p-5 rounded-2xl border-2 transition-all flex items-center justify-between",
                 selectedWeek.isSpecial ? "bg-red-500/5 border-red-500/20" : "bg-muted/5 border-border/40"
               )}>
                 <div className="flex items-center gap-4">
-                   <div className={cn(
-                     "p-3 rounded-xl",
-                     selectedWeek.isSpecial ? "bg-red-500 text-white" : "bg-muted text-muted-foreground"
-                   )}>
-                      <AlertCircle className="w-6 h-6" />
-                   </div>
-                   <div>
-                      <p className="font-black text-sm uppercase">Día Feriado / Especial</p>
-                      <p className="text-xs text-muted-foreground">Activa para horarios especiales</p>
-                   </div>
+                  <div className={cn(
+                    "p-3 rounded-xl",
+                    selectedWeek.isSpecial ? "bg-red-500 text-white" : "bg-muted text-muted-foreground"
+                  )}>
+                    <AlertCircle className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <p className="font-black text-sm uppercase">Día Feriado / Especial</p>
+                    <p className="text-xs text-muted-foreground">Activa para horarios especiales</p>
+                  </div>
                 </div>
                 <label className="relative inline-flex items-center cursor-pointer">
-                  <input 
-                    type="checkbox" 
-                    checked={selectedWeek.isSpecial} 
+                  <input
+                    type="checkbox"
+                    checked={selectedWeek.isSpecial}
                     onChange={() => updateItem(selectedWeek.id, 'isSpecial', !selectedWeek.isSpecial)}
-                    className="sr-only peer" 
+                    className="sr-only peer"
                   />
                   <div className="w-14 h-7 bg-muted peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-6 after:transition-all peer-checked:bg-red-500"></div>
                 </label>
@@ -525,7 +537,7 @@ export default function GuardiasPage() {
                   <label className="text-[10px] font-black text-red-600 uppercase tracking-widest ml-1 flex items-center gap-2">
                     <History className="w-3 h-3" /> Nombre de la Festividad
                   </label>
-                  <input 
+                  <input
                     className="w-full bg-red-50 border-2 border-red-200 focus:border-red-500 rounded-xl px-4 py-3 outline-none font-bold text-sm text-red-900 transition-all placeholder:text-red-300"
                     placeholder="Ej: Día del Trabajador"
                     value={selectedWeek.specialTitle}
@@ -536,7 +548,7 @@ export default function GuardiasPage() {
 
               {/* Assignment Sections */}
               <div className="space-y-10">
-                
+
                 {/* Section 1 */}
                 <div className="space-y-4">
                   <h3 className="font-black text-xs uppercase tracking-widest flex items-center gap-2 text-blue-600">
@@ -547,10 +559,10 @@ export default function GuardiasPage() {
                     {!selectedWeek.isSpecial && (
                       <div className="space-y-2">
                         <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">Lunes a Viernes</p>
-                        <MultiSelect 
-                          value={selectedWeek.weekCallCenterPerson} 
-                          onChange={v => updateItem(selectedWeek.id, 'weekCallCenterPerson', v)} 
-                          options={agents} placeholder="Seleccionar agentes..." 
+                        <MultiSelect
+                          value={selectedWeek.weekCallCenterPerson}
+                          onChange={v => updateItem(selectedWeek.id, 'weekCallCenterPerson', v)}
+                          options={agents} placeholder="Seleccionar agentes..."
                         />
                       </div>
                     )}
@@ -558,10 +570,10 @@ export default function GuardiasPage() {
                       <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">
                         {selectedWeek.isSpecial ? "Personal de Guardia" : "Sábado y Domingo"}
                       </p>
-                      <MultiSelect 
-                        value={selectedWeek.isSpecial ? selectedWeek.specialCallCenter : selectedWeek.weekendCallCenterPerson} 
-                        onChange={v => updateItem(selectedWeek.id, selectedWeek.isSpecial ? 'specialCallCenter' : 'weekendCallCenterPerson', v)} 
-                        options={agents} placeholder="Seleccionar agentes..." 
+                      <MultiSelect
+                        value={selectedWeek.isSpecial ? selectedWeek.specialCallCenter : selectedWeek.weekendCallCenterPerson}
+                        onChange={v => updateItem(selectedWeek.id, selectedWeek.isSpecial ? 'specialCallCenter' : 'weekendCallCenterPerson', v)}
+                        options={agents} placeholder="Seleccionar agentes..."
                       />
                     </div>
                   </div>
@@ -577,19 +589,19 @@ export default function GuardiasPage() {
                     {!selectedWeek.isSpecial && (
                       <div className="space-y-2">
                         <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">Lunes a Viernes</p>
-                        <MultiSelect 
-                          value={selectedWeek.weekSoportePerson} 
-                          onChange={v => updateItem(selectedWeek.id, 'weekSoportePerson', v)} 
-                          options={agents} placeholder="Seleccionar agentes..." 
+                        <MultiSelect
+                          value={selectedWeek.weekSoportePerson}
+                          onChange={v => updateItem(selectedWeek.id, 'weekSoportePerson', v)}
+                          options={agents} placeholder="Seleccionar agentes..."
                         />
                       </div>
                     )}
                     <div className="space-y-2">
                       <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">Fin de Semana / Feriado</p>
-                      <MultiSelect 
-                        value={selectedWeek.isSpecial ? selectedWeek.specialSoporte : selectedWeek.weekendSoportePerson} 
-                        onChange={v => updateItem(selectedWeek.id, selectedWeek.isSpecial ? 'specialSoporte' : 'weekendSoportePerson', v)} 
-                        options={agents} placeholder="Seleccionar agentes..." 
+                      <MultiSelect
+                        value={selectedWeek.isSpecial ? selectedWeek.specialSoporte : selectedWeek.weekendSoportePerson}
+                        onChange={v => updateItem(selectedWeek.id, selectedWeek.isSpecial ? 'specialSoporte' : 'weekendSoportePerson', v)}
+                        options={agents} placeholder="Seleccionar agentes..."
                       />
                     </div>
                   </div>
@@ -604,10 +616,10 @@ export default function GuardiasPage() {
                   <div className="space-y-6 pl-2 border-l-2 border-green-100">
                     <div className="space-y-2">
                       <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">S-D / Festivo</p>
-                      <MultiSelect 
-                        value={selectedWeek.isSpecial ? selectedWeek.specialAgencia : selectedWeek.weekendAgenciaPerson} 
-                        onChange={v => updateItem(selectedWeek.id, selectedWeek.isSpecial ? 'specialAgencia' : 'weekendAgenciaPerson', v)} 
-                        options={[{id: 'cerrado', name: 'CERRADO'}, ...agents]} placeholder="Estado de agencia..." 
+                      <MultiSelect
+                        value={selectedWeek.isSpecial ? selectedWeek.specialAgencia : selectedWeek.weekendAgenciaPerson}
+                        onChange={v => updateItem(selectedWeek.id, selectedWeek.isSpecial ? 'specialAgencia' : 'weekendAgenciaPerson', v)}
+                        options={[{ id: 'cerrado', name: 'CERRADO' }, ...agents]} placeholder="Estado de agencia..."
                       />
                     </div>
                   </div>
@@ -616,29 +628,29 @@ export default function GuardiasPage() {
 
               {/* Danger Zone */}
               <div className="pt-10 border-t border-border/40">
-                 <button 
-                   onClick={() => removeItem(selectedWeek.id)}
-                   className="w-full flex items-center justify-center gap-3 p-4 border-2 border-destructive/20 text-destructive font-black text-xs rounded-2xl hover:bg-destructive hover:text-white transition-all uppercase tracking-widest"
-                 >
-                   <Trash2 className="w-4 h-4" /> Eliminar Registro
-                 </button>
+                <button
+                  onClick={() => removeItem(selectedWeek.id)}
+                  className="w-full flex items-center justify-center gap-3 p-4 border-2 border-destructive/20 text-destructive font-black text-xs rounded-2xl hover:bg-destructive hover:text-white transition-all uppercase tracking-widest"
+                >
+                  <Trash2 className="w-4 h-4" /> Eliminar Registro
+                </button>
               </div>
             </div>
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full p-12 text-center">
-             <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mb-6">
-                <CalendarIcon className="w-10 h-10 text-muted-foreground/30" />
-             </div>
-             <h3 className="text-xl font-black text-foreground/80 mb-2 uppercase">Selecciona una Semana</h3>
-             <p className="text-sm text-muted-foreground font-medium">Toca un día asignado en el calendario para editar el personal de guardia.</p>
+            <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mb-6">
+              <CalendarIcon className="w-10 h-10 text-muted-foreground/30" />
+            </div>
+            <h3 className="text-xl font-black text-foreground/80 mb-2 uppercase">Selecciona una Semana</h3>
+            <p className="text-sm text-muted-foreground font-medium">Toca un día asignado en el calendario para editar el personal de guardia.</p>
           </div>
         )}
       </div>
 
       {/* Backdrop for mobile */}
       {isDrawerOpen && (
-        <div 
+        <div
           onClick={() => setIsDrawerOpen(false)}
           className="fixed inset-0 bg-black/20 backdrop-blur-sm z-[40] md:hidden"
         />
