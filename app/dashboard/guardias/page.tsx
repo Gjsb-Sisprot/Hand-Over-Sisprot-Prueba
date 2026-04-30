@@ -5,7 +5,7 @@ import {
   Save, Plus, Trash2, CalendarDays, Headphones, MapPin,
   AlertCircle, Clock, ChevronDown, ChevronUp, Users,
   Calendar as CalendarIcon, ChevronLeft, ChevronRight,
-  History, X, Check, ArrowRight, Menu, Save, Plus, Trash2, Headphones, MapPin, CalendarDays
+  History, X, Check, ArrowRight, Menu
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
