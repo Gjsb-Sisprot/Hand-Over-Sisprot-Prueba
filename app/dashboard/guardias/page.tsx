@@ -129,9 +129,9 @@ export default function GuardiasPage() {
 
         setData(initializedData);
         
-        let fetchedAgents = resAgents.data || [];
+        let fetchedAgents: {id: string, name: string}[] = resAgents.data || [];
         // Asegurar que Henyerbeth esté en la lista aunque falte en Supabase
-        if (!fetchedAgents.find((a: any) => a.name.includes("HENYERBETH ARRIECHE"))) {
+        if (!fetchedAgents.find((a: any) => a.name && a.name.includes("HENYERBETH ARRIECHE"))) {
           fetchedAgents.push({ id: 'missing-henyerbeth', name: 'HENYERBETH ARRIECHE' });
         }
         setAgents(fetchedAgents);
