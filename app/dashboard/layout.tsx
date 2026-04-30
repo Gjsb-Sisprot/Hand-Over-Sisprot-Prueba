@@ -35,17 +35,17 @@ export default async function DashboardLayout({
     }
   }
 
-  // 2. Si es Call Center (admin), NO puede ver Soporte ni Guardias
-  if (role === "admin") {
+  // 2. Si es Call Center (operador), NO puede ver Soporte ni Guardias
+  if (role === "operador") {
     if (pathname.startsWith("/dashboard/calendar") || pathname.startsWith("/dashboard/guardias")) {
       redirect("/dashboard"); // Redirigir a inicio
     }
   }
 
   return (
-    <div className="flex h-[100dvh] w-full bg-background overflow-hidden relative">
+    <div className="flex flex-col md:flex-row h-[100dvh] w-full bg-background overflow-hidden relative">
       <Sidebar />
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden pb-[68px] md:pb-0">
         <main className="flex-1 flex flex-col overflow-hidden relative">
           {children}
         </main>
