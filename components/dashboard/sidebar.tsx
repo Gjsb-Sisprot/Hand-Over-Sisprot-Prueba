@@ -51,12 +51,12 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-[68px] flex flex-col items-center py-4 bg-sidebar border-r border-sidebar-border h-full shrink-0">
-      <div className="mb-8 p-2 bg-primary/10 rounded-xl">
+    <aside className="fixed md:relative bottom-0 left-0 right-0 z-50 flex flex-row md:flex-col h-[68px] md:h-full w-full md:w-[68px] items-center justify-around md:justify-start py-2 md:py-4 bg-sidebar border-t md:border-t-0 md:border-r border-sidebar-border shrink-0">
+      <div className="hidden md:flex mb-8 p-2 bg-primary/10 rounded-xl">
         <Radio className="h-6 w-6 text-primary" />
       </div>
 
-      <nav className="flex-1 flex flex-col items-center gap-4">
+      <nav className="flex-1 flex flex-row md:flex-col items-center justify-around md:justify-start gap-1 md:gap-4 w-full md:w-auto px-2 md:px-0">
         {!loading && sidebarItems.map((item) => {
           const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
@@ -65,7 +65,7 @@ export function Sidebar() {
               href={item.href}
               title={item.label}
               className={cn(
-                "p-3 rounded-xl transition-all duration-200 group relative",
+                "p-2 md:p-3 rounded-xl transition-all duration-200 group relative flex-1 md:flex-none flex justify-center max-w-[48px] md:max-w-none",
                 isActive 
                   ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" 
                   : "text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent"
@@ -73,17 +73,17 @@ export function Sidebar() {
             >
               <item.icon className="h-5 w-5" />
               {isActive && (
-                <span className="absolute -right-[1px] top-1/2 -translate-y-1/2 w-[3px] h-6 bg-primary rounded-l-full" />
+                <span className="absolute bottom-[-8px] md:bottom-auto left-1/2 md:left-auto md:-right-[1px] md:top-1/2 -translate-x-1/2 md:-translate-x-0 md:-translate-y-1/2 w-6 h-[3px] md:w-[3px] md:h-6 bg-primary rounded-t-full md:rounded-l-full md:rounded-t-none" />
               )}
             </Link>
           );
         })}
       </nav>
 
-      <div className="mt-auto flex flex-col items-center gap-4">
+      <div className="md:mt-auto flex flex-row md:flex-col items-center gap-1 md:gap-4 pr-2 md:pr-0">
         <button 
           title="Configuración"
-          className="p-3 rounded-xl text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all"
+          className="hidden md:flex p-3 rounded-xl text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all"
         >
           <Settings className="h-5 w-5" />
         </button>
@@ -91,7 +91,7 @@ export function Sidebar() {
         <button 
           title="Cerrar Sesión"
           onClick={handleLogout}
-          className="p-3 rounded-xl text-destructive hover:bg-destructive/10 transition-all cursor-pointer"
+          className="p-2 md:p-3 rounded-xl text-destructive hover:bg-destructive/10 transition-all cursor-pointer flex justify-center max-w-[48px] md:max-w-none"
         >
           <LogOut className="h-5 w-5" />
         </button>
