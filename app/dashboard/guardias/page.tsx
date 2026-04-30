@@ -667,11 +667,9 @@ export default function GuardiasPage() {
 
                        {/* Role Card 3 */}
                        <div className="bg-[#fcfcfc] border border-border/40 rounded-[2rem] p-8 space-y-8 hover:shadow-xl hover:shadow-green-500/5 transition-all md:col-span-2">
-                          <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                               <div className="p-3 bg-green-100 text-green-600 rounded-2xl"><MapPin className="w-6 h-6" /></div>
-                               <h3 className="text-xl font-black uppercase tracking-tighter">Agencia & Monitoreo FDS</h3>
-                            </div>
+                          <div className="flex flex-col items-center text-center gap-4">
+                             <div className="p-3 bg-green-100 text-green-600 rounded-2xl w-fit"><MapPin className="w-6 h-6" /></div>
+                             <h3 className="text-xl font-black uppercase tracking-tighter">Agencia & Monitoreo</h3>
                           </div>
                           
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
