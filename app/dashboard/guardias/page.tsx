@@ -238,7 +238,9 @@ export default function GuardiasPage() {
     }
 
     return days;
-  }, [currentMonth, currentYea  const getWeekForDay = (day: number, monthType: string) => {
+  }, [currentMonth, currentYear]);
+
+  const getWeekForDay = (day: number, monthType: string) => {
     if (monthType !== 'current') return null;
     return filteredData.find(w => day >= (w.startDay || 0) && day <= (w.endDay || 0));
   };
