@@ -280,20 +280,26 @@ export async function getVisitByTicketId(ticketId: string) {
   }
 }
 
-/**
- * Función auxiliar para notificar a n8n
- */
 async function notifyN8N(visit: SupportVisit) {
   try {
     const ticketId = visit.metadata?.glpi_ticket_id || visit.id;
     
-    // Obtener nombres de técnicos de forma manual para el payload
-    const { data: techs } = await (supabaseAdmin as any)
-      .from("technicians")
-      .select("name")
-      .in("id", [visit.technician_id, visit.technician_id_2].filter(Boolean));
+    // Obtener IDs de técnicos (el principal de la columna, el secundario de metadata)
+    const tech1Id = visit.technician_id;
+    const tech2Id = visit.metadata?.technician_id_2 || visit.technician_id_2;
     
-    const nombresTecnicos = techs?.map((t: any) => t.name).join(" y ") || "Por asignar";
+    // Obtener nombres de técnicos de forma manual para el payload
+    const idsToFetch = [tech1Id, tech2Id].filter(Boolean);
+    let nombresTecnicos = "Por asignar";
+    
+    if (idsToFetch.length > 0) {
+      const { data: techs } = await (supabaseAdmin as any)
+        .from("technicians")
+        .select("name")
+        .in("id", idsToFetch);
+      
+      nombresTecnicos = techs?.map((t: any) => t.name).join(" y ") || "Por asignar";
+    }
 
     await fetch("https://n8n.sisprottaurus.com/webhook/envio_confirmacion_visita_tecnica", {
       method: "POST",
@@ -310,6 +316,31 @@ async function notifyN8N(visit: SupportVisit) {
     });
   } catch (err) {
     console.error("[NOTIFY_N8N_ERROR]", err);
+  }
+}
+
+/**
+ * Obtiene las horas ocupadas para una fecha específica
+ */
+export async function getOccupiedSlots(date: string) {
+  try {
+    const startOfDay = `${date}T00:00:00.000Z`;
+    const endOfDay = `${date}T23:59:59.999Z`;
+
+    const { data, error } = await (supabaseAdmin as any)
+      .from("support_visits")
+      .select("visit_date")
+      .gte("visit_date", startOfDay)
+      .lte("visit_date", endOfDay)
+      .neq("status", "cancelled");
+
+    if (error) throw error;
+    
+    // Retornamos solo las horas (HH:mm)
+    return (data || []).map((v: any) => v.visit_date.split('T')[1].substring(0, 5));
+  } catch (error) {
+    console.error("[GET_OCCUPIED_SLOTS_ERROR]", error);
+    return [];
   }
 }
 
