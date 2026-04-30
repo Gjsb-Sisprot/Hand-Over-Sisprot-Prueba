@@ -114,11 +114,15 @@ export default function GuardiasPage() {
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean, id: string | null }>({ isOpen: false, id: null });
 
   useEffect(() => {
-    // Cargar libreria para descarga de PDF
-    const script = document.createElement("script");
-    script.src = "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js";
-    script.async = true;
-    document.body.appendChild(script);
+    // Cargar librerias para descarga de PDF
+    const loadScript = (src: string) => {
+      const script = document.createElement("script");
+      script.src = src;
+      script.async = true;
+      document.body.appendChild(script);
+    };
+    loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
+    loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
 
     const fetchData = async () => {
       try {
@@ -185,32 +189,42 @@ export default function GuardiasPage() {
 
   const handleDownload = async () => {
     const element = document.getElementById('pdf-report-content');
-    if (!element || !(window as any).html2pdf) {
-      toast.error("Preparando descargador... intenta de nuevo en un segundo.");
+    const { html2canvas, jspdf } = window as any;
+    
+    if (!element || !html2canvas || !jspdf) {
+      toast.error("Las librerías de PDF aún se están cargando. Espera 2 segundos.");
       return;
     }
 
-    const toastId = toast.loading('Generando PDF...');
+    const toastId = toast.loading('Generando documento PDF...');
 
     try {
-      const opt = {
-        margin:       [10, 10, 10, 10],
-        filename:     `Guardias_${MONTHS[currentMonth]}_${currentYear}.pdf`,
-        image:        { type: 'jpeg', quality: 0.98 },
-        html2canvas:  { 
-          scale: 2, 
-          useCORS: true,
-          logging: false,
-          letterRendering: true
-        },
-        jsPDF:        { unit: 'mm', format: 'letter', orientation: 'portrait' }
-      };
+      // Capturar el contenido como imagen
+      const canvas = await html2canvas(element, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: "#ffffff",
+        logging: false
+      });
+      
+      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      const pdf = new jspdf.jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: 'letter'
+      });
 
-      await (window as any).html2pdf().set(opt).from(element).save();
-      toast.success('PDF descargado correctamente', { id: toastId });
+      const imgProps = pdf.getImageProperties(imgData);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`Guardias_Sisprot_${MONTHS[currentMonth]}_${currentYear}.pdf`);
+      
+      toast.success('PDF descargado con éxito', { id: toastId });
     } catch (error) {
-      console.error('PDF Error:', error);
-      toast.error('Error al generar el PDF. Intenta de nuevo.', { id: toastId });
+      console.error('Error al generar PDF:', error);
+      toast.error('Hubo un problema al generar el archivo. Intenta de nuevo.', { id: toastId });
     }
   };
 
