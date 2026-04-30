@@ -14,9 +14,9 @@ export type SupportVisit = {
   technician_id: string | null;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'confirmed' | 'rescheduled';
   category: 'support' | 'administration';
+  team: 'Equipo A' | 'Equipo B' | null;
   agent_id: string | null;
   conversation_id: string | null;
-  glpi_ticket_id: string | null;
   metadata: any;
   created_at: string;
   updated_at: string;
@@ -29,6 +29,7 @@ export type Technician = {
   id: string;
   name: string;
   area: string | null;
+  specialty: 'Equipo A' | 'Equipo B' | 'Ambos' | null;
   avatar_url: string | null;
   is_active: boolean;
 };
@@ -49,16 +50,20 @@ export async function getTechnicians(): Promise<Technician[]> {
   }
 }
 
-export async function getVisits(startDate: string, endDate: string, category?: 'support' | 'administration'): Promise<SupportVisit[]> {
+export async function getVisits(startDate: string, endDate: string, category?: 'support' | 'administration', team?: 'Equipo A' | 'Equipo B'): Promise<SupportVisit[]> {
   try {
     let query = (supabaseAdmin as any)
       .from("support_visits")
-      .select("*, technicians!technician_id(name)")
+      .select("*, technicians(name)")
       .gte("visit_date", startDate)
       .lte("visit_date", endDate);
 
     if (category) {
       query = query.eq("category", category);
+    }
+
+    if (team) {
+      query = query.eq("team", team);
     }
 
     const { data, error } = await query.order("visit_date", { ascending: true });
@@ -107,7 +112,7 @@ export async function createVisitFromAI(params: {
     // 1. Buscar la conversación para obtener los datos del cliente utilizando privilegios de admin
     const { data: conv, error: convError } = await supabaseAdmin
       .from("conversations")
-      .select("id, glpi_ticket_id, contact_name, identification, contract")
+      .select("id, glpi_ticket_id, contact_name, identification, contract, name")
       .or(`session_id.eq.${params.sessionId},id.eq.${params.sessionId}`)
       .maybeSingle();
 
@@ -115,7 +120,7 @@ export async function createVisitFromAI(params: {
       throw new Error(`No se pudo encontrar la conversación ${params.sessionId}`);
     }
 
-    const clientName = conv.contact_name || "Cliente AI";
+    const clientName = conv.contact_name || conv.name || "Cliente AI";
 
     // 2. Insertar directamente usando supabaseAdmin para evitar checks de RLS de usuario
     const { data, error } = await (supabaseAdmin as any)
@@ -128,9 +133,8 @@ export async function createVisitFromAI(params: {
         reason: params.reason || "Agendado por Susana AI",
         status: "scheduled",
         category: "support",
-        glpi_ticket_id: conv.glpi_ticket_id || conv.id,
-        conversation_id: conv.id,
         metadata: {
+          glpi_ticket_id: conv.glpi_ticket_id || conv.id,
           source: "susana_ai"
         },
         created_at: new Date().toISOString()
@@ -204,14 +208,15 @@ export async function deleteVisit(id: string) {
 }
 
 /**
- * Busca una visita técnica por el ID del ticket de GLPI
+ * Busca una visita técnica por el ID del ticket de GLPI guardado en metadata
  */
 export async function getVisitByTicketId(ticketId: string) {
   try {
+    // Buscamos en la tabla support_visits donde metadata contenga el glpi_ticket_id
     const { data, error } = await (supabaseAdmin as any)
       .from("support_visits")
-      .select("*, technicians!technician_id(name)")
-      .eq("glpi_ticket_id", ticketId)
+      .select("*, technicians(name)")
+      .filter("metadata->>glpi_ticket_id", "eq", ticketId)
       .maybeSingle();
 
     if (error) throw error;
