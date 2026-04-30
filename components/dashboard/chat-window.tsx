@@ -26,9 +26,10 @@ import { useDashboardMessages } from "@/hooks";
 interface ChatWindowProps {
   conversation: MCPConversation;
   onTakeControl?: () => Promise<void>;
+  onReactivate?: () => Promise<void>;
 }
 
-export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
+export function ChatWindow({ conversation, onTakeControl, onReactivate }: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isTakingControl, setIsTakingControl] = useState(false);
@@ -47,6 +48,15 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
       await onTakeControl();
     } finally {
       setIsTakingControl(false);
+    }
+  };
+
+  const handleReactivate = async () => {
+    if (!onReactivate) return;
+    try {
+      await onReactivate();
+    } catch (err) {
+      toast.error("Error al reactivar la IA");
     }
   };
 
@@ -72,8 +82,10 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
   };
 
   const statusLabel = conversation.status === "handed_over" 
-    ? "🤝 Puente Activo" 
-    : `🤖 IA: ${conversation.status?.toUpperCase() || 'BUSY'}`;
+    ? "🤝 Control Humano" 
+    : conversation.status === "paused"
+      ? "⏸️ IA en Pausa"
+      : `🤖 IA: ${conversation.status?.toUpperCase() || 'BUSY'}`;
 
   return (
     <div className="flex flex-col w-full h-full min-h-0 bg-background overflow-hidden animate-in fade-in duration-500">
@@ -92,7 +104,11 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
               </h3>
               <Badge variant="outline" className={cn(
                 "text-[10px] px-1.5 py-0 h-4 border-primary/20",
-                conversation.status === "handed_over" ? "bg-primary/10 text-primary" : "bg-orange-500/10 text-orange-500 animate-pulse"
+                conversation.status === "handed_over" 
+                    ? "bg-primary/10 text-primary" 
+                    : conversation.status === "paused"
+                        ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+                        : "bg-orange-500/10 text-orange-500 animate-pulse"
               )}>
                 {statusLabel}
               </Badge>
@@ -127,7 +143,16 @@ export function ChatWindow({ conversation, onTakeControl }: ChatWindowProps) {
           <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary transition-colors">
             <MoreVertical className="h-4 w-4" />
           </Button>
-          {conversation.status !== "handed_over" && conversation.status !== "closed" && (
+          {conversation.status === "paused" && (
+            <Button 
+              onClick={handleReactivate}
+              className="ml-2 bg-green-600 hover:bg-green-500 text-white font-black px-5 h-9 rounded-xl shadow-[0_4px_14px_rgba(22,163,74,0.3)] hover:shadow-[0_6px_20px_rgba(22,163,74,0.4)] transition-all uppercase tracking-widest text-[10px] border-b-4 border-green-800 active:border-b-0 active:translate-y-1"
+            >
+              REACTIVAR IA 🤖
+            </Button>
+          )}
+
+          {conversation.status !== "handed_over" && conversation.status !== "closed" && conversation.status !== "paused" && (
             <Button 
               onClick={handleTakeControl}
               disabled={isTakingControl}
