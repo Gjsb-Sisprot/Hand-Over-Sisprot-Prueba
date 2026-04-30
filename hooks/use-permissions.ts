@@ -62,7 +62,7 @@ export function usePermissions() {
     role,
     email,
 
-    isAdmin: role === "admin",
+    isOperador: role === "operador",
     isSupervisor: role === "supervisor",
     isAgent: role === "agent",
 
