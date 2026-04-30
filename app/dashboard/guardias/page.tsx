@@ -183,7 +183,7 @@ export default function GuardiasPage() {
     return data.find(w => w.id === selectedWeekId) || null;
   }, [data, selectedWeekId]);
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     const element = document.getElementById('pdf-report-content');
     if (!element || !(window as any).html2pdf) {
       toast.error("Preparando descargador... intenta de nuevo en un segundo.");
