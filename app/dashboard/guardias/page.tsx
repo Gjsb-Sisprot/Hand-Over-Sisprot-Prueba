@@ -165,6 +165,8 @@ export default function GuardiasPage() {
     } finally {
       setIsSaving(false);
     }
+  };
+
   const handleDownload = () => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
