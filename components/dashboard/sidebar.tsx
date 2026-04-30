@@ -30,8 +30,10 @@ export function Sidebar() {
       { icon: MessageSquare, label: "Conversaciones", href: "/dashboard/conversations" }
     ] : []),
     
-    // Soporte (Calendario): Todos los roles entran, pero ven pestañas distintas según el rol
-    { icon: WrenchEmoji, label: "Soporte / Calendario", href: "/dashboard/calendar" },
+    // Soporte (Calendario): Soporte Técnico (agent) y Supervisor. Call Center (operador) NO lo ve.
+    ...(role !== "operador" ? [
+      { icon: WrenchEmoji, label: "Soporte", href: "/dashboard/calendar" }
+    ] : []),
 
     // Guardias y Usuarios: Solo Supervisor
     ...(role === "supervisor" ? [
