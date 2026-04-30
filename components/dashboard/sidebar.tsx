@@ -7,30 +7,42 @@ import {
   LayoutDashboard, 
   Settings, 
   Users, 
-  Calendar,
-  Radio,
-  Tag,
   LogOut,
-  CalendarDays
+  CalendarDays,
+  Radio,
+  Tag
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePermissions } from "@/hooks/use-permissions";
 
 const WrenchEmoji = ({ className }: { className?: string }) => (
   <span className={cn("flex items-center justify-center text-lg", className)} style={{ lineHeight: 1 }}>🛠️</span>
 );
 
-const sidebarItems = [
-  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
-  { icon: MessageSquare, label: "Conversaciones", href: "/dashboard/conversations" },
-  { icon: WrenchEmoji, label: "Soporte", href: "/dashboard/calendar" },
-  { icon: CalendarDays, label: "Guardias", href: "/dashboard/guardias" },
-  { icon: Radio, label: "En vivo", href: "#" },
-  { icon: Users, label: "Contactos", href: "#" },
-  { icon: Tag, label: "Etiquetas", href: "#" },
-];
-
 export function Sidebar() {
   const pathname = usePathname();
+  const { role, loading } = usePermissions();
+
+  const sidebarItems = [
+    // Dashboard y Conversaciones: Call Center (admin) y Supervisor
+    ...(role !== "agent" ? [
+      { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+      { icon: MessageSquare, label: "Conversaciones", href: "/dashboard/conversations" }
+    ] : []),
+    
+    // Soporte (Calendario): Soporte Técnico (agent) y Supervisor. Call Center (admin) NO lo ve.
+    ...(role !== "admin" ? [
+      { icon: WrenchEmoji, label: "Soporte", href: "/dashboard/calendar" }
+    ] : []),
+
+    // Guardias y Usuarios: Solo Supervisor
+    ...(role === "supervisor" ? [
+      { icon: CalendarDays, label: "Guardias", href: "/dashboard/guardias" },
+      { icon: Users, label: "Usuarios", href: "#" },
+      { icon: Radio, label: "En vivo", href: "#" },
+      { icon: Tag, label: "Etiquetas", href: "#" }
+    ] : []),
+  ];
 
   return (
     <aside className="w-[68px] flex flex-col items-center py-4 bg-sidebar border-r border-sidebar-border h-full shrink-0">
@@ -39,7 +51,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex-1 flex flex-col items-center gap-4">
-        {sidebarItems.map((item) => {
+        {!loading && sidebarItems.map((item) => {
           const isActive = pathname === item.href;
           return (
             <Link
