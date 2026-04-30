@@ -184,32 +184,41 @@ export default function GuardiasPage() {
     const html = `
       <html>
         <head>
-          <title>Rol de Guardias Sisprot - ${MONTHS[currentMonth]} ${currentYear}</title>
+          <title>Cronograma de Guardias - ${MONTHS[currentMonth]} ${currentYear}</title>
           <style>
-            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-            body { font-family: 'Inter', sans-serif; padding: 30px; color: #1e293b; background: white; }
-            .container { max-width: 1100px; margin: 0 auto; }
-            .header { border-bottom: 4px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: center; }
-            .logo-area img { height: 60px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.1)); }
-            .header-title h1 { font-size: 24px; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: -0.02em; color: #0f172a; text-align: right; }
-            .header-title p { font-size: 14px; color: #64748b; margin: 5px 0 0; font-weight: 700; text-align: right; }
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap');
+            body { font-family: 'Inter', sans-serif; padding: 40px; color: #1e293b; background: white; line-height: 1.5; }
+            .container { max-width: 900px; margin: 0 auto; }
             
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 1px solid #e2e8f0; }
-            th { background: #f8fafc; color: #475569; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; padding: 12px 10px; border-bottom: 2px solid #e2e8f0; text-align: left; }
-            td { padding: 12px 10px; font-size: 11px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; margin-bottom: 40px; }
+            .logo-area img { height: 50px; }
+            .header-info { text-align: right; }
+            .header-info h1 { margin: 0; font-size: 20px; font-weight: 900; color: #0f172a; text-transform: uppercase; }
+            .header-info p { margin: 5px 0 0; font-size: 12px; color: #64748b; font-weight: 600; }
+
+            .week-block { margin-bottom: 35px; page-break-inside: avoid; }
+            .week-title { font-size: 16px; font-weight: 900; color: #2563eb; text-transform: uppercase; border-left: 4px solid #2563eb; padding-left: 15px; margin-bottom: 15px; background: #f8fafc; padding-top: 8px; padding-bottom: 8px; }
+            .special-title { color: #dc2626; border-left-color: #dc2626; background: #fef2f2; }
+
+            .shift-section { margin-left: 20px; margin-bottom: 20px; }
+            .shift-label { font-size: 13px; font-weight: 800; color: #475569; margin-bottom: 10px; display: block; text-decoration: underline; }
             
-            .type-badge { display: inline-block; padding: 3px 8px; border-radius: 5px; font-size: 9px; font-weight: 900; text-transform: uppercase; }
-            .type-semana { background: #dbeafe; color: #1e40af; }
-            .type-weekend { background: #fef3c7; color: #92400e; }
-            .type-special { background: #fee2e2; color: #b91c1c; }
+            .role-item { display: flex; margin-bottom: 6px; font-size: 13px; }
+            .role-name { font-weight: 800; color: #0f172a; width: 140px; flex-shrink: 0; }
+            .role-value { color: #334155; font-weight: 500; }
+
+            .footer { margin-top: 60px; display: flex; justify-content: space-between; align-items: flex-end; border-top: 1px solid #e2e8f0; padding-top: 30px; }
+            .signature { text-align: center; width: 250px; }
+            .sig-line { border-top: 2px solid #0f172a; margin-bottom: 10px; }
+            .sig-name { font-size: 14px; font-weight: 900; text-transform: uppercase; margin: 0; }
+            .sig-title { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin: 0; }
             
-            .names { font-weight: 700; color: #334155; }
-            .day-range { font-weight: 900; font-size: 13px; color: #0f172a; }
-            
-            .footer { margin-top: 50px; display: flex; justify-content: space-between; align-items: flex-end; }
-            .signature { border-top: 2px solid #0f172a; width: 250px; padding-top: 10px; text-align: center; }
-            .signature p { margin: 2px 0; font-size: 10px; font-weight: 800; text-transform: uppercase; }
-            .meta-info { font-size: 9px; color: #94a3b8; font-style: italic; }
+            .meta { font-size: 10px; color: #94a3b8; font-style: italic; }
+
+            @media print {
+              body { padding: 20px; }
+              .week-block { break-inside: avoid; }
+            }
           </style>
         </head>
         <body>
@@ -218,79 +227,53 @@ export default function GuardiasPage() {
               <div class="logo-area">
                 <img src="/logo.png" onerror="this.style.display='none'" />
               </div>
-              <div class="header-title">
-                <h1>Rol de Guardias y Turnos</h1>
+              <div class="header-info">
+                <h1>Cronograma de Guardias</h1>
                 <p>${MONTHS[currentMonth].toUpperCase()} ${currentYear} • SISPROT G.F</p>
               </div>
             </div>
 
-            <table>
-              <thead>
-                <tr>
-                  <th style="width: 15%">Período</th>
-                  <th style="width: 12%">Turno</th>
-                  <th style="width: 20%">Call Center & Monitoreo</th>
-                  <th style="width: 20%">Soporte Técnico</th>
-                  <th style="width: 15%">Agencia</th>
-                  <th style="width: 18%">Observaciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${filteredData.sort((a,b) => a.startDay - b.startDay).map(w => {
-                  let rows = [];
-                  if (!w.isSpecial && w.startDay <= 5) {
-                    rows.push(`
-                      <tr>
-                        <td><div class="day-range">${w.startDay} al ${Math.min(w.endDay, 5)}</div></td>
-                        <td><span class="type-badge type-semana">Días Semana</span></td>
-                        <td class="names">${w.weekCallCenterPerson || '-'}</td>
-                        <td class="names">${w.weekSoportePerson || '-'}</td>
-                        <td class="names">-</td>
-                        <td>8:00 AM - 5:00 PM</td>
-                      </tr>
-                    `);
-                  }
-                  if (w.isSpecial) {
-                    rows.push(`
-                      <tr style="background: #fffafa;">
-                        <td><div class="day-range">${w.startDay === w.endDay ? w.startDay : `${w.startDay} al ${w.endDay}`}</div></td>
-                        <td><span class="type-badge type-special">Feriado</span></td>
-                        <td class="names" style="color: #b91c1c;">${w.specialCallCenter || '-'}</td>
-                        <td class="names" style="color: #b91c1c;">${w.specialSoporte || '-'}</td>
-                        <td class="names" style="color: #b91c1c;">${w.specialAgencia || '-'}</td>
-                        <td><strong style="color: #b91c1c;">${w.specialTitle || 'FESTIVO'}</strong></td>
-                      </tr>
-                    `);
-                  }
-                  if (w.endDay >= 6) {
-                    rows.push(`
-                      <tr style="background: #fffcf5;">
-                        <td><div class="day-range">${Math.max(w.startDay, 6)} al ${w.endDay}</div></td>
-                        <td><span class="type-badge type-weekend">Fín de Semana</span></td>
-                        <td>
-                           <div style="font-size: 9px; font-weight: 800; color: #94a3b8;">CALL: <span class="names" style="color: #1e293b;">${w.weekendCallCenterPerson || '-'}</span></div>
-                           <div style="font-size: 9px; font-weight: 800; color: #94a3b8;">MONIT: <span class="names" style="color: #1e293b;">${w.weekendMonitoreoPerson || '-'}</span></div>
-                        </td>
-                        <td class="names">${w.weekendSoportePerson || '-'}</td>
-                        <td class="names">${w.weekendAgenciaPerson || '-'}</td>
-                        <td>8:00 AM - 8:00 PM</td>
-                      </tr>
-                    `);
-                  }
-                  return rows.join('');
-                }).join('')}
-              </tbody>
-            </table>
+            ${filteredData.sort((a,b) => a.startDay - b.startDay).map(w => `
+              <div class="week-block">
+                <div class="week-title ${w.isSpecial ? 'special-title' : ''}">
+                  ${w.isSpecial ? (w.specialTitle || `Feriado: ${w.startDay} de ${MONTHS[w.month]}`) : `Semana del ${w.startDay} al ${w.endDay} de ${MONTHS[w.month]}`}
+                </div>
+
+                ${w.isSpecial ? `
+                  <div class="shift-section">
+                    <span class="shift-label">HORARIO: 8:00 AM - 8:00 PM</span>
+                    <div class="role-item"><span class="role-name">Call Center:</span><span class="role-value">${w.specialCallCenter || '-'}</span></div>
+                    <div class="role-item"><span class="role-name">Monitoreo:</span><span class="role-value">${w.weekendMonitoreoPerson || '-'}</span></div>
+                    <div class="role-item"><span class="role-name">Soporte Técnico:</span><span class="role-value">${w.specialSoporte || '-'}</span></div>
+                    <div class="role-item"><span class="role-name">Agencia:</span><span class="role-value">${w.specialAgencia || '-'}</span></div>
+                  </div>
+                ` : `
+                  <div class="shift-section">
+                    <span class="shift-label">Lunes a Viernes (8:00 AM - 5:00 PM):</span>
+                    <div class="role-item"><span class="role-name">Call Center:</span><span class="role-value">${w.weekCallCenterPerson || '-'}</span></div>
+                    <div class="role-item"><span class="role-name">Soporte Técnico:</span><span class="role-value">${w.weekSoportePerson || '-'}</span></div>
+                  </div>
+
+                  <div class="shift-section">
+                    <span class="shift-label">Sábado y Domingo (8:00 AM - 8:00 PM):</span>
+                    <div class="role-item"><span class="role-name">Call Center:</span><span class="role-value">${w.weekendCallCenterPerson || '-'}</span></div>
+                    <div class="role-item"><span class="role-name">Monitoreo:</span><span class="role-value">${w.weekendMonitoreoPerson || '-'}</span></div>
+                    <div class="role-item"><span class="role-name">Soporte Técnico:</span><span class="role-value">${w.weekendSoportePerson || '-'}</span></div>
+                    <div class="role-item"><span class="role-name">Agencia:</span><span class="role-value">${w.weekendAgenciaPerson || '-'}</span></div>
+                  </div>
+                `}
+              </div>
+            `).join('')}
 
             <div class="footer">
-              <div class="meta-info">
-                Documento generado el ${new Date().toLocaleString()}<br>
-                Sisprot G.F - Sistema de Control Interno
+              <div class="meta">
+                Generado el ${new Date().toLocaleString()}<br>
+                Sistema de Control Interno Sisprot
               </div>
               <div class="signature">
-                <p>Elaborado por:</p>
-                <div style="font-size: 14px; font-weight: 900; margin: 10px 0;">${currentUser}</div>
-                <p>SUPERVISOR DE OPERACIONES</p>
+                <div class="sig-line"></div>
+                <p class="sig-name">${currentUser}</p>
+                <p class="sig-title">Supervisor de Operaciones</p>
               </div>
             </div>
           </div>
@@ -569,7 +552,7 @@ export default function GuardiasPage() {
                           
                           <div className="space-y-6">
                              <div className="space-y-2">
-                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Lunes a Viernes</p>
+                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Lunes a Viernes (8am - 5pm)</p>
                                 <MultiSelect 
                                   value={selectedWeek.weekCallCenterPerson} 
                                   onChange={v => updateItem(selectedWeek.id, 'weekCallCenterPerson', v)} 
@@ -577,7 +560,7 @@ export default function GuardiasPage() {
                                 />
                              </div>
                              <div className="space-y-2">
-                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">Fin de Semana (S-D)</p>
+                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">Sábado y Domingo (8am - 8pm)</p>
                                 <MultiSelect 
                                   value={selectedWeek.weekendCallCenterPerson} 
                                   onChange={v => updateItem(selectedWeek.id, 'weekendCallCenterPerson', v)} 
@@ -606,7 +589,7 @@ export default function GuardiasPage() {
                           
                           <div className="space-y-6">
                              <div className="space-y-2">
-                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Lunes a Viernes</p>
+                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">Lunes a Viernes (8am - 8pm)</p>
                                 <MultiSelect 
                                   value={selectedWeek.weekSoportePerson} 
                                   onChange={v => updateItem(selectedWeek.id, 'weekSoportePerson', v)} 
@@ -614,7 +597,7 @@ export default function GuardiasPage() {
                                 />
                              </div>
                              <div className="space-y-2">
-                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">Fin de Semana (S-D)</p>
+                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">Sábado y Domingo (8am - 8pm)</p>
                                 <MultiSelect 
                                   value={selectedWeek.weekendSoportePerson} 
                                   onChange={v => updateItem(selectedWeek.id, 'weekendSoportePerson', v)} 
