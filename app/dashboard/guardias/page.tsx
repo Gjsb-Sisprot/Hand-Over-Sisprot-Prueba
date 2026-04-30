@@ -111,6 +111,7 @@ export default function GuardiasPage() {
   const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<string>("Administrador");
+  const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean, id: string | null }>({ isOpen: false, id: null });
 
   useEffect(() => {
     const fetchData = async () => {
@@ -332,10 +333,17 @@ export default function GuardiasPage() {
   };
 
   const removeItem = (id: string) => {
-    if (!confirm("¿Estás seguro de eliminar esta semana de guardia?")) return;
-    setData(data.filter(item => item.id !== id));
-    if (selectedWeekId === id) {
-      setSelectedWeekId(null);
+    setDeleteModal({ isOpen: true, id });
+  };
+
+  const confirmDelete = () => {
+    if (deleteModal.id) {
+      setData(data.filter(item => item.id !== deleteModal.id));
+      if (selectedWeekId === deleteModal.id) {
+        setSelectedWeekId(null);
+      }
+      setDeleteModal({ isOpen: false, id: null });
+      toast.success("Semana eliminada");
     }
   };
 
@@ -680,6 +688,41 @@ export default function GuardiasPage() {
           )}
         </section>
       </main>
+
+      {/* Custom Delete Confirmation Modal */}
+      {deleteModal.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+           <div 
+             className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300"
+             onClick={() => setDeleteModal({ isOpen: false, id: null })}
+           />
+           <div className="bg-white rounded-[2.5rem] p-10 max-w-md w-full shadow-2xl relative z-10 border border-border/40 animate-in zoom-in-95 slide-in-from-bottom-8 duration-500">
+              <div className="w-20 h-20 bg-destructive/10 text-destructive rounded-3xl flex items-center justify-center mb-8 mx-auto">
+                 <Trash2 className="w-10 h-10" />
+              </div>
+              
+              <h3 className="text-2xl font-black text-center text-foreground uppercase tracking-tight mb-4">¿Eliminar Guardia?</h3>
+              <p className="text-muted-foreground text-center font-medium mb-10">
+                Esta acción eliminará permanentemente la planificación de esta semana. No podrás deshacer este cambio.
+              </p>
+              
+              <div className="flex flex-col gap-3">
+                 <button 
+                   onClick={confirmDelete}
+                   className="w-full py-4 bg-destructive text-destructive-foreground font-black rounded-2xl shadow-lg shadow-destructive/20 hover:bg-destructive/90 hover:scale-[1.02] active:scale-95 transition-all uppercase tracking-widest text-xs"
+                 >
+                   Sí, Eliminar Registro
+                 </button>
+                 <button 
+                   onClick={() => setDeleteModal({ isOpen: false, id: null })}
+                   className="w-full py-4 bg-muted/50 text-muted-foreground font-black rounded-2xl hover:bg-muted transition-all uppercase tracking-widest text-xs"
+                 >
+                   No, Mantener
+                 </button>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 }
