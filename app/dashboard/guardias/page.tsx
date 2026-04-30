@@ -297,8 +297,8 @@ export default function GuardiasPage() {
       });
 
       // Flatten the array rows for autoTable if they contain nested content
-      const processedRows = tableRows.map(row => {
-        return row.map(cell => {
+      const processedRows = tableRows.map((row: any) => {
+        return row.map((cell: any) => {
           if (Array.isArray(cell)) {
             // Si es un array de objetos (estilo manual para cada linea de la celda)
             // autoTable no soporta arrays de objetos directamente de esta forma facil
