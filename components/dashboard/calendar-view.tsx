@@ -32,7 +32,6 @@ import { VisitDialog } from "./visit-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
-import { usePermissions } from "@/hooks/use-permissions";
 
 interface CalendarViewProps {
   technicians: Technician[];
@@ -43,16 +42,8 @@ export function CalendarView({ technicians }: CalendarViewProps) {
   const [visits, setVisits] = useState<SupportVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTechnician, setSelectedTechnician] = useState<string>("all");
-  const { role, isOperador, isAgent } = usePermissions();
+  const [selectedTeam, setSelectedTeam] = useState<string>("all");
   const [currentCategory, setCurrentCategory] = useState<'support' | 'administration'>('support');
-
-  useEffect(() => {
-    if (isOperador) {
-      setCurrentCategory('administration');
-    } else {
-      setCurrentCategory('support');
-    }
-  }, [isOperador]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedVisit, setSelectedVisit] = useState<SupportVisit | undefined>(undefined);
 
@@ -60,10 +51,11 @@ export function CalendarView({ technicians }: CalendarViewProps) {
     setLoading(true);
     const start = startOfWeek(startOfMonth(currentMonth)).toISOString();
     const end = endOfWeek(endOfMonth(currentMonth)).toISOString();
-    const data = await getVisits(start, end, currentCategory);
+    const teamFilter = selectedTeam === "all" ? undefined : selectedTeam as 'Equipo A' | 'Equipo B';
+    const data = await getVisits(start, end, currentCategory, teamFilter);
     setVisits(data);
     setLoading(false);
-  }, [currentMonth, currentCategory]);
+  }, [currentMonth, currentCategory, selectedTeam]);
 
   useEffect(() => {
     fetchVisits();
@@ -129,36 +121,45 @@ export function CalendarView({ technicians }: CalendarViewProps) {
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl mr-2">
-            {!isOperador && (
-              <Button
-                variant={currentCategory === 'support' ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setCurrentCategory('support')}
-                className={cn(
-                  "h-8 px-4 rounded-lg text-xs font-bold transition-all",
-                  currentCategory === 'support' ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
-                )}
-              >
-                Soporte Técnico
-              </Button>
-            )}
-            {!isAgent && (
-              <Button
-                variant={currentCategory === 'administration' ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setCurrentCategory('administration')}
-                className={cn(
-                  "h-8 px-4 rounded-lg text-xs font-bold transition-all",
-                  currentCategory === 'administration' ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
-                )}
-              >
-                Administración
-              </Button>
-            )}
+            <Button
+              variant={currentCategory === 'support' ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setCurrentCategory('support')}
+              className={cn(
+                "h-8 px-4 rounded-lg text-xs font-bold transition-all",
+                currentCategory === 'support' ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
+              )}
+            >
+              Soporte
+            </Button>
+            <Button
+              variant={currentCategory === 'administration' ? "secondary" : "ghost"}
+              size="sm"
+              onClick={() => setCurrentCategory('administration')}
+              className={cn(
+                "h-8 px-4 rounded-lg text-xs font-bold transition-all",
+                currentCategory === 'administration' ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
+              )}
+            >
+              Administración
+            </Button>
           </div>
 
           <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-xl border border-border/40">
             <Filter className="h-4 w-4 ml-2 text-muted-foreground" />
+            <select
+              value={selectedTeam}
+              onChange={(e) => setSelectedTeam(e.target.value)}
+              className="bg-transparent border-none text-sm focus:ring-0 pr-8 py-1 rounded-lg font-medium"
+            >
+              <option value="all">Todos los equipos</option>
+              <option value="Equipo A">Equipo A (Intermitencia)</option>
+              <option value="Equipo B">Equipo B (ONU en Rojo)</option>
+            </select>
+          </div>
+
+          <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-xl border border-border/40">
+            <User className="h-4 w-4 ml-2 text-muted-foreground" />
             <select
               value={selectedTechnician}
               onChange={(e) => setSelectedTechnician(e.target.value)}
@@ -247,12 +248,27 @@ export function CalendarView({ technicians }: CalendarViewProps) {
                     }}
                     className={cn(
                       "text-[10px] p-1.5 rounded-lg border cursor-pointer border-l-4 transition-all hover:scale-[1.02] active:scale-95 shadow-sm",
-                      visit.status === 'completed' && "bg-green-500/10 border-green-500/50 text-green-700 dark:text-green-400 border-l-green-500",
-                      visit.status === 'cancelled' && "bg-destructive/10 border-destructive/50 text-destructive border-l-destructive",
-                      visit.status === 'scheduled' && "bg-primary/10 border-primary/50 text-primary border-l-primary",
-                      visit.status === 'in_progress' && "bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-400 border-l-amber-500",
-                      visit.status === 'confirmed' && "bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-400 border-l-emerald-500",
-                      visit.status === 'rescheduled' && "bg-violet-500/10 border-violet-500/50 text-violet-700 dark:text-violet-400 border-l-violet-500"
+                      // Lógica de colores según estado y fecha (Finalizadas vs No atendidas)
+                      (() => {
+                        const visitDate = parseISO(visit.visit_date);
+                        const isPast = visitDate < new Date();
+                        
+                        if (visit.status === 'completed') {
+                          return "bg-green-500/20 border-green-500/50 text-green-700 dark:text-green-400 border-l-green-600";
+                        }
+                        
+                        if (isPast && (visit.status === 'scheduled' || visit.status === 'confirmed')) {
+                          return "bg-red-500/20 border-red-500/50 text-red-700 dark:text-red-400 border-l-red-600 font-bold";
+                        }
+
+                        if (visit.status === 'cancelled') return "bg-destructive/10 border-destructive/50 text-destructive border-l-destructive";
+                        if (visit.status === 'scheduled') return "bg-primary/10 border-primary/50 text-primary border-l-primary";
+                        if (visit.status === 'in_progress') return "bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-400 border-l-amber-500";
+                        if (visit.status === 'confirmed') return "bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-400 border-l-emerald-500";
+                        if (visit.status === 'rescheduled') return "bg-violet-500/10 border-violet-500/50 text-violet-700 dark:text-violet-400 border-l-violet-500";
+                        
+                        return "bg-muted/50 border-border text-muted-foreground";
+                      })()
                     )}
                   >
                     <div className="font-bold truncate">{visit.client_name}</div>
