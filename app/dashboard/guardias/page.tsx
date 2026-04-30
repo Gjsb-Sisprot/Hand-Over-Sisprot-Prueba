@@ -134,8 +134,8 @@ export default function GuardiasPage() {
       script.async = true;
       document.body.appendChild(script);
     };
-    loadScript("https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js");
     loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+    loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js");
 
     const fetchData = async () => {
       try {
@@ -201,43 +201,97 @@ export default function GuardiasPage() {
   }, [data, selectedWeekId]);
 
   const handleDownload = async () => {
-    const element = document.getElementById('pdf-report-content');
-    const { html2canvas, jspdf } = window as any;
+    const { jspdf } = window as any;
     
-    if (!element || !html2canvas || !jspdf) {
-      toast.error("Las librerías de PDF aún se están cargando. Espera 2 segundos.");
+    if (!jspdf) {
+      toast.error("El motor de PDF se está cargando. Reintenta en 3 segundos.");
       return;
     }
 
-    const toastId = toast.loading('Generando documento PDF...');
+    const toastId = toast.loading('Generando documento oficial...');
 
     try {
-      // Capturar el contenido como imagen
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false
-      });
+      const doc = new jspdf.jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
       
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
-      const pdf = new jspdf.jsPDF({
-        orientation: 'portrait',
-        unit: 'px',
-        format: 'letter'
+      // Header
+      doc.setFontSize(20);
+      doc.setFont("helvetica", "bold");
+      doc.text("SISPROT G.F - CRONOGRAMA DE GUARDIAS", 105, 20, { align: 'center' });
+      
+      doc.setFontSize(12);
+      doc.setFont("helvetica", "normal");
+      doc.text(`${MONTHS[currentMonth].toUpperCase()} ${currentYear}`, 105, 28, { align: 'center' });
+
+      // Table Data
+      const tableRows: any[] = [];
+      const sortedData = [...filteredData].sort((a, b) => a.startDay - b.startDay);
+
+      sortedData.forEach(w => {
+        // Bloque L-V
+        if (!w.isSpecial && w.startDay <= 5) {
+          tableRows.push([
+            `Lunes ${w.startDay} al Viernes ${Math.min(w.endDay, 5)}`,
+            `CC: ${w.weekCallCenterPerson || '-'}`,
+            `ST: ${w.weekSoportePerson || '-'}`,
+            "-",
+            "8 AM - 5 PM"
+          ]);
+        }
+        
+        // Bloque Feriado
+        if (w.isSpecial) {
+          tableRows.push([
+            { content: w.specialTitle || `Feriado ${w.startDay}`, styles: { fillColor: [255, 230, 230], fontStyle: 'bold' } },
+            { content: `CC: ${w.specialCallCenter || '-'}\nMN: ${w.weekendMonitoreoPerson || '-'}`, styles: { fillColor: [255, 230, 230] } },
+            { content: `ST: ${w.specialSoporte || '-'}`, styles: { fillColor: [255, 230, 230] } },
+            { content: w.specialAgencia || '-', styles: { fillColor: [255, 230, 230] } },
+            { content: "8 AM - 8 PM", styles: { fillColor: [255, 230, 230] } }
+          ]);
+        }
+
+        // Bloque FDS
+        if (w.endDay >= 6) {
+          tableRows.push([
+            { content: `Sábado ${Math.max(6, w.startDay)} y Domingo ${w.endDay}`, styles: { fillColor: [255, 250, 230], fontStyle: 'bold' } },
+            { content: `CC: ${w.weekendCallCenterPerson || '-'}\nMN: ${w.weekendMonitoreoPerson || '-'}`, styles: { fillColor: [255, 250, 230] } },
+            { content: `ST: ${w.weekendSoportePerson || '-'}`, styles: { fillColor: [255, 250, 230] } },
+            { content: w.weekendAgenciaPerson || '-', styles: { fillColor: [255, 250, 230] } },
+            { content: "8 AM - 8 PM", styles: { fillColor: [255, 250, 230] } }
+          ]);
+        }
       });
 
-      const imgProps = pdf.getImageProperties(imgData);
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+      (doc as any).autoTable({
+        startY: 35,
+        head: [['DÍA / FECHA', 'CALL CENTER & MN', 'SOPORTE TÉCNICO', 'AGENCIA', 'HORARIO']],
+        body: tableRows,
+        theme: 'grid',
+        headStyles: { fillColor: [15, 23, 42], textColor: 255, fontSize: 9, halign: 'center' },
+        styles: { fontSize: 8, cellPadding: 4 },
+        columnStyles: {
+          0: { cellWidth: 35, halign: 'center', fontStyle: 'bold' },
+          4: { cellWidth: 25, halign: 'center' }
+        }
+      });
 
-      pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
-      pdf.save(`Guardias_Sisprot_${MONTHS[currentMonth]}_${currentYear}.pdf`);
+      // Footer
+      const finalY = (doc as any).lastAutoTable.finalY + 20;
+      doc.setFontSize(8);
+      doc.text(`Generado el: ${new Date().toLocaleString()}`, 14, finalY);
       
-      toast.success('PDF descargado con éxito', { id: toastId });
+      doc.line(130, finalY + 15, 190, finalY + 15);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "bold");
+      doc.text(currentUser.toUpperCase(), 160, finalY + 20, { align: 'center' });
+      doc.setFontSize(8);
+      doc.text("SUPERVISOR DE OPERACIONES", 160, finalY + 24, { align: 'center' });
+
+      doc.save(`Guardias_${MONTHS[currentMonth]}_${currentYear}.pdf`);
+      toast.success('¡PDF generado y descargado!', { id: toastId });
     } catch (error) {
-      console.error('Error al generar PDF:', error);
-      toast.error('Hubo un problema al generar el archivo. Intenta de nuevo.', { id: toastId });
+      console.error('Error PDF:', error);
+      toast.error('Error técnico al crear el PDF. Reintenta.', { id: toastId });
     }
   };
 
