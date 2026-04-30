@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { Sidebar } from "@/components/dashboard/sidebar";
 
@@ -14,6 +15,31 @@ export default async function DashboardLayout({
 
   if (!user) {
     redirect("/login");
+  }
+
+  // Obtenemos el rol del agente para proteger las rutas
+  const { data: agent } = await supabase
+    .from("agents")
+    .select("role")
+    .eq("id", user.id)
+    .single();
+
+  const role = agent?.role || "agent";
+  const headersList = await headers();
+  const pathname = headersList.get("x-invoke-path") || "";
+
+  // 1. Si es Soporte Técnico (agent), NO puede ver Dashboard ni Conversaciones
+  if (role === "agent") {
+    if (pathname === "/dashboard" || pathname.startsWith("/dashboard/conversations")) {
+      redirect("/dashboard/calendar"); // Redirigir a su única zona permitida
+    }
+  }
+
+  // 2. Si es Call Center (admin), NO puede ver Soporte ni Guardias
+  if (role === "admin") {
+    if (pathname.startsWith("/dashboard/calendar") || pathname.startsWith("/dashboard/guardias")) {
+      redirect("/dashboard"); // Redirigir a inicio
+    }
   }
 
   return (
