@@ -244,8 +244,8 @@ export default function GuardiasPage() {
         const itemNum = idx + 1;
         const monthStr = (currentMonth + 1).toString().padStart(2, '0');
         
-        let leftCol = "";
-        let rightCol = "";
+        let leftCol: any = "";
+        let rightCol: any = "";
         let dateCol = "";
 
         if (w.isSpecial) {
