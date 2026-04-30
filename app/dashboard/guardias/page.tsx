@@ -244,94 +244,66 @@ export default function GuardiasPage() {
         const itemNum = idx + 1;
         const monthStr = (currentMonth + 1).toString().padStart(2, '0');
         
-        let leftCol: any = "";
-        let rightCol: any = "";
+        let leftCol = "";
+        let rightCol = "";
         let dateCol = "";
 
         if (w.isSpecial) {
-          // Feriado Especial
           leftCol = "DÍA FERIADO - AGENCIA CERRADA";
-          rightCol = [
-            { content: `CC Y MONITOREO - ${w.specialTitle || 'FERIADO'}`, styles: { fillColor: [255, 200, 200], fontStyle: 'bold' } },
-            `CC: ${w.specialCallCenter || '-'}\nMN: ${w.weekendMonitoreoPerson || '-'}`,
-            { content: "SOPORTE TÉCNICO", styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } },
-            `${w.specialSoporte || '-'}`,
-            { content: "AGENCIA TURMERO", styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } },
-            `${w.specialAgencia || 'CERRADA'}`
-          ];
+          rightCol = `CC Y MONITOREO - ${w.specialTitle || 'FERIADO'}\n` +
+                    `CC: ${w.specialCallCenter || '-'}\nMN: ${w.weekendMonitoreoPerson || '-'}\n` +
+                    `SOPORTE TÉCNICO\n${w.specialSoporte || '-'}\n` +
+                    `AGENCIA TURMERO\n${w.specialAgencia || 'CERRADA'}`;
           dateCol = `${w.startDay}/${monthStr}`;
         } else {
-          // Semana Regular
           const fri = w.endDay - 2;
           let soporteHorario = "08:00 AM A 08:00 PM";
           if (w.startDay >= 18) soporteHorario = "01:00 PM A 08:00 PM";
 
-          leftCol = [
-             { content: `SEMANA DEL ${w.startDay.toString().padStart(2,'0')} AL ${fri.toString().padStart(2,'0')}/${monthStr}`, styles: { fillColor: [230, 245, 230], fontStyle: 'bold' } },
-             { content: `CALL CENTER 08:00 AM A 05:00 PM`, styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } },
-             `${w.weekCallCenterPerson || '-'}`,
-             { content: `SOPORTE TÉCNICO ${soporteHorario}`, styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } },
-             `${w.weekSoportePerson || '-'}`,
-             { content: "AGENCIA TURMERO", styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } },
-             "ABIERTA"
-          ];
+          leftCol = `SEMANA DEL ${w.startDay.toString().padStart(2,'0')} AL ${fri.toString().padStart(2,'0')}/${monthStr}\n` +
+                   `CALL CENTER 08:00 AM A 05:00 PM\n${w.weekCallCenterPerson || '-'}\n` +
+                   `SOPORTE TÉCNICO ${soporteHorario}\n${w.weekSoportePerson || '-'}\n` +
+                   `AGENCIA TURMERO\nABIERTA`;
 
-          rightCol = [
-             { content: `CC Y MONITOREO FDS 08:00 AM A 08:00 PM`, styles: { fillColor: [255, 250, 210], fontStyle: 'bold' } },
-             `CC: ${w.weekendCallCenterPerson || '-'}\nMN: ${w.weekendMonitoreoPerson || '-'}`,
-             { content: "SOPORTE TÉCNICO", styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } },
-             `${w.weekendSoportePerson || '-'}`,
-             { content: "AGENCIA TURMERO", styles: { fillColor: [240, 240, 240], fontStyle: 'bold' } },
-             `${w.weekendAgenciaPerson || 'ABIERTA'}`
-          ];
+          rightCol = `CC Y MONITOREO FDS 08:00 AM A 08:00 PM\n` +
+                    `CC: ${w.weekendCallCenterPerson || '-'}\nMN: ${w.weekendMonitoreoPerson || '-'}\n` +
+                    `SOPORTE TÉCNICO\n${w.weekendSoportePerson || '-'}\n` +
+                    `AGENCIA TURMERO\n${w.weekendAgenciaPerson || 'ABIERTA'}`;
 
           dateCol = `${w.endDay-1}-${w.endDay}/${monthStr}`;
         }
 
         tableRows.push([
-          { content: itemNum.toString(), styles: { valign: 'middle', halign: 'center', fontStyle: 'bold' } },
-          Array.isArray(leftCol) ? leftCol : [{ content: leftCol, styles: { valign: 'middle', halign: 'center' } }],
-          Array.isArray(rightCol) ? rightCol : [{ content: rightCol, styles: { valign: 'middle' } }],
-          { content: dateCol, styles: { valign: 'middle', halign: 'center', fontStyle: 'bold', fillColor: [245, 245, 250] } }
+          itemNum.toString(),
+          leftCol,
+          rightCol,
+          dateCol
         ]);
-      });
-
-      // Flatten the array rows for autoTable if they contain nested content
-      const processedRows = tableRows.map((row: any) => {
-        return row.map((cell: any) => {
-          if (Array.isArray(cell)) {
-            // Si es un array de objetos (estilo manual para cada linea de la celda)
-            // autoTable no soporta arrays de objetos directamente de esta forma facil
-            // pero podemos concatenarlos o usar hooks. 
-            // Para simplificar, convertiremos a string con saltos de linea y usaremos drawCell si fuera necesario.
-            // Pero mejor: usaremos un solo string con formato.
-            return cell.map(c => typeof c === 'string' ? c : c.content).join('\n');
-          }
-          return cell;
-        });
       });
 
       (doc as any).autoTable({
         startY: 30,
         head: [['ITEM', 'LUNES A VIERNES', 'SÁBADO / DOMINGO', 'FECHA']],
-        body: processedRows,
+        body: tableRows,
         theme: 'grid',
         headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 10, halign: 'center', fontStyle: 'bold' },
-        styles: { fontSize: 8, cellPadding: 3, textColor: [15, 23, 42], lineWidth: 0.2, lineColor: [0, 0, 0] },
+        styles: { fontSize: 8, cellPadding: 4, textColor: [15, 23, 42], lineWidth: 0.1, lineColor: [80, 80, 80] },
         columnStyles: {
-          0: { cellWidth: 15 },
+          0: { cellWidth: 15, halign: 'center', valign: 'middle' },
           1: { cellWidth: 100 },
           2: { cellWidth: 100 },
-          3: { cellWidth: 35 }
+          3: { cellWidth: 35, halign: 'center', valign: 'middle', fontStyle: 'bold' }
         },
         didParseCell: function(data: any) {
-          // Colorear celdas segun contenido
           if (data.section === 'body') {
-            if (data.column.index === 1 && data.cell.text[0]?.includes('SEMANA')) {
-               data.cell.styles.fillColor = [230, 245, 230];
+            if (data.column.index === 1 && data.cell.raw.includes('SEMANA')) {
+               data.cell.styles.fillColor = [240, 250, 240];
             }
-            if (data.column.index === 2 && data.cell.text[0]?.includes('CC Y MONITOREO')) {
-               data.cell.styles.fillColor = [255, 250, 210];
+            if (data.column.index === 2 && data.cell.raw.includes('FDS')) {
+               data.cell.styles.fillColor = [255, 253, 240];
+            }
+            if (data.column.index === 2 && data.cell.raw.includes('FERIADO')) {
+               data.cell.styles.fillColor = [255, 240, 240];
             }
           }
         }
