@@ -15,7 +15,7 @@ export type SupportVisit = {
   technician_id_2: string | null;
   status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled' | 'confirmed' | 'rescheduled';
   category: 'support' | 'administration';
-  team: 'Equipo A' | 'Equipo B' | null;
+  team?: 'Equipo A' | 'Equipo B' | null;
   agent_id: string | null;
   conversation_id: string | null;
   metadata: any;
@@ -67,7 +67,7 @@ export async function getVisits(startDate: string, endDate: string, category?: '
     }
 
     if (team) {
-      query = query.eq("team", team);
+      query = query.filter("metadata->>team", "eq", team);
     }
 
     const { data, error } = await query.order("visit_date", { ascending: true });
@@ -93,10 +93,13 @@ export async function createVisit(visitData: Partial<SupportVisit>) {
       }
     }
 
+    // Extraer team y technician_id_2 para que no se envíen como columnas
+    const { team, technician_id_2, ...rest } = visitData;
+
     const { data, error } = await (supabaseAdmin as any)
       .from("support_visits")
       .insert([{
-        ...visitData,
+        ...rest,
         agent_id: user?.id
       }])
       .select("*, technicians(name)")
@@ -185,10 +188,13 @@ export async function updateVisit(id: string, visitData: Partial<SupportVisit>) 
       }
     }
 
+    // Extraer team y technician_id_2 para que no se envíen como columnas
+    const { team, technician_id_2, ...rest } = visitData;
+
     const { data, error } = await (supabaseAdmin as any)
       .from("support_visits")
       .update({
-        ...visitData,
+        ...rest,
         updated_at: new Date().toISOString()
       })
       .eq("id", id)
