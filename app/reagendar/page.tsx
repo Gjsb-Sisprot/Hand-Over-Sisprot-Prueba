@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
-import { getVisitByTicketId, updateVisit, SupportVisit } from "@/lib/actions/visits";
-import { Calendar, Clock, AlertCircle, Loader2, ArrowRight, Save, History } from "lucide-react";
+import { getVisitByTicketId, updateVisit, SupportVisit, getTechnicians, Technician } from "@/lib/actions/visits";
+import { Calendar, Clock, AlertCircle, Loader2, ArrowRight, Save, History, User as UserIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parseISO } from "date-fns";
 import { es } from "date-fns/locale/es";
 import { toast } from "sonner";
@@ -25,6 +26,8 @@ function RescheduleContent() {
   // Form state
   const [newDate, setNewDate] = useState("");
   const [newTime, setNewTime] = useState("");
+  const [technicians, setTechnicians] = useState<Technician[]>([]);
+  const [selectedTechnician, setSelectedTechnician] = useState<string>("");
 
   useEffect(() => {
     async function loadVisit() {
@@ -35,17 +38,26 @@ function RescheduleContent() {
       }
 
       try {
-        const visitData = await getVisitByTicketId(ticketId);
+        const [visitData, techsData] = await Promise.all([
+          getVisitByTicketId(ticketId),
+          getTechnicians()
+        ]);
+
         if (!visitData) {
           setError("No pudimos encontrar la visita que deseas reagendar.");
           return;
         }
         setVisit(visitData);
+        setTechnicians(techsData);
         
         // Pre-poblar con la fecha actual si existe
         if (visitData.visit_date) {
           setNewDate(visitData.visit_date.split('T')[0]);
           setNewTime(visitData.visit_date.split('T')[1]?.substring(0, 5) || "12:00");
+        }
+
+        if (visitData.technician_id) {
+          setSelectedTechnician(visitData.technician_id);
         }
       } catch (err: any) {
         setError("Ocurrió un error al cargar los datos.");
@@ -67,6 +79,7 @@ function RescheduleContent() {
       
       const { error: updateError } = await updateVisit(visit.id, { 
         visit_date: updatedISO,
+        technician_id: selectedTechnician || null,
         status: 'rescheduled'
       });
 
@@ -164,6 +177,25 @@ function RescheduleContent() {
                         onChange={(e) => setNewTime(e.target.value)}
                       />
                     </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Especialista Asignado</Label>
+                  <div className="relative">
+                    <UserIcon className="absolute left-4 top-3.5 h-5 w-5 text-muted-foreground/50 z-10" />
+                    <Select value={selectedTechnician} onValueChange={setSelectedTechnician}>
+                      <SelectTrigger className="pl-12 h-14 rounded-2xl bg-muted/30 border-none text-lg font-medium focus:ring-primary/20">
+                        <SelectValue placeholder="Técnico por asignar" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl border-muted">
+                        {technicians.map((tech) => (
+                          <SelectItem key={tech.id} value={tech.id} className="text-base py-3">
+                            {tech.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
 
