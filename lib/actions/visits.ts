@@ -58,7 +58,7 @@ export async function getVisits(startDate: string, endDate: string, category?: '
   try {
     let query = (supabaseAdmin as any)
       .from("support_visits")
-      .select("*, technicians(name), technician_2:technician_id_2(name)")
+      .select("*, technicians(name)")
       .gte("visit_date", startDate)
       .lte("visit_date", endDate);
 
@@ -99,7 +99,7 @@ export async function createVisit(visitData: Partial<SupportVisit>) {
         ...visitData,
         agent_id: user?.id
       }])
-      .select("*, technicians(name), technician_2:technician_id_2(name)")
+      .select("*, technicians(name)")
       .single();
 
     if (error) throw error;
@@ -192,7 +192,7 @@ export async function updateVisit(id: string, visitData: Partial<SupportVisit>) 
         updated_at: new Date().toISOString()
       })
       .eq("id", id)
-      .select("*, technicians(name), technician_2:technician_id_2(name)")
+      .select("*, technicians(name)")
       .single();
 
     if (error) throw error;
@@ -234,7 +234,7 @@ export async function getVisitByTicketId(ticketId: string) {
     // 1. Intentar buscar por metadata->>glpi_ticket_id (Texto)
     const { data: byMetadata, error: error1 } = await (supabaseAdmin as any)
       .from("support_visits")
-      .select("*, technicians(name), technician_2:technician_id_2(name)")
+      .select("*, technicians(name)")
       .filter("metadata->>glpi_ticket_id", "eq", ticketId)
       .maybeSingle();
 
@@ -244,7 +244,7 @@ export async function getVisitByTicketId(ticketId: string) {
     if (ticketId.length > 30) {
       const { data: byId, error: error2 } = await (supabaseAdmin as any)
         .from("support_visits")
-        .select("*, technicians(name), technician_2:technician_id_2(name)")
+        .select("*, technicians(name)")
         .eq("id", ticketId)
         .maybeSingle();
       
@@ -254,7 +254,7 @@ export async function getVisitByTicketId(ticketId: string) {
     // 3. Fallback: buscar por contract_number
     const { data: byContract, error: error3 } = await (supabaseAdmin as any)
       .from("support_visits")
-      .select("*, technicians(name), technician_2:technician_id_2(name)")
+      .select("*, technicians(name)")
       .eq("contract_number", ticketId)
       .maybeSingle();
 
@@ -264,7 +264,7 @@ export async function getVisitByTicketId(ticketId: string) {
     // Esto es más lento pero útil como último recurso
     const { data: allVisits } = await (supabaseAdmin as any)
       .from("support_visits")
-      .select("*, technicians(name), technician_2:technician_id_2(name)")
+      .select("*, technicians(name)")
       .limit(100);
     
     const deepSearch = (allVisits || []).find((v: any) => 
@@ -287,17 +287,24 @@ async function notifyN8N(visit: SupportVisit) {
   try {
     const ticketId = visit.metadata?.glpi_ticket_id || visit.id;
     
+    // Obtener nombres de técnicos de forma manual para el payload
+    const { data: techs } = await (supabaseAdmin as any)
+      .from("technicians")
+      .select("name")
+      .in("id", [visit.technician_id, visit.technician_id_2].filter(Boolean));
+    
+    const nombresTecnicos = techs?.map((t: any) => t.name).join(" y ") || "Por asignar";
+
     await fetch("https://n8n.sisprottaurus.com/webhook/envio_confirmacion_visita_tecnica", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        id_tickect: ticketId, // Revertido a la ortografía original por compatibilidad con n8n
+        id_tickect: ticketId,
         contrato: visit.contract_number || "N/A",
         fecha: visit.visit_date.split('T')[0],
         hora: visit.visit_date.split('T')[1]?.substring(0, 5) || "Pendiente",
         motivo: visit.reason || "Agendado vía Dashboard",
-        tecnico: visit.technicians?.name || "Por asignar",
-        tecnico_2: visit.technician_2?.name || "N/A",
+        tecnico: nombresTecnicos,
         estado: visit.status
       })
     });
