@@ -554,8 +554,10 @@ export default function GuardiasPage() {
           <ArrowRight className="w-6 h-6" />
         </button>
 
-        {selectedWeek ? (
-          <div className="flex flex-col h-full overflow-y-auto">
+        {selectedWeek ? (() => {
+          const isWeekend = selectedDayName === 'SÁBADO' || selectedDayName === 'DOMINGO';
+          return (
+            <div className="flex flex-col h-full overflow-y-auto">
             {/* Drawer Header */}
             <div className={cn(
               "p-8 border-b border-border/40 sticky top-0 bg-white/80 backdrop-blur-md z-10",
@@ -636,80 +638,140 @@ export default function GuardiasPage() {
 
               {/* Assignment Sections */}
               <div className="space-y-10">
-
-                {/* Section 1 */}
+                
+                {/* Section 1: Call Center */}
                 <div className="space-y-4">
                   <h3 className="font-black text-xs uppercase tracking-widest flex items-center gap-2 text-blue-600">
                     <div className="p-1.5 bg-blue-50 rounded-lg"><Headphones className="w-4 h-4" /></div>
                     Call Center & Monitoreo
                   </h3>
-                  <div className="space-y-6 pl-2 border-l-2 border-blue-100">
-                    {!selectedWeek.isSpecial && (
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">Lunes a Viernes</p>
-                        <MultiSelect
-                          value={selectedWeek.weekCallCenterPerson}
-                          onChange={v => updateItem(selectedWeek.id, 'weekCallCenterPerson', v)}
-                          options={agents} placeholder="Seleccionar agentes..."
+                  <div className="space-y-4 pl-2 border-l-2 border-blue-100">
+                    
+                    {/* L-V (Solo si no es fin de semana) */}
+                    {(!isWeekend || selectedDayName === null) && (
+                      <div className={cn(
+                        "space-y-2 p-3 rounded-xl transition-all border border-transparent",
+                        !isWeekend && "bg-blue-50/50 border-blue-100 ring-4 ring-blue-500/5"
+                      )}>
+                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-tight">Lunes a Viernes</p>
+                        <MultiSelect 
+                          value={selectedWeek.weekCallCenterPerson} 
+                          onChange={v => updateItem(selectedWeek.id, 'weekCallCenterPerson', v)} 
+                          options={agents} placeholder="Seleccionar..." 
                         />
                       </div>
                     )}
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">
-                        {selectedWeek.isSpecial ? "Personal de Guardia" : "Sábado y Domingo"}
-                      </p>
-                      <MultiSelect
-                        value={selectedWeek.isSpecial ? selectedWeek.specialCallCenter : selectedWeek.weekendCallCenterPerson}
-                        onChange={v => updateItem(selectedWeek.id, selectedWeek.isSpecial ? 'specialCallCenter' : 'weekendCallCenterPerson', v)}
-                        options={agents} placeholder="Seleccionar agentes..."
-                      />
-                    </div>
+
+                    {/* S-D (Solo si es fin de semana o si queremos ver todo) */}
+                    {(isWeekend || selectedDayName === null) && (
+                      <div className={cn(
+                        "space-y-2 p-3 rounded-xl transition-all border border-transparent",
+                        isWeekend && "bg-amber-50/50 border-amber-100 ring-4 ring-amber-500/5"
+                      )}>
+                        <p className="text-[10px] font-black text-amber-600 uppercase tracking-tight">Sábado y Domingo</p>
+                        <MultiSelect 
+                          value={selectedWeek.weekendCallCenterPerson} 
+                          onChange={v => updateItem(selectedWeek.id, 'weekendCallCenterPerson', v)} 
+                          options={agents} placeholder="Seleccionar..." 
+                        />
+                      </div>
+                    )}
+
+                    {/* Feriado (Solo si está marcado como especial) */}
+                    {selectedWeek.isSpecial && (
+                      <div className="space-y-2 p-3 bg-red-50/50 rounded-xl border border-red-100">
+                        <p className="text-[10px] font-black text-red-600 uppercase tracking-tight flex items-center gap-1.5">
+                          <AlertCircle className="w-3 h-3" /> Guardia Feriado / Especial
+                        </p>
+                        <MultiSelect 
+                          value={selectedWeek.specialCallCenter} 
+                          onChange={v => updateItem(selectedWeek.id, 'specialCallCenter', v)} 
+                          options={agents} placeholder="Personal de guardia..." 
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Section 2 */}
+                {/* Section 2: Soporte */}
                 <div className="space-y-4">
                   <h3 className="font-black text-xs uppercase tracking-widest flex items-center gap-2 text-amber-600">
                     <div className="p-1.5 bg-amber-50 rounded-lg">🛠️</div>
                     Soporte Técnico
                   </h3>
-                  <div className="space-y-6 pl-2 border-l-2 border-amber-100">
-                    {!selectedWeek.isSpecial && (
-                      <div className="space-y-2">
-                        <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">Lunes a Viernes</p>
-                        <MultiSelect
-                          value={selectedWeek.weekSoportePerson}
-                          onChange={v => updateItem(selectedWeek.id, 'weekSoportePerson', v)}
-                          options={agents} placeholder="Seleccionar agentes..."
+                  <div className="space-y-4 pl-2 border-l-2 border-amber-100">
+                    {!isWeekend && (
+                      <div className={cn(
+                        "space-y-2 p-3 rounded-xl transition-all border border-transparent",
+                        !isWeekend && "bg-blue-50/50 border-blue-100 ring-4 blue-500/5"
+                      )}>
+                        <p className="text-[10px] font-black text-blue-600 uppercase tracking-tight">Lunes a Viernes</p>
+                        <MultiSelect 
+                          value={selectedWeek.weekSoportePerson} 
+                          onChange={v => updateItem(selectedWeek.id, 'weekSoportePerson', v)} 
+                          options={agents} placeholder="Seleccionar..." 
                         />
                       </div>
                     )}
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">Fin de Semana / Feriado</p>
-                      <MultiSelect
-                        value={selectedWeek.isSpecial ? selectedWeek.specialSoporte : selectedWeek.weekendSoportePerson}
-                        onChange={v => updateItem(selectedWeek.id, selectedWeek.isSpecial ? 'specialSoporte' : 'weekendSoportePerson', v)}
-                        options={agents} placeholder="Seleccionar agentes..."
-                      />
-                    </div>
+
+                    {(isWeekend || selectedDayName === null) && (
+                      <div className={cn(
+                        "space-y-2 p-3 rounded-xl transition-all border border-transparent",
+                        isWeekend && "bg-amber-50/50 border-amber-100 ring-4 ring-amber-500/5"
+                      )}>
+                        <p className="text-[10px] font-black text-amber-600 uppercase tracking-tight">Sábado y Domingo</p>
+                        <MultiSelect 
+                          value={selectedWeek.weekendSoportePerson} 
+                          onChange={v => updateItem(selectedWeek.id, 'weekendSoportePerson', v)} 
+                          options={agents} placeholder="Seleccionar..." 
+                        />
+                      </div>
+                    )}
+
+                    {selectedWeek.isSpecial && (
+                      <div className="space-y-2 p-3 bg-red-50/50 rounded-xl border border-red-100">
+                        <p className="text-[10px] font-black text-red-600 uppercase tracking-tight flex items-center gap-1.5">
+                          <AlertCircle className="w-3 h-3" /> Soporte Feriado
+                        </p>
+                        <MultiSelect 
+                          value={selectedWeek.specialSoporte} 
+                          onChange={v => updateItem(selectedWeek.id, 'specialSoporte', v)} 
+                          options={agents} placeholder="Seleccionar soporte..." 
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Section 3 */}
+                {/* Section 3: Agencia */}
                 <div className="space-y-4">
                   <h3 className="font-black text-xs uppercase tracking-widest flex items-center gap-2 text-green-600">
                     <div className="p-1.5 bg-green-50 rounded-lg"><MapPin className="w-4 h-4" /></div>
                     Agencia & Admin
                   </h3>
-                  <div className="space-y-6 pl-2 border-l-2 border-green-100">
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-tight">S-D / Festivo</p>
-                      <MultiSelect
-                        value={selectedWeek.isSpecial ? selectedWeek.specialAgencia : selectedWeek.weekendAgenciaPerson}
-                        onChange={v => updateItem(selectedWeek.id, selectedWeek.isSpecial ? 'specialAgencia' : 'weekendAgenciaPerson', v)}
-                        options={[{ id: 'cerrado', name: 'CERRADO' }, ...agents]} placeholder="Estado de agencia..."
+                  <div className="space-y-4 pl-2 border-l-2 border-green-100">
+                    <div className={cn(
+                      "space-y-2 p-3 rounded-xl transition-all border border-transparent",
+                      isWeekend && "bg-green-50/50 border-green-100 ring-4 ring-green-500/5"
+                    )}>
+                      <p className="text-[10px] font-black text-green-600 uppercase tracking-tight">Fin de Semana (S-D)</p>
+                      <MultiSelect 
+                        value={selectedWeek.weekendAgenciaPerson} 
+                        onChange={v => updateItem(selectedWeek.id, 'weekendAgenciaPerson', v)} 
+                        options={[{id: 'cerrado', name: 'CERRADO'}, ...agents]} placeholder="Estado agencia..." 
                       />
                     </div>
+
+                    {selectedWeek.isSpecial && (
+                      <div className="space-y-2 p-3 bg-red-50/50 rounded-xl border border-red-100">
+                        <p className="text-[10px] font-black text-red-600 uppercase tracking-tight">Agencia Feriado</p>
+                        <MultiSelect 
+                          value={selectedWeek.specialAgencia} 
+                          onChange={v => updateItem(selectedWeek.id, 'specialAgencia', v)} 
+                          options={[{id: 'cerrado', name: 'CERRADO'}, ...agents]} placeholder="Estado agencia..." 
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -725,7 +787,8 @@ export default function GuardiasPage() {
               </div>
             </div>
           </div>
-        ) : (
+          );
+        })() : (
           <div className="flex flex-col items-center justify-center h-full p-12 text-center">
             <div className="w-20 h-20 bg-muted/30 rounded-full flex items-center justify-center mb-6">
               <CalendarIcon className="w-10 h-10 text-muted-foreground/30" />
