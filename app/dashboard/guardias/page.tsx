@@ -174,76 +174,150 @@ export default function GuardiasPage() {
     const html = `
       <html>
         <head>
-          <title>Guardias Sisprot - ${MONTHS[currentMonth]} ${currentYear}</title>
+          <title>Rol de Guardias Sisprot - ${MONTHS[currentMonth]} ${currentYear}</title>
           <style>
-            body { font-family: 'Inter', sans-serif; padding: 40px; color: #333; line-height: 1.5; }
-            h1 { text-align: center; color: #000; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 5px; }
-            .subtitle { text-align: center; color: #666; font-size: 14px; margin-bottom: 30px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 20px; box-shadow: 0 0 20px rgba(0,0,0,0.05); }
-            th, td { border: 1px solid #e2e8f0; padding: 14px 10px; text-align: left; font-size: 11px; }
-            th { background-color: #f8fafc; font-weight: 800; text-transform: uppercase; color: #475569; letter-spacing: 0.05em; }
-            tr:nth-child(even) { background-color: #fcfcfc; }
-            .special { background-color: #fff5f5 !important; }
-            .special td { color: #c53030; font-weight: 600; }
-            .header-info { margin-bottom: 30px; border-bottom: 4px solid #3b82f6; padding-bottom: 15px; }
-            .badge { padding: 4px 8px; rounded: 4px; font-size: 9px; font-weight: bold; text-transform: uppercase; }
-            .badge-guardia { background: #e0f2fe; color: #0369a1; }
-            .badge-feriado { background: #fee2e2; color: #b91c1c; }
-            .person-list { font-weight: 500; color: #1e293b; }
+            @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+            body { font-family: 'Inter', sans-serif; padding: 30px; color: #1e293b; background: white; }
+            .container { max-width: 1100px; margin: 0 auto; }
+            .header { border-bottom: 4px solid #2563eb; padding-bottom: 20px; margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-end; }
+            .header-title h1 { font-size: 28px; font-weight: 900; margin: 0; text-transform: uppercase; letter-spacing: -0.02em; color: #0f172a; }
+            .header-title p { font-size: 16px; color: #64748b; margin: 5px 0 0; font-weight: 700; }
+            .meta { text-align: right; font-size: 11px; color: #94a3b8; }
+            
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; border: 1px solid #e2e8f0; }
+            th { background: #f8fafc; color: #475569; font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; padding: 12px 10px; border-bottom: 2px solid #e2e8f0; text-align: left; }
+            td { padding: 12px 10px; font-size: 11px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+            
+            .week-row { background: #fdfdfd; }
+            .type-badge { display: inline-block; padding: 3px 8px; border-radius: 5px; font-size: 9px; font-weight: 900; text-transform: uppercase; }
+            .type-semana { background: #dbeafe; color: #1e40af; }
+            .type-weekend { background: #fef3c7; color: #92400e; }
+            .type-special { background: #fee2e2; color: #b91c1c; }
+            
+            .role-box { margin-bottom: 4px; }
+            .role-label { font-size: 9px; font-weight: 800; color: #94a3b8; text-transform: uppercase; margin-bottom: 1px; }
+            .names { font-weight: 700; color: #334155; }
+            .no-names { color: #cbd5e1; font-style: italic; }
+            
+            .day-range { font-weight: 900; font-size: 13px; color: #0f172a; }
+            .day-month { font-size: 10px; color: #94a3b8; font-weight: 700; text-transform: uppercase; }
+            
+            .footer { margin-top: 40px; font-size: 10px; color: #94a3b8; display: flex; justify-content: space-between; border-top: 1px solid #f1f5f9; padding-top: 20px; }
           </style>
         </head>
         <body>
-          <div class="header-info">
-            <h1>ROL DE GUARDIAS - SISTEMA SISPROT</h1>
-            <p class="subtitle">${MONTHS[currentMonth].toUpperCase()} ${currentYear}</p>
-            <div style="display: flex; justify-content: space-between; font-size: 10px; color: #64748b;">
-              <span><strong>Empresa:</strong> Sisprot G.F</span>
-              <span><strong>Generado:</strong> ${new Date().toLocaleString()}</span>
+          <div class="container">
+            <div class="header">
+              <div class="header-title">
+                <h1>Rol de Guardias y Turnos</h1>
+                <p>${MONTHS[currentMonth].toUpperCase()} ${currentYear} • SISPROT G.F</p>
+              </div>
+              <div class="meta">
+                Generado el: ${new Date().toLocaleDateString('es-ES', { day: '2-digit', month: 'long', year: 'numeric' })}<br>
+                Estado: Planificación Final
+              </div>
             </div>
-          </div>
-          <table>
-            <thead>
-              <tr>
-                <th style="width: 15%">RANGO FECHAS</th>
-                <th style="width: 10%">ESTADO</th>
-                <th style="width: 20%">CALL CENTER</th>
-                <th style="width: 20%">MONITOREO</th>
-                <th style="width: 20%">SOPORTE TÉCNICO</th>
-                <th style="width: 15%">AGENCIA TURMERO</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${filteredData.sort((a,b) => a.startDay - b.startDay).map(w => {
-                const isSpecial = w.isSpecial;
-                return `
-                <tr class="${isSpecial ? 'special' : ''}">
-                  <td>
-                    <strong>${w.startDay === w.endDay ? w.startDay : `${w.startDay} al ${w.endDay}`}</strong> ${MONTHS[w.month].substring(0,3)}
-                  </td>
-                  <td>
-                    <span class="badge ${isSpecial ? 'badge-feriado' : 'badge-guardia'}">
-                      ${isSpecial ? (w.specialTitle || 'FERIADO') : 'GUARDIA'}
-                    </span>
-                  </td>
-                  <td class="person-list">${isSpecial ? (w.specialCallCenter || '-') : `${w.weekCallCenterPerson}${w.weekendCallCenterPerson ? ' / '+w.weekendCallCenterPerson : ''}`}</td>
-                  <td class="person-list">${isSpecial ? (w.specialMonitoreo || '-') : (w.weekendMonitoreoPerson || '-')}</td>
-                  <td class="person-list">${isSpecial ? (w.specialSoporte || '-') : `${w.weekSoportePerson}${w.weekendSoportePerson ? ' / '+w.weekendSoportePerson : ''}`}</td>
-                  <td class="person-list">${isSpecial ? (w.specialAgencia || '-') : (w.weekendAgenciaPerson || '-')}</td>
+
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 15%">Período / Días</th>
+                  <th style="width: 12%">Turno / Horario</th>
+                  <th style="width: 18%">Call Center & Monitoreo</th>
+                  <th style="width: 22%">Soporte Técnico</th>
+                  <th style="width: 18%">Agencia Turmero</th>
+                  <th style="width: 15%">Notas / Especial</th>
                 </tr>
-              `}).join('')}
-            </tbody>
-          </table>
-          <div style="margin-top: 40px; border-top: 1px solid #eee; padding-top: 20px; display: flex; justify-content: space-between;">
-             <div style="font-size: 9px; color: #94a3b8;">
-                © ${new Date().getFullYear()} Sisprot - Control de Guardias Interno
-             </div>
-             <div style="font-size: 9px; color: #94a3b8; font-style: italic;">
-                Documento de uso administrativo
-             </div>
+              </thead>
+              <tbody>
+                ${filteredData.sort((a,b) => a.startDay - b.startDay).map(w => {
+                  let rows = [];
+                  
+                  // Row for Weekdays (if exists)
+                  if (!w.isSpecial && w.startDay <= 5) {
+                    rows.push(`
+                      <tr class="week-row">
+                        <td>
+                          <div class="day-range">${w.startDay} al ${Math.min(w.endDay, 5)}</div>
+                          <div class="day-month">${MONTHS[w.month]}</div>
+                        </td>
+                        <td>
+                          <span class="type-badge type-semana">Días Semana</span>
+                          <div style="font-size: 9px; margin-top: 4px; font-weight: 700; color: #64748b;">8:00 AM - 5:00 PM</div>
+                        </td>
+                        <td><div class="names">${w.weekCallCenterPerson || '<span class="no-names">No asig.</span>'}</div></td>
+                        <td><div class="names">${w.weekSoportePerson || '<span class="no-names">No asig.</span>'}</div></td>
+                        <td><div class="names">-</div></td>
+                        <td><div style="font-size: 10px; color: #94a3b8;">Turno administrativo regular</div></td>
+                      </tr>
+                    `);
+                  }
+
+                  // Row for Special (if exists)
+                  if (w.isSpecial) {
+                    rows.push(`
+                      <tr style="background: #fffafa;">
+                        <td>
+                          <div class="day-range">${w.startDay === w.endDay ? w.startDay : `${w.startDay} al ${w.endDay}`}</div>
+                          <div class="day-month">${MONTHS[w.month]}</div>
+                        </td>
+                        <td>
+                          <span class="type-badge type-special">Feriado</span>
+                          <div style="font-size: 9px; margin-top: 4px; font-weight: 700; color: #b91c1c;">8:00 AM - 8:00 PM</div>
+                        </td>
+                        <td><div class="names" style="color: #b91c1c;">${w.specialCallCenter || '<span class="no-names">No asig.</span>'}</div></td>
+                        <td><div class="names" style="color: #b91c1c;">${w.specialSoporte || '<span class="no-names">No asig.</span>'}</div></td>
+                        <td><div class="names" style="color: #b91c1c;">${w.specialAgencia || '<span class="no-names">No asig.</span>'}</div></td>
+                        <td><div style="font-size: 10px; font-weight: bold; color: #b91c1c;">${w.specialTitle || 'FESTIVO'}</div></td>
+                      </tr>
+                    `);
+                  }
+
+                  // Row for Weekend (if exists in this block)
+                  if (w.endDay >= 6 || (w.isSpecial && w.endDay >= 6)) {
+                     const startWeekend = Math.max(w.startDay, 6);
+                     if (startWeekend <= w.endDay) {
+                        rows.push(`
+                          <tr style="background: #fffcf5;">
+                            <td>
+                              <div class="day-range">${startWeekend === w.endDay ? startWeekend : `${startWeekend} al ${w.endDay}`}</div>
+                              <div class="day-month">${MONTHS[w.month]}</div>
+                            </td>
+                            <td>
+                              <span class="type-badge type-weekend">Sábado-Domingo</span>
+                              <div style="font-size: 9px; margin-top: 4px; font-weight: 700; color: #92400e;">8:00 AM - 8:00 PM</div>
+                            </td>
+                            <td>
+                              <div class="role-box">
+                                <div class="role-label">Call Center</div>
+                                <div class="names">${w.weekendCallCenterPerson || '<span class="no-names">No asig.</span>'}</div>
+                              </div>
+                              <div class="role-box">
+                                <div class="role-label">Monitoreo</div>
+                                <div class="names">${w.weekendMonitoreoPerson || '<span class="no-names">No asig.</span>'}</div>
+                              </div>
+                            </td>
+                            <td><div class="names">${w.weekendSoportePerson || '<span class="no-names">No asig.</span>'}</div></td>
+                            <td><div class="names">${w.weekendAgenciaPerson || '<span class="no-names">No asig.</span>'}</div></td>
+                            <td><div style="font-size: 10px; color: #92400e;">Guardia de fin de semana</div></td>
+                          </tr>
+                        `);
+                     }
+                  }
+
+                  return rows.join('');
+                }).join('')}
+              </tbody>
+            </table>
+
+            <div class="footer">
+              <div>Sisprot G.F - Control de Personal y Guardias v2.0</div>
+              <div>Este documento es un rol oficial de trabajo y debe ser respetado por todo el personal.</div>
+            </div>
           </div>
           <script>
             window.onload = () => {
-              setTimeout(() => { window.print(); window.close(); }, 500);
+              setTimeout(() => { window.print(); window.close(); }, 800);
             };
           </script>
         </body>
