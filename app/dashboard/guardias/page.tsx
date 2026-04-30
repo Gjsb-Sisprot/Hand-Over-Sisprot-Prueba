@@ -109,8 +109,6 @@ export default function GuardiasPage() {
 
   // Selection
   const [selectedWeekId, setSelectedWeekId] = useState<string | null>(null);
-  const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [selectedDayName, setSelectedDayName] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState<string>("Administrador");
 
@@ -133,11 +131,11 @@ export default function GuardiasPage() {
         setData(initializedData);
 
         let fetchedAgents: { id: string, name: string }[] = resAgents.data || [];
-        // Asegurar que Henyerbeth esté en la lista aunque falte en Supabase
         if (!fetchedAgents.find((a: any) => a.name && a.name.includes("HENYERBETH ARRIECHE"))) {
           fetchedAgents.push({ id: 'missing-henyerbeth', name: 'HENYERBETH ARRIECHE' });
         }
         setAgents(fetchedAgents);
+        
         const { data: { user } } = await createClient().auth.getUser();
         if (user?.email) setCurrentUser(user.email.split('@')[0].toUpperCase());
       } catch (e) {
@@ -169,6 +167,14 @@ export default function GuardiasPage() {
       setIsSaving(false);
     }
   };
+
+  const filteredData = useMemo(() => {
+    return data.filter(item => item.month === currentMonth && item.year === currentYear);
+  }, [data, currentMonth, currentYear]);
+
+  const selectedWeek = useMemo(() => {
+    return data.find(w => w.id === selectedWeekId) || null;
+  }, [data, selectedWeekId]);
 
   const handleDownload = () => {
     const printWindow = window.open('', '_blank');
@@ -323,7 +329,6 @@ export default function GuardiasPage() {
     };
     setData([newItem, ...data]);
     setSelectedWeekId(newItem.id);
-    setIsDrawerOpen(true);
   };
 
   const removeItem = (id: string) => {
@@ -331,56 +336,8 @@ export default function GuardiasPage() {
     setData(data.filter(item => item.id !== id));
     if (selectedWeekId === id) {
       setSelectedWeekId(null);
-      setIsDrawerOpen(false);
     }
   };
-
-  const filteredData = useMemo(() => {
-    return data.filter(item => item.month === currentMonth && item.year === currentYear);
-  }, [data, currentMonth, currentYear]);
-
-  // --- Calendar Logic ---
-
-  const calendarDays = useMemo(() => {
-    const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
-    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0);
-
-    const daysInMonth = lastDayOfMonth.getDate();
-    let startingDay = firstDayOfMonth.getDay(); // 0 (Sun) to 6 (Sat)
-    // Convert to 0 (Mon) to 6 (Sun)
-    startingDay = startingDay === 0 ? 6 : startingDay - 1;
-
-    const days = [];
-
-    // Previous month days
-    const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
-    for (let i = startingDay - 1; i >= 0; i--) {
-      days.push({ day: prevMonthLastDay - i, month: 'prev', fullDate: new Date(currentYear, currentMonth - 1, prevMonthLastDay - i) });
-    }
-
-    // Current month days
-    for (let i = 1; i <= daysInMonth; i++) {
-      days.push({ day: i, month: 'current', fullDate: new Date(currentYear, currentMonth, i) });
-    }
-
-    // Next month days
-    const totalCells = 42; // 6 rows
-    const remaining = totalCells - days.length;
-    for (let i = 1; i <= remaining; i++) {
-      days.push({ day: i, month: 'next', fullDate: new Date(currentYear, currentMonth + 1, i) });
-    }
-
-    return days;
-  }, [currentMonth, currentYear]);
-
-  const getWeekForDay = (day: number, monthType: string) => {
-    if (monthType !== 'current') return null;
-    return filteredData.find(w => day >= (w.startDay || 0) && day <= (w.endDay || 0));
-  };
-
-  const selectedWeek = useMemo(() => {
-    return data.find(w => w.id === selectedWeekId) || null;
-  }, [data, selectedWeekId]);
 
   if (loading) {
     return (
@@ -396,192 +353,92 @@ export default function GuardiasPage() {
   }
 
   return (
-    <div className="flex h-full bg-[#fdfaf6] overflow-hidden relative font-outfit">
-      
-      {/* --- Left Side: Calendar Grid --- */}
-      <div className={cn(
-        "flex-1 flex flex-col h-full transition-all duration-500 ease-in-out p-4 md:p-8",
-        isDrawerOpen ? "md:mr-[400px] lg:mr-[450px]" : "mr-0"
-      )}>
-        
-        {/* Header Navigation */}
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-6">
-          <div className="flex flex-col items-start">
-             <div className="flex items-center gap-3 mb-1">
-                <div className="p-2.5 bg-primary/10 rounded-2xl">
-                  <CalendarIcon className="w-7 h-7 text-primary" />
-                </div>
-                <h1 className="text-3xl md:text-4xl font-black tracking-tight text-foreground/90 uppercase">
-                  {MONTHS[currentMonth]} <span className="text-primary/40 ml-1">{currentYear}</span>
-                </h1>
+    <div className="min-h-screen bg-[#fafafa] text-foreground font-sans flex flex-col">
+      {/* Header Premium */}
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-border/40 px-8 py-4 flex items-center justify-between shadow-sm">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
+             <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shadow-lg shadow-primary/20">
+                <CalendarIcon className="w-6 h-6 text-white" />
              </div>
-             <p className="text-muted-foreground text-sm font-medium pl-14">Planificación de guardias y horarios especiales</p>
+             <div>
+                <h1 className="text-lg font-black tracking-tight text-foreground uppercase">Control de Guardias</h1>
+                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">{MONTHS[currentMonth]} {currentYear}</p>
+             </div>
           </div>
 
-          <div className="flex items-center gap-4 bg-white/60 backdrop-blur-md p-1.5 rounded-2xl border border-border/50 shadow-sm">
-             <button 
-               onClick={() => {
-                 if (currentMonth === 0) { setCurrentMonth(11); setCurrentYear(v => v-1); }
-                 else { setCurrentMonth(v => v-1); }
-               }}
-               className="p-3 hover:bg-primary/5 rounded-xl transition-all text-primary/60 hover:text-primary active:scale-95"
-             >
-               <ChevronLeft className="w-6 h-6" />
-             </button>
-             
-             <div className="h-8 w-[1px] bg-border/40"></div>
-             
-             <button 
-               onClick={() => {
-                 if (currentMonth === 11) { setCurrentMonth(0); setCurrentYear(v => v+1); }
-                 else { setCurrentMonth(v => v+1); }
-               }}
-               className="p-3 hover:bg-primary/5 rounded-xl transition-all text-primary/60 hover:text-primary active:scale-95"
-             >
-               <ChevronRight className="w-6 h-6" />
-             </button>
+          <div className="h-8 w-[1px] bg-border/40 hidden md:block"></div>
 
-             <div className="h-8 w-[1px] bg-border/40"></div>
-
-             <button 
-               onClick={addItem}
-               className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all text-sm"
-             >
-               <Plus className="w-4 h-4" /> Nueva Semana
-             </button>
-
-             <button 
-               onClick={handleDownload}
-               className="flex items-center gap-2 px-5 py-2.5 bg-white text-foreground border border-border/50 font-bold rounded-xl shadow-sm hover:bg-muted active:scale-95 transition-all text-sm"
-             >
-               <History className="w-4 h-4" /> Exportar PDF
-             </button>
+          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/50">
+            <button 
+              onClick={() => setCurrentMonth(prev => prev === 0 ? 11 : prev - 1)}
+              className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="px-4 text-xs font-black uppercase min-w-[120px] text-center">
+              {MONTHS[currentMonth]}
+            </span>
+            <button 
+              onClick={() => setCurrentMonth(prev => prev === 11 ? 0 : prev + 1)}
+              className="p-2 hover:bg-white hover:shadow-sm rounded-lg transition-all"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
         </div>
 
-        {/* Calendar Grid */}
-        <div className="flex-1 bg-white/80 backdrop-blur-sm rounded-[2rem] border border-border/60 shadow-2xl overflow-hidden flex flex-col group/calendar">
-          {/* Days labels */}
-          <div className="grid grid-cols-7 border-b border-border/40 bg-muted/5">
-            {WEEKDAYS.map(d => (
-              <div key={d} className="py-4 text-center text-[10px] md:text-xs font-black uppercase tracking-[0.2em] text-muted-foreground/60 border-r border-border/20 last:border-0">
-                {d}
-              </div>
-            ))}
-          </div>
+        <div className="flex items-center gap-3">
+           <button 
+             onClick={handleSave}
+             disabled={isSaving}
+             className="flex items-center gap-2 px-5 py-2.5 bg-white text-foreground border border-border/50 font-bold rounded-xl shadow-sm hover:bg-muted active:scale-95 transition-all text-sm"
+           >
+             <Save className={cn("w-4 h-4", isSaving && "animate-spin")} /> {isSaving ? 'Guardando...' : 'Guardar Cambios'}
+           </button>
 
-          {/* Grid Cells */}
-          <div className="grid grid-cols-7 flex-1">
-            {calendarDays.map((dateObj, i) => {
-              const week = getWeekForDay(dateObj.day, dateObj.month);
-              const isSelected = week && selectedWeekId === week.id;
+           <button 
+             onClick={addItem}
+             className="flex items-center gap-2 px-5 py-2.5 bg-primary text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 hover:scale-[1.02] active:scale-95 transition-all text-sm"
+           >
+             <Plus className="w-4 h-4" /> Nueva Semana
+           </button>
 
-              // Determine person to show
-              let personToShow = "No asig.";
-              let typeLabel = "GUARDIA";
-              let isFeriado = false;
+           <button 
+             onClick={handleDownload}
+             className="flex items-center gap-2 px-5 py-2.5 bg-slate-900 text-white font-bold rounded-xl shadow-lg shadow-slate-900/10 hover:bg-slate-800 active:scale-95 transition-all text-sm"
+           >
+             <History className="w-4 h-4" /> Exportar PDF
+           </button>
+        </div>
+      </header>
 
-              if (week) {
-                const isWeekend = i % 7 >= 5; // 5=Saturday, 6=Sunday
-                isFeriado = week.isSpecial && !isWeekend;
-                typeLabel = isFeriado ? "FERIADO" : "GUARDIA";
-
-                if (isFeriado) {
-                   personToShow = week.specialSoporte?.split(" / ")[0] || "No asig.";
-                } else if (isWeekend) {
-                   personToShow = week.weekendSoportePerson?.split(" / ")[0] || "No asig.";
-                } else {
-                   personToShow = week.weekSoportePerson?.split(" / ")[0] || "No asig.";
-                }
-              }
-
-              return (
-                <div 
-                  key={i}
-                  onClick={() => {
-                    if (week) {
-                      setSelectedWeekId(week.id);
-                      setSelectedDay(dateObj.day);
-                      setSelectedDayName(WEEKDAYS[i % 7]);
-                      setIsDrawerOpen(true);
-                    }
-                  }}
+      <main className="flex-1 flex overflow-hidden">
+        {/* Timeline Sidebar */}
+        <aside className="w-96 border-r border-border/40 bg-white flex flex-col">
+           <div className="p-6 border-b border-border/40 bg-muted/20">
+              <h2 className="text-xs font-black text-muted-foreground uppercase tracking-widest">Cronograma Mensual</h2>
+              <p className="text-[10px] font-medium text-muted-foreground/60 mt-1">Selecciona una semana para ver y editar detalles.</p>
+           </div>
+           
+           <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+              {filteredData.sort((a,b) => a.startDay - b.startDay).map((week) => (
+                <button
+                  key={week.id}
+                  onClick={() => setSelectedWeekId(week.id)}
                   className={cn(
-                    "relative border-r border-b border-border/20 p-2 md:p-3 transition-all cursor-default overflow-hidden group/cell",
-                    dateObj.month !== 'current' ? "bg-muted/5 opacity-30" : "bg-transparent",
-                    week && "cursor-pointer hover:bg-primary/[0.03]",
-                    isSelected && "bg-primary/[0.05] ring-2 ring-primary/20 ring-inset",
-                    (i+1) % 7 === 0 && "border-r-0"
+                    "w-full text-left p-5 rounded-2xl transition-all border-2 group",
+                    selectedWeekId === week.id 
+                      ? "bg-primary/5 border-primary shadow-sm" 
+                      : "bg-white border-transparent hover:bg-muted/50 hover:border-border/60"
                   )}
                 >
-                  <span className={cn(
-                    "text-sm font-bold block mb-1 transition-colors",
-                    dateObj.month === 'current' ? "text-foreground/70" : "text-muted-foreground/30",
-                    isSelected && "text-primary"
-                  )}>
-                    {dateObj.day}
-                  </span>
-
-                  {week && (
-                    <div className="space-y-1 mt-2">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex items-center gap-2">
                        <div className={cn(
-                         "h-1.5 w-full rounded-full transition-all",
-                         isFeriado ? "bg-red-500" : "bg-primary/40",
-                         isSelected && "h-2"
+                         "w-2 h-2 rounded-full",
+                         week.isSpecial ? "bg-red-500 animate-pulse" : "bg-primary"
                        )} />
-                       <div className="hidden md:block">
-                          <p className={cn(
-                            "text-[9px] font-bold truncate uppercase tracking-tighter",
-                            isFeriado ? "text-red-500" : "text-foreground/50"
-                          )}>
-                            {typeLabel}
-                          </p>
-                          <p className={cn(
-                            "text-[8px] truncate leading-tight font-bold",
-                            personToShow === "No asig." ? "text-muted-foreground/30" : "text-muted-foreground"
-                          )}>
-                            {personToShow}
-                          </p>
-                       </div>
-                    </div>
-                  )}
-
-                  {/* Visual Decoration for empty days */}
-                  {!week && dateObj.month === 'current' && (
-                    <div className="absolute inset-0 opacity-0 group-hover/cell:opacity-100 transition-opacity flex items-center justify-center">
-                       <div className="w-8 h-8 rounded-full border-2 border-dashed border-primary/20 flex items-center justify-center text-primary/30">
-                          <Plus className="w-4 h-4" />
-                       </div>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Footer Actions */}
-        <div className="mt-6 flex justify-end gap-4">
-          <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground mr-auto bg-white/80 p-3 rounded-2xl border border-border/40">
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 bg-primary/40 rounded-full"></div>
-              <span>Guardia Normal</span>
-            </div>
-            <div className="w-[1px] h-4 bg-border/40 mx-2"></div>
-            <div className="flex items-center gap-1.5">
-              <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-              <span>Feriado</span>
-            </div>
-          </div>
-
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="flex items-center gap-3 px-8 py-4 bg-foreground text-background font-black rounded-2xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 group"
-          >
-            {isSaving ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <Save className="w-5 h-5 group-hover:rotate-12 transition-transform" />}
-            GUARDAR CAMBIOS
-          </button>
                        <span className="text-sm font-black text-foreground">
                          {week.startDay === week.endDay ? `Día ${week.startDay}` : `${week.startDay} al ${week.endDay}`}
                        </span>
@@ -622,9 +479,7 @@ export default function GuardiasPage() {
 
         {/* Detail View */}
         <section className="flex-1 bg-white overflow-y-auto">
-          {selectedWeek ? (() => {
-            const isWeekend = false;
-            return (
+          {selectedWeek ? (
               <div className="max-w-4xl mx-auto p-12">
                  <div className="flex justify-between items-start mb-12">
                     <div>
@@ -812,8 +667,7 @@ export default function GuardiasPage() {
                     </div>
                  </div>
               </div>
-            );
-          })() : (
+          ) : (
             <div className="flex flex-col items-center justify-center h-full p-20 text-center bg-muted/5">
               <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center mb-8 shadow-xl shadow-black/5">
                 <CalendarIcon className="w-16 h-16 text-muted-foreground/20" />
@@ -827,3 +681,5 @@ export default function GuardiasPage() {
         </section>
       </main>
     </div>
+  );
+}
