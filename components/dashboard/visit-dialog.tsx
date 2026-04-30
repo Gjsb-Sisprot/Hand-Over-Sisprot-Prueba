@@ -215,8 +215,11 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
           <div className="space-y-2">
             <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Equipo Especializado</Label>
             <Select
-              value={formData.team || ""}
-              onValueChange={(val: any) => setFormData({ ...formData, team: val })}
+              value={formData.metadata?.team || ""}
+              onValueChange={(val: any) => setFormData({ 
+                ...formData, 
+                metadata: { ...formData.metadata, team: val } 
+              })}
             >
               <SelectTrigger className="bg-background/50 rounded-xl">
                 <SelectValue placeholder="Seleccionar equipo..." />
