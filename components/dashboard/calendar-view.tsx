@@ -32,6 +32,7 @@ import { VisitDialog } from "./visit-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { usePermissions } from "@/hooks/use-permissions";
 
 interface CalendarViewProps {
   technicians: Technician[];
@@ -42,7 +43,16 @@ export function CalendarView({ technicians }: CalendarViewProps) {
   const [visits, setVisits] = useState<SupportVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTechnician, setSelectedTechnician] = useState<string>("all");
+  const { role, isOperador, isAgent } = usePermissions();
   const [currentCategory, setCurrentCategory] = useState<'support' | 'administration'>('support');
+
+  useEffect(() => {
+    if (isOperador) {
+      setCurrentCategory('administration');
+    } else {
+      setCurrentCategory('support');
+    }
+  }, [isOperador]);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedVisit, setSelectedVisit] = useState<SupportVisit | undefined>(undefined);
 
@@ -119,28 +129,32 @@ export function CalendarView({ technicians }: CalendarViewProps) {
 
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl mr-2">
-            <Button
-              variant={currentCategory === 'support' ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setCurrentCategory('support')}
-              className={cn(
-                "h-8 px-4 rounded-lg text-xs font-bold transition-all",
-                currentCategory === 'support' ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
-              )}
-            >
-              Soporte
-            </Button>
-            <Button
-              variant={currentCategory === 'administration' ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setCurrentCategory('administration')}
-              className={cn(
-                "h-8 px-4 rounded-lg text-xs font-bold transition-all",
-                currentCategory === 'administration' ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
-              )}
-            >
-              Administración
-            </Button>
+            {!isOperador && (
+              <Button
+                variant={currentCategory === 'support' ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setCurrentCategory('support')}
+                className={cn(
+                  "h-8 px-4 rounded-lg text-xs font-bold transition-all",
+                  currentCategory === 'support' ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
+                )}
+              >
+                Soporte Técnico
+              </Button>
+            )}
+            {!isAgent && (
+              <Button
+                variant={currentCategory === 'administration' ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setCurrentCategory('administration')}
+                className={cn(
+                  "h-8 px-4 rounded-lg text-xs font-bold transition-all",
+                  currentCategory === 'administration' ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
+                )}
+              >
+                Administración
+              </Button>
+            )}
           </div>
 
           <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-xl border border-border/40">
