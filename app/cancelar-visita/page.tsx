@@ -156,6 +156,19 @@ function CancelContent() {
                   </p>
                 </div>
               </div>
+
+              <div className="flex items-center gap-5 p-5 bg-muted/30 rounded-[2rem]">
+                <div className="bg-primary/10 p-4 rounded-2xl text-primary">
+                  <User className="h-6 w-6" />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground">Especialistas</p>
+                  <p className="text-xl font-bold">
+                    {visit?.technicians?.name || "Técnico por asignar"}
+                    {visit?.technician_2?.name && ` y ${visit.technician_2.name}`}
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="space-y-6 pt-4">
