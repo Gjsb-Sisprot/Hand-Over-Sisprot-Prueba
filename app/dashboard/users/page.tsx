@@ -11,11 +11,11 @@ export default async function UsersPage() {
     redirect("/login");
   }
 
-  const { data: agent } = await supabase
+  const { data: agent } = (await supabase
     .from("agents")
     .select("role")
     .eq("id", user.id)
-    .single();
+    .single()) as { data: { role: string } | null };
 
   if (agent?.role !== "supervisor") {
     redirect("/dashboard");
