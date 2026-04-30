@@ -18,11 +18,11 @@ export default async function DashboardLayout({
   }
 
   // Obtenemos el rol del agente para proteger las rutas
-  const { data: agent } = await supabase
+  const { data: agent } = (await supabase
     .from("agents")
     .select("role")
     .eq("id", user.id)
-    .single();
+    .single()) as { data: { role: string } | null };
 
   const role = agent?.role || "agent";
   const headersList = await headers();
