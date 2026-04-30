@@ -28,6 +28,7 @@ function RescheduleContent() {
   const [newTime, setNewTime] = useState("");
   const [technicians, setTechnicians] = useState<Technician[]>([]);
   const [selectedTechnician, setSelectedTechnician] = useState<string>("");
+  const [selectedTechnician2, setSelectedTechnician2] = useState<string>("");
 
   useEffect(() => {
     async function loadVisit() {
@@ -59,6 +60,9 @@ function RescheduleContent() {
         if (visitData.technician_id) {
           setSelectedTechnician(visitData.technician_id);
         }
+        if (visitData.technician_id_2) {
+          setSelectedTechnician2(visitData.technician_id_2);
+        }
       } catch (err: any) {
         setError("Ocurrió un error al cargar los datos.");
       } finally {
@@ -80,6 +84,7 @@ function RescheduleContent() {
       const { error: updateError } = await updateVisit(visit.id, { 
         visit_date: updatedISO,
         technician_id: selectedTechnician || null,
+        technician_id_2: selectedTechnician2 || null,
         status: 'rescheduled'
       });
 
@@ -180,22 +185,44 @@ function RescheduleContent() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Especialista Asignado</Label>
-                  <div className="relative">
-                    <UserIcon className="absolute left-4 top-3.5 h-5 w-5 text-muted-foreground/50 z-10" />
-                    <Select value={selectedTechnician} onValueChange={setSelectedTechnician}>
-                      <SelectTrigger className="pl-12 h-14 rounded-2xl bg-muted/30 border-none text-lg font-medium focus:ring-primary/20">
-                        <SelectValue placeholder="Técnico por asignar" />
-                      </SelectTrigger>
-                      <SelectContent className="rounded-xl border-muted">
-                        {technicians.map((tech) => (
-                          <SelectItem key={tech.id} value={tech.id} className="text-base py-3">
-                            {tech.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Especialista Principal</Label>
+                    <div className="relative">
+                      <UserIcon className="absolute left-4 top-3.5 h-5 w-5 text-muted-foreground/50 z-10" />
+                      <Select value={selectedTechnician} onValueChange={setSelectedTechnician}>
+                        <SelectTrigger className="pl-12 h-14 rounded-2xl bg-muted/30 border-none text-lg font-medium focus:ring-primary/20">
+                          <SelectValue placeholder="Seleccionar..." />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-muted">
+                          <SelectItem value="none">Ninguno</SelectItem>
+                          {technicians.map((tech) => (
+                            <SelectItem key={tech.id} value={tech.id} className="text-base py-3">
+                              {tech.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <Label className="text-xs font-black uppercase tracking-widest text-muted-foreground ml-1">Especialista Auxiliar</Label>
+                    <div className="relative">
+                      <UserIcon className="absolute left-4 top-3.5 h-5 w-5 text-muted-foreground/50 z-10" />
+                      <Select value={selectedTechnician2} onValueChange={setSelectedTechnician2}>
+                        <SelectTrigger className="pl-12 h-14 rounded-2xl bg-muted/30 border-none text-lg font-medium focus:ring-primary/20">
+                          <SelectValue placeholder="Seleccionar..." />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl border-muted">
+                          <SelectItem value="none">Ninguno</SelectItem>
+                          {technicians.map((tech) => (
+                            <SelectItem key={tech.id} value={tech.id} className="text-base py-3">
+                              {tech.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                 </div>
 
