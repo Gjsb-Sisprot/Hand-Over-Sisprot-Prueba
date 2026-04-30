@@ -21,7 +21,7 @@ export async function getUsers() {
 export async function updateUserRole(userId: string, role: string) {
   const supabase = await createClient();
   
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("agents")
     .update({ role })
     .eq("id", userId);
@@ -39,7 +39,7 @@ export async function deleteUser(userId: string) {
   
   // Nota: Esto solo borra de la tabla agents. 
   // Para borrar el auth de Supabase, necesitaríamos service_role key.
-  const { error } = await supabase
+  const { error } = await (supabase as any)
     .from("agents")
     .delete()
     .eq("id", userId);
