@@ -120,13 +120,18 @@ function ConfirmContent() {
             </div>
 
             <div className="pt-6 border-t border-border/50">
-              <div className="flex items-center gap-4 bg-muted/30 p-4 rounded-2xl">
-                <div className="bg-primary/10 p-3 rounded-xl text-primary">
-                  <User className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Especialista Asignado</p>
-                  <p className="font-bold text-lg">{visit?.technicians?.name || "Técnico por asignar"}</p>
+              <div className="flex flex-col gap-4 bg-muted/30 p-4 rounded-2xl">
+                <div className="flex items-center gap-4">
+                  <div className="bg-primary/10 p-3 rounded-xl text-primary">
+                    <User className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Especialistas Asignados</p>
+                    <p className="font-bold text-lg">
+                      {visit?.technicians?.name || "Técnico por asignar"}
+                      {visit?.technician_2?.name && ` y ${visit.technician_2.name}`}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
