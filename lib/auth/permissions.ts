@@ -25,7 +25,7 @@ export type Permission = typeof PERMISSIONS[keyof typeof PERMISSIONS];
 
 
 const ROLE_PERMISSIONS: Record<AgentRole, Permission[]> = {
-  admin: [
+  operador: [
     PERMISSIONS.VIEW_ALL_CONVERSATIONS,
     PERMISSIONS.VIEW_OWN_CONVERSATIONS,
     PERMISSIONS.VIEW_PENDING_CONVERSATIONS,
