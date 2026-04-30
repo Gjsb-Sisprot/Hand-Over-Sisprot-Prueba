@@ -7,7 +7,8 @@ import {
   takeoverConversation, 
   getChatHistory,
   closeConversation,
-  pauseConversation
+  pauseConversation,
+  reactivateConversation
 } from "../../lib/actions/conversations";
 import { ConversationCard } from "./conversation-card";
 import { ContactPanel } from "./contact-panel";
@@ -184,9 +185,9 @@ export function ConversationList({
   ) => {
     optimisticUpdate(conversationId, { status: "paused" });
 
-    setActiveConversation(null);
     setConversationToPause(null);
     toast.success("Conversación pausada exitosamente");
+    refresh(); // Actualizar para reflejar el estado pausado sin cerrar la ventana
 
     const currentMessages = await getChatHistory(conversationId);
     const transcript = currentMessages
@@ -210,8 +211,8 @@ export function ConversationList({
 
   const handleSimplePause = async (conv: MCPConversation) => {
     optimisticUpdate(conv.id, { status: "paused" });
-    setActiveConversation(null);
     toast.success("Modelo pausado (sin ticket)");
+    refresh();
 
     const result = await pauseConversation(conv.sessionId, "Pausa manual del agente (sin ticket)", {
         createTicket: false
@@ -220,6 +221,20 @@ export function ConversationList({
     if (result.error) {
         toast.error(result.error);
         refresh();
+    }
+  };
+
+  const handleReactivateConversation = async (sessionId: string) => {
+    optimisticUpdate(sessionId, { status: "active" });
+    toast.success("IA reactivada correctamente");
+
+    const result = await reactivateConversation(sessionId);
+
+    if (result.error) {
+      toast.error(result.error);
+      refresh();
+    } else {
+      refresh();
     }
   };
 
@@ -382,6 +397,7 @@ export function ConversationList({
           <ChatWindow 
             conversation={activeConversation} 
             onTakeControl={() => handleBridgeTakeover(activeConversation)}
+            onReactivate={() => handleReactivateConversation(activeConversation.sessionId)}
           />
         ) : (
           <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-30">
