@@ -93,13 +93,19 @@ export async function createVisit(visitData: Partial<SupportVisit>) {
       }
     }
 
-    // Extraer team y technician_id_2 para que no se envíen como columnas
-    const { team, technician_id_2, ...rest } = visitData;
+    // Extraer campos que no son columnas reales o son relaciones
+    const { 
+      team, 
+      technician_id_2, 
+      technicians, 
+      technician_2,
+      ...validColumns 
+    } = visitData;
 
     const { data, error } = await (supabaseAdmin as any)
       .from("support_visits")
       .insert([{
-        ...rest,
+        ...validColumns,
         agent_id: user?.id
       }])
       .select("*, technicians(name)")
@@ -188,13 +194,21 @@ export async function updateVisit(id: string, visitData: Partial<SupportVisit>) 
       }
     }
 
-    // Extraer team y technician_id_2 para que no se envíen como columnas
-    const { team, technician_id_2, ...rest } = visitData;
+    // Extraer campos que no son columnas reales o son relaciones
+    const { 
+      team, 
+      technician_id_2, 
+      technicians, 
+      technician_2,
+      id: visitId, // No enviar el ID en el cuerpo del update
+      created_at,  // No enviar campos de auditoría
+      ...validColumns 
+    } = visitData;
 
     const { data, error } = await (supabaseAdmin as any)
       .from("support_visits")
       .update({
-        ...rest,
+        ...validColumns,
         updated_at: new Date().toISOString()
       })
       .eq("id", id)
