@@ -24,16 +24,14 @@ export function Sidebar() {
   const { role, loading } = usePermissions();
 
   const sidebarItems = [
-    // Dashboard y Conversaciones: Call Center (admin) y Supervisor
+    // Dashboard y Conversaciones: Call Center (operador) y Supervisor
     ...(role !== "agent" ? [
       { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
       { icon: MessageSquare, label: "Conversaciones", href: "/dashboard/conversations" }
     ] : []),
     
-    // Soporte (Calendario): Soporte Técnico (agent) y Supervisor. Call Center (admin) NO lo ve.
-    ...(role !== "admin" ? [
-      { icon: WrenchEmoji, label: "Soporte", href: "/dashboard/calendar" }
-    ] : []),
+    // Soporte (Calendario): Todos los roles entran, pero ven pestañas distintas según el rol
+    { icon: WrenchEmoji, label: "Soporte / Calendario", href: "/dashboard/calendar" },
 
     // Guardias y Usuarios: Solo Supervisor
     ...(role === "supervisor" ? [
