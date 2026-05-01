@@ -210,11 +210,24 @@ export default function GuardiasPage() {
       // Background header style
       doc.setFillColor(15, 23, 42);
       doc.rect(0, 0, 280, 25, 'F');
+
+      // Intentar cargar e insertar logo
+      try {
+        const logoImg = new Image();
+        logoImg.src = '/logo.png';
+        await new Promise((resolve) => {
+          logoImg.onload = resolve;
+          logoImg.onerror = resolve;
+        });
+        if (logoImg.complete && logoImg.naturalWidth > 0) {
+          doc.addImage(logoImg, 'PNG', 12, 4, 16, 16);
+        }
+      } catch (e) {}
       
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(22);
       doc.setFont("helvetica", "bold");
-      doc.text("SISPROT G.F - CRONOGRAMA DE GUARDIAS", 140, 15, { align: 'center' });
+      doc.text("SISPROT G.F - CRONOGRAMA DE GUARDIAS", 148, 15, { align: 'center' });
       
       doc.setFontSize(12);
       doc.text(`${MONTHS[currentMonth].toUpperCase()} ${currentYear}`, 140, 22, { align: 'center' });
@@ -251,15 +264,16 @@ export default function GuardiasPage() {
         const dRef = new Date(currentYear, currentMonth, firstItem.startDay);
         const diffMon = (dRef.getDay() + 6) % 7;
         const mon = new Date(dRef); mon.setDate(dRef.getDate() - diffMon);
-        const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
+        const sat = new Date(mon); sat.setDate(mon.getDate() + 5);
         const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
 
         const monStr = mon.getDate().toString().padStart(2, '0');
         const friStr = fri.getDate().toString().padStart(2, '0');
+        const satStr = sat.getDate().toString().padStart(2, '0');
         const sunStr = sun.getDate().toString().padStart(2, '0');
         
         let leftCol = `SEMANA DEL ${monStr} AL ${friStr}/${monthStr}\n`;
-        let rightCol = `CC Y MONITOREO FDS 08:00 AM A 08:00 PM\n`;
+        let rightCol = `CC Y MONITOREO SÁBADO ${satStr} Y DOMINGO ${sunStr}/${monthStr}\n08:00 AM A 08:00 PM\n\n`;
         let dateCol = `${monStr}-${sunStr}/${monthStr}`;
 
         // Separar L-V y S-D
@@ -289,10 +303,8 @@ export default function GuardiasPage() {
           leftCol += `${workdayText}: AGENCIA ABIERTA\n`;
           
           const reg = regularLV[0] || group.find(i => i.weekCallCenterPerson);
-          if (reg) {
-            leftCol += `CALL CENTER: ${reg.weekCallCenterPerson || '-'}\n`;
-            leftCol += `SOPORTE TÉCNICO: ${reg.weekSoportePerson || '-'}\n`;
-          }
+          leftCol += `CALL CENTER: ${reg?.weekCallCenterPerson || '-'}\n`;
+          leftCol += `SOPORTE TÉCNICO: ${reg?.weekSoportePerson || '-'}\n`;
 
           holidaysLV.forEach(h => {
             const hName = WEEKDAYS[(new Date(currentYear, currentMonth, h.startDay).getDay() + 6) % 7];
@@ -309,12 +321,10 @@ export default function GuardiasPage() {
 
         // --- CONSTRUIR COLUMNA DERECHA (S-D) ---
         const regSD = sdItems.find(i => !i.isSpecial);
-        if (regSD) {
-          rightCol += `CC: ${regSD.weekendCallCenterPerson || '-'}\n`;
-          rightCol += `MN: ${regSD.weekendMonitoreoPerson || '-'}\n`;
-          rightCol += `SOPORTE TÉCNICO: ${regSD.weekendSoportePerson || '-'}\n`;
-          rightCol += `AGENCIA TURMERO: ${regSD.weekendAgenciaPerson || 'ABIERTA'}`;
-        }
+        rightCol += `CC: ${regSD?.weekendCallCenterPerson || '-'}\n`;
+        rightCol += `MN: ${regSD?.weekendMonitoreoPerson || '-'}\n`;
+        rightCol += `SOPORTE TÉCNICO: ${regSD?.weekendSoportePerson || '-'}\n`;
+        rightCol += `AGENCIA TURMERO: ${regSD?.weekendAgenciaPerson || 'ABIERTA'}`;
 
         const holidaysSD = sdItems.filter(i => i.isSpecial);
         holidaysSD.forEach(h => {
