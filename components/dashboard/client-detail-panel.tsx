@@ -28,18 +28,21 @@ import { getTechnicians, Technician } from "@/lib/actions/visits";
 import { VisitDialog } from "./visit-dialog";
 
 
+import { cn } from "@/lib/utils";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
-interface ClientDetailPanelProps {
+export interface ClientDetailPanelProps {
   conversation: MCPConversation;
   onCloseConversation: (id: string) => void;
   onPauseConversation: (id: string, isEscalation?: boolean, isReactivate?: boolean) => void;
+  className?: string;
 }
 
 export function ClientDetailPanel({
   conversation,
   onCloseConversation,
-  onPauseConversation
+  onPauseConversation,
+  className
 }: ClientDetailPanelProps) {
   const client = conversation.client ?? {};
   const [isVisitDialogOpen, setIsVisitDialogOpen] = useState(false);
@@ -50,7 +53,7 @@ export function ClientDetailPanel({
   }, []);
   
   return (
-    <div className="w-[340px] h-full max-h-full flex flex-col bg-card/30 border-l border-border shrink-0 overflow-hidden">
+    <div className={cn("w-[340px] h-full max-h-full flex flex-col bg-card/30 border-l border-border shrink-0 overflow-hidden", className)}>
       <ScrollArea className="flex-1 w-full h-full">
       {/* Client Identity compactado */}
       <div className="p-4 flex flex-col items-center text-center space-y-3">
