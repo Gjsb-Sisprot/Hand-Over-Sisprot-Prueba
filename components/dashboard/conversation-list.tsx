@@ -298,7 +298,7 @@ export function ConversationList({
     <div className="flex w-full flex-1 min-h-0 overflow-hidden bg-background relative">
       {/* Columna 1: Lista de Conversaciones (Sidebar Secundario) */}
       <div className={cn(
-        "w-full md:w-[400px] flex flex-col border-r border-border shrink-0 bg-card/10 transition-all duration-300",
+        "w-full md:w-[460px] md:min-w-[460px] flex flex-col border-r border-border shrink-0 bg-card/10 transition-all duration-300",
         activeConversation ? "hidden md:flex" : "flex"
       )}>
         <header className="p-4 border-b border-border space-y-3 shrink-0 bg-card/30 backdrop-blur-sm">
