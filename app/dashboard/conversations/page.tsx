@@ -14,11 +14,15 @@ export default async function ConversationsPage() {
     redirect("/login");
   }
 
-  const { data: agent } = await supabase
+  const { data: agent } = (await supabase
     .from("agents")
     .select("*")
     .eq("id", user.id)
-    .single();
+    .single()) as { data: any };
+    
+  if (agent?.role === "agent") {
+    redirect("/dashboard/calendar");
+  }
 
   const conversations = await getConversations(undefined, true);
 
