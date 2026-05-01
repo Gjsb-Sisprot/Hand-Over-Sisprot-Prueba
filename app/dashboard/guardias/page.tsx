@@ -219,48 +219,112 @@ export default function GuardiasPage() {
       doc.setFontSize(12);
       doc.text(`${MONTHS[currentMonth].toUpperCase()} ${currentYear}`, 140, 22, { align: 'center' });
 
-      const tableRows: any[] = [];
-      const sortedData = [...filteredData].sort((a, b) => a.startDay - b.startDay);
+      // --- AGRUPACIÓN POR SEMANA ---
+      const weekMap = new Map<string, any[]>();
+      const monthStr = (currentMonth + 1).toString().padStart(2, '0');
 
-      sortedData.forEach((w, idx) => {
-        const itemNum = idx + 1;
-        const monthStr = (currentMonth + 1).toString().padStart(2, '0');
+      filteredData.forEach(w => {
+        const d = new Date(currentYear, currentMonth, w.startDay);
+        // Ajustar al lunes de esa semana
+        const dayDiff = (d.getDay() + 6) % 7; 
+        const monday = new Date(d);
+        monday.setDate(d.getDate() - dayDiff);
+        const weekKey = monday.toDateString();
         
-        let leftCol = "";
-        let rightCol = "";
-        let dateCol = "";
+        if (!weekMap.has(weekKey)) weekMap.set(weekKey, []);
+        weekMap.get(weekKey)?.push(w);
+      });
 
-        if (w.isSpecial) {
-          leftCol = "DÍA FERIADO - AGENCIA CERRADA";
-          rightCol = `CC Y MONITOREO - ${w.specialTitle || 'FERIADO'}\n` +
-                    `CC: ${w.specialCallCenter || '-'}\nMN: ${w.weekendMonitoreoPerson || '-'}\n` +
-                    `SOPORTE TÉCNICO\n${w.specialSoporte || '-'}\n` +
-                    `AGENCIA TURMERO\n${w.specialAgencia || 'CERRADA'}`;
-          dateCol = `${w.startDay}/${monthStr}`;
-        } else {
-          const fri = w.endDay - 2;
-          let soporteHorario = "08:00 AM A 08:00 PM";
-          if (w.startDay >= 18) soporteHorario = "01:00 PM A 08:00 PM";
+      const sortedWeeks = Array.from(weekMap.values()).sort((a, b) => {
+        const minA = Math.min(...a.map(i => i.startDay));
+        const minB = Math.min(...b.map(i => i.startDay));
+        return minA - minB;
+      });
 
-          leftCol = `SEMANA DEL ${w.startDay.toString().padStart(2,'0')} AL ${fri.toString().padStart(2,'0')}/${monthStr}\n` +
-                   `CALL CENTER 08:00 AM A 05:00 PM\n${w.weekCallCenterPerson || '-'}\n` +
-                   `SOPORTE TÉCNICO ${soporteHorario}\n${w.weekSoportePerson || '-'}\n` +
-                   `AGENCIA TURMERO\nABIERTA`;
+      const tableRows: any[] = [];
 
-          rightCol = `CC Y MONITOREO FDS 08:00 AM A 08:00 PM\n` +
-                    `CC: ${w.weekendCallCenterPerson || '-'}\nMN: ${w.weekendMonitoreoPerson || '-'}\n` +
-                    `SOPORTE TÉCNICO\n${w.weekendSoportePerson || '-'}\n` +
-                    `AGENCIA TURMERO\n${w.weekendAgenciaPerson || 'ABIERTA'}`;
+      sortedWeeks.forEach((group, idx) => {
+        const itemNum = idx + 1;
+        
+        // Determinar límites de la semana (Lunes a Domingo)
+        const firstItem = group.sort((a, b) => a.startDay - b.startDay)[0];
+        const dRef = new Date(currentYear, currentMonth, firstItem.startDay);
+        const diffMon = (dRef.getDay() + 6) % 7;
+        const mon = new Date(dRef); mon.setDate(dRef.getDate() - diffMon);
+        const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
+        const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
 
-          dateCol = `${w.endDay-1}-${w.endDay}/${monthStr}`;
+        const monStr = mon.getDate().toString().padStart(2, '0');
+        const friStr = fri.getDate().toString().padStart(2, '0');
+        const sunStr = sun.getDate().toString().padStart(2, '0');
+        
+        let leftCol = `SEMANA DEL ${monStr} AL ${friStr}/${monthStr}\n`;
+        let rightCol = `CC Y MONITOREO FDS 08:00 AM A 08:00 PM\n`;
+        let dateCol = `${monStr}-${sunStr}/${monthStr}`;
+
+        // Separar L-V y S-D
+        const lvItems = group.filter(i => {
+          const d = new Date(currentYear, currentMonth, i.startDay);
+          const day = (d.getDay() + 6) % 7;
+          return day < 5 || (i.isSpecial && day < 5);
+        });
+
+        const sdItems = group.filter(i => {
+          const d = new Date(currentYear, currentMonth, i.startDay);
+          const day = (d.getDay() + 6) % 7;
+          return day >= 5 || (!i.isSpecial && i.endDay >= 6);
+        });
+
+        // --- CONSTRUIR COLUMNA IZQUIERDA (L-V) ---
+        const holidaysLV = lvItems.filter(i => i.isSpecial);
+        const regularLV = lvItems.filter(i => !i.isSpecial);
+
+        if (holidaysLV.length > 0) {
+          // Si hay feriado, detallamos días operativos
+          const hDay = holidaysLV[0].startDay;
+          const hDate = new Date(currentYear, currentMonth, hDay);
+          const hIdx = (hDate.getDay() + 6) % 7;
+
+          const workdayText = hIdx === 4 ? "Lunes a Jueves" : hIdx === 0 ? "Martes a Viernes" : "Días Laborales";
+          leftCol += `${workdayText}: AGENCIA ABIERTA\n`;
+          
+          const reg = regularLV[0] || group.find(i => i.weekCallCenterPerson);
+          if (reg) {
+            leftCol += `CALL CENTER: ${reg.weekCallCenterPerson || '-'}\n`;
+            leftCol += `SOPORTE TÉCNICO: ${reg.weekSoportePerson || '-'}\n`;
+          }
+
+          holidaysLV.forEach(h => {
+            const hName = WEEKDAYS[(new Date(currentYear, currentMonth, h.startDay).getDay() + 6) % 7];
+            leftCol += `\n${hName.toUpperCase()} ${h.startDay}/${monthStr}: DÍA FERIADO - AGENCIA CERRADA\n`;
+            leftCol += `CC: ${h.specialCallCenter || '-'}\nMN: ${h.weekendMonitoreoPerson || '-'}\n`;
+            leftCol += `SOPORTE: ${h.specialSoporte || '-'}`;
+          });
+        } else if (regularLV.length > 0) {
+          leftCol += `Lunes a Viernes: AGENCIA ABIERTA\n`;
+          leftCol += `CALL CENTER: ${regularLV[0].weekCallCenterPerson || '-'}\n`;
+          let soporteHorario = regularLV[0].startDay >= 18 ? "01:00 PM A 08:00 PM" : "08:00 AM A 08:00 PM";
+          leftCol += `SOPORTE TÉCNICO ${soporteHorario}: ${regularLV[0].weekSoportePerson || '-'}`;
         }
 
-        tableRows.push([
-          itemNum.toString(),
-          leftCol,
-          rightCol,
-          dateCol
-        ]);
+        // --- CONSTRUIR COLUMNA DERECHA (S-D) ---
+        const regSD = sdItems.find(i => !i.isSpecial);
+        if (regSD) {
+          rightCol += `CC: ${regSD.weekendCallCenterPerson || '-'}\n`;
+          rightCol += `MN: ${regSD.weekendMonitoreoPerson || '-'}\n`;
+          rightCol += `SOPORTE TÉCNICO: ${regSD.weekendSoportePerson || '-'}\n`;
+          rightCol += `AGENCIA TURMERO: ${regSD.weekendAgenciaPerson || 'ABIERTA'}`;
+        }
+
+        const holidaysSD = sdItems.filter(i => i.isSpecial);
+        holidaysSD.forEach(h => {
+          const hName = WEEKDAYS[(new Date(currentYear, currentMonth, h.startDay).getDay() + 6) % 7];
+          rightCol += `\n\nFERIADO ${hName.toUpperCase()} ${h.startDay}/${monthStr}:\n`;
+          rightCol += `CC: ${h.specialCallCenter || '-'}\nMN: ${h.weekendMonitoreoPerson || '-'}\n`;
+          rightCol += `SOPORTE: ${h.specialSoporte || '-'}`;
+        });
+
+        tableRows.push([itemNum.toString(), leftCol, rightCol, dateCol]);
       });
 
       autoTable(doc, {
@@ -281,10 +345,10 @@ export default function GuardiasPage() {
             if (data.column.index === 1 && data.cell.raw && String(data.cell.raw).includes('SEMANA')) {
                data.cell.styles.fillColor = [240, 250, 240];
             }
-            if (data.column.index === 2 && data.cell.raw && String(data.cell.raw).includes('FDS')) {
+            if (data.column.index === 2 && data.cell.raw && String(data.cell.raw).includes('CC Y MONITOREO')) {
                data.cell.styles.fillColor = [255, 253, 240];
             }
-            if (data.column.index === 2 && data.cell.raw && String(data.cell.raw).includes('FERIADO')) {
+            if (data.cell.raw && String(data.cell.raw).includes('FERIADO')) {
                data.cell.styles.fillColor = [255, 240, 240];
             }
           }
@@ -294,7 +358,7 @@ export default function GuardiasPage() {
       const finalY = (doc as any).lastAutoTable?.finalY || 30;
       doc.setFontSize(8);
       doc.setTextColor(100);
-      doc.text(`Sistema de Control Sisprot - Generado por: ${currentUser} - ${new Date().toLocaleString()}`, 14, finalY);
+      doc.text(`Sistema de Control Sisprot - Generado por: ${currentUser} - ${new Date().toLocaleString()}`, 14, finalY + 10);
       
       doc.save(`Cronograma_Guardias_${MONTHS[currentMonth]}.pdf`);
       toast.success('¡Cronograma Premium Descargado!', { id: toastId });
