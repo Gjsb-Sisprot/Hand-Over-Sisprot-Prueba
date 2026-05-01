@@ -28,17 +28,17 @@ export default async function DashboardLayout({
   const headersList = await headers();
   const pathname = headersList.get("x-invoke-path") || "";
 
-  // 1. Si es Soporte Técnico (agent), NO puede ver Dashboard ni Conversaciones
+  // 1. Si es Agente (agent), SOLO puede ver Gestión y Soporte
   if (role === "agent") {
-    if (pathname === "/dashboard" || pathname.startsWith("/dashboard/conversations")) {
-      redirect("/dashboard/calendar"); // Redirigir a su única zona permitida
+    if (pathname === "/dashboard" || pathname.startsWith("/dashboard/conversations") || pathname.startsWith("/dashboard/guardias") || pathname.startsWith("/dashboard/users")) {
+      redirect("/dashboard/calendar"); 
     }
   }
 
-  // 2. Si es Call Center (operador), NO puede ver Soporte ni Guardias
+  // 2. Si es Operador (operador), PUEDE ver Gestión y Soporte y Conversaciones. NO Guardias ni Usuarios.
   if (role === "operador") {
-    if (pathname.startsWith("/dashboard/calendar") || pathname.startsWith("/dashboard/guardias")) {
-      redirect("/dashboard"); // Redirigir a inicio
+    if (pathname === "/dashboard" || pathname.startsWith("/dashboard/guardias") || pathname.startsWith("/dashboard/users")) {
+      redirect("/dashboard/conversations"); 
     }
   }
 
