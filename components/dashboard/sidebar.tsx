@@ -9,15 +9,12 @@ import {
   Users, 
   LogOut,
   CalendarDays,
-  Radio
+  Radio,
+  LifeBuoy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/use-permissions";
 import { createClient } from "@/lib/supabase/client";
-
-const WrenchEmoji = ({ className }: { className?: string }) => (
-  <span className={cn("flex items-center justify-center text-lg", className)} style={{ lineHeight: 1 }}>🛠️</span>
-);
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -43,7 +40,7 @@ export function Sidebar() {
     ] : []),
     
     // Gestión y Soporte (anteriormente Soporte): Todos (Agent, Operador, Supervisor)
-    { icon: WrenchEmoji, label: "Gestión y Soporte", href: "/dashboard/calendar" },
+    { icon: LifeBuoy, label: "Atención y Soporte", href: "/dashboard/calendar" },
 
     // Guardias y Usuarios: Solo Supervisor
     ...(role === "supervisor" ? [
