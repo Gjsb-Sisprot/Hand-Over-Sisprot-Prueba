@@ -13,7 +13,8 @@ import {
   Video,
   Loader2,
   MessageCircle,
-  Globe
+  Globe,
+  ChevronLeft
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
@@ -27,9 +28,10 @@ interface ChatWindowProps {
   conversation: MCPConversation;
   onTakeControl?: () => Promise<void>;
   onReactivate?: () => Promise<void>;
+  onBack?: () => void;
 }
 
-export function ChatWindow({ conversation, onTakeControl, onReactivate }: ChatWindowProps) {
+export function ChatWindow({ conversation, onTakeControl, onReactivate, onBack }: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isTakingControl, setIsTakingControl] = useState(false);
@@ -98,8 +100,18 @@ export function ChatWindow({ conversation, onTakeControl, onReactivate }: ChatWi
     <div className="flex flex-col w-full h-full min-h-0 bg-background overflow-hidden animate-in fade-in duration-500">
       {/* Header compactado */}
       <header className="h-12 border-b border-border px-4 flex items-center justify-between shrink-0 bg-card/30 backdrop-blur-sm">
-        <div className="flex items-center gap-3">
-          <Avatar className="h-8 w-8 border-2 border-primary/20">
+        <div className="flex items-center gap-2 sm:gap-3 overflow-hidden">
+          {onBack && (
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={onBack}
+              className="md:hidden -ml-2 h-8 w-8 text-muted-foreground hover:text-primary shrink-0"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+          )}
+          <Avatar className="h-8 w-8 border-2 border-primary/20 shrink-0">
             <AvatarFallback className="bg-primary/10 text-primary text-xs">
               {conversation.client?.name?.[0] || <User className="h-4 w-4" />}
             </AvatarFallback>
