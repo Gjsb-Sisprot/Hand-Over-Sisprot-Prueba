@@ -81,8 +81,13 @@ export function ConversationCard({
 
   return (
     <div
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("sessionId", conversation.sessionId);
+        e.dataTransfer.effectAllowed = "move";
+      }}
       className={cn(
-        "cursor-pointer transition-all duration-300 group relative flex items-center gap-4 py-4 pl-4 pr-8 border-b border-border/40 hover:bg-muted/30",
+        "cursor-pointer transition-all duration-300 group relative flex items-center gap-4 py-4 pl-4 pr-8 border-b border-border/40 hover:bg-muted/30 active:scale-[0.98] active:opacity-70",
         isSelected && "bg-primary/[0.04] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1.5 before:bg-primary shadow-inner"
       )}
       onClick={onClick}
