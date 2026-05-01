@@ -33,7 +33,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 interface ClientDetailPanelProps {
   conversation: MCPConversation;
   onCloseConversation: (id: string) => void;
-  onPauseConversation: (id: string, isEscalation?: boolean) => void;
+  onPauseConversation: (id: string, isEscalation?: boolean, isReactivate?: boolean) => void;
 }
 
 export function ClientDetailPanel({
@@ -98,14 +98,25 @@ export function ClientDetailPanel({
       
       <div className="p-4 grid grid-cols-1 gap-2">
         <div className="grid grid-cols-2 gap-2">
-          <Button 
-            variant="outline" 
-            className="h-auto py-2 flex flex-col gap-1 border-blue-500/20 bg-blue-500/5 text-blue-600 hover:bg-blue-500/10 hover:border-blue-500/40"
-            onClick={() => onPauseConversation(conversation.sessionId)}
-          >
-            <Pause className="h-4 w-4" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">Pausar</span>
-          </Button>
+          {conversation.status === "paused" ? (
+            <Button 
+              variant="outline" 
+              className="h-auto py-2 flex flex-col gap-1 border-green-500/20 bg-green-500/5 text-green-600 hover:bg-green-500/10 hover:border-green-500/40"
+              onClick={() => onPauseConversation(conversation.sessionId, false, true)}
+            >
+              <History className="h-4 w-4 rotate-180" />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Reanudar</span>
+            </Button>
+          ) : (
+            <Button 
+              variant="outline" 
+              className="h-auto py-2 flex flex-col gap-1 border-blue-500/20 bg-blue-500/5 text-blue-600 hover:bg-blue-500/10 hover:border-blue-500/40"
+              onClick={() => onPauseConversation(conversation.sessionId)}
+            >
+              <Pause className="h-4 w-4" />
+              <span className="text-[10px] font-bold uppercase tracking-widest">Pausar</span>
+            </Button>
+          )}
           <Button 
             variant="outline"
             className="h-auto py-2 flex flex-col gap-1 border-green-500/20 bg-green-500/5 text-green-600 hover:bg-green-500/10 hover:border-green-500/40"
