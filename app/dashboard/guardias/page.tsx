@@ -264,6 +264,7 @@ export default function GuardiasPage() {
         const dRef = new Date(currentYear, currentMonth, firstItem.startDay);
         const diffMon = (dRef.getDay() + 6) % 7;
         const mon = new Date(dRef); mon.setDate(dRef.getDate() - diffMon);
+        const fri = new Date(mon); fri.setDate(mon.getDate() + 4);
         const sat = new Date(mon); sat.setDate(mon.getDate() + 5);
         const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
 
@@ -960,7 +961,7 @@ export default function GuardiasPage() {
           color: '#1e293b'
         }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px solid #2563eb', paddingBottom: '15px', marginBottom: '20px' }}>
-             <img src="/logo.png" style={{ height: '50px' }} />
+             <img src="/logo.png" alt="Logo Sisprot" style={{ height: '50px' }} />
              <div style={{ textAlign: 'right' }}>
                 <h1 style={{ margin: 0, fontSize: '24px', fontWeight: 900, color: '#0f172a', textTransform: 'uppercase' }}>Cronograma de Guardias</h1>
                 <p style={{ margin: 2, fontSize: '12px', fontWeight: 700, color: '#64748b' }}>{MONTHS[currentMonth].toUpperCase()} {currentYear} • SISPROT G.F</p>
