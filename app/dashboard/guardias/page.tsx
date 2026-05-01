@@ -274,7 +274,7 @@ export default function GuardiasPage() {
         
         let leftCol = `SEMANA DEL ${monStr} AL ${friStr}/${monthStr}\n`;
         let rightCol = `CC Y MONITOREO SÁBADO ${satStr} Y DOMINGO ${sunStr}/${monthStr}\n08:00 AM A 08:00 PM\n\n`;
-        let dateCol = `${monStr}-${sunStr}/${monthStr}`;
+        let dateCol = `L-V: ${monStr}-${friStr}\nS-D: ${satStr}/${sunStr}\nMes: ${monthStr}`;
 
         // Separar L-V y S-D
         const lvItems = group.filter(i => {
@@ -789,14 +789,18 @@ export default function GuardiasPage() {
                           </div>
                           
                           <div className="space-y-6">
-                             <div className="space-y-2">
-                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">L-V (8:00 AM - 5:00 PM)</p>
-                                <MultiSelect 
-                                  value={selectedWeek.weekCallCenterPerson} 
-                                  onChange={v => updateItem(selectedWeek.id, 'weekCallCenterPerson', v)} 
-                                  options={agents} placeholder="Sin asignar" 
-                                />
-                             </div>
+                             {/* Mostrar L-V solo si el rango incluye días Mon-Fri que no sean solo un viernes feriado */}
+                             {(!(selectedWeek.isSpecial && selectedWeek.startDay >= 5) && 
+                               (new Date(currentYear, currentMonth, selectedWeek.startDay).getDay() + 6) % 7 < 5) && (
+                               <div className="space-y-2">
+                                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">L-V (8:00 AM - 5:00 PM)</p>
+                                  <MultiSelect 
+                                    value={selectedWeek.weekCallCenterPerson} 
+                                    onChange={v => updateItem(selectedWeek.id, 'weekCallCenterPerson', v)} 
+                                    options={agents} placeholder="Sin asignar" 
+                                  />
+                               </div>
+                             )}
                              <div className="space-y-2">
                                 <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">SÁB-DOM (8:00 AM - 8:00 PM)</p>
                                 <MultiSelect 
@@ -826,14 +830,18 @@ export default function GuardiasPage() {
                           </div>
                           
                           <div className="space-y-6">
-                             <div className="space-y-2">
-                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">L-V (8:00 AM - 8:00 PM)</p>
-                                <MultiSelect 
-                                  value={selectedWeek.weekSoportePerson} 
-                                  onChange={v => updateItem(selectedWeek.id, 'weekSoportePerson', v)} 
-                                  options={agents} placeholder="Sin asignar" 
-                                />
-                             </div>
+                             {/* Mostrar L-V solo si el rango incluye días Mon-Fri */}
+                             {(!(selectedWeek.isSpecial && selectedWeek.startDay >= 5) && 
+                               (new Date(currentYear, currentMonth, selectedWeek.startDay).getDay() + 6) % 7 < 5) && (
+                               <div className="space-y-2">
+                                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">L-V (8:00 AM - 8:00 PM)</p>
+                                  <MultiSelect 
+                                    value={selectedWeek.weekSoportePerson} 
+                                    onChange={v => updateItem(selectedWeek.id, 'weekSoportePerson', v)} 
+                                    options={agents} placeholder="Sin asignar" 
+                                  />
+                               </div>
+                             )}
                              <div className="space-y-2">
                                 <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">SÁB-DOM (8:00 AM - 8:00 PM)</p>
                                 <MultiSelect 
