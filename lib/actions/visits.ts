@@ -18,6 +18,7 @@ export type SupportVisit = {
   team?: 'Equipo A' | 'Equipo B' | null;
   agent_id: string | null;
   conversation_id: string | null;
+  glpi_ticket_id: string | null;
   metadata: any;
   created_at: string;
   updated_at: string;
@@ -159,8 +160,8 @@ export async function createVisitFromAI(params: {
         reason: params.reason || "Agendado por Susana AI",
         status: "scheduled",
         category: "support",
+        glpi_ticket_id: conv.glpi_ticket_id ? conv.glpi_ticket_id.toString() : conv.id.toString(),
         metadata: {
-          glpi_ticket_id: conv.glpi_ticket_id || conv.id,
           source: "susana_ai"
         },
         created_at: new Date().toISOString()
@@ -302,7 +303,7 @@ export async function getVisitByTicketId(ticketId: string) {
 
 async function notifyN8N(visit: SupportVisit) {
   try {
-    const ticketId = visit.metadata?.glpi_ticket_id || visit.id;
+    const ticketId = visit.glpi_ticket_id || visit.id;
     
     // Obtener IDs de técnicos (el principal de la columna, el secundario de metadata)
     const tech1Id = visit.technician_id;
