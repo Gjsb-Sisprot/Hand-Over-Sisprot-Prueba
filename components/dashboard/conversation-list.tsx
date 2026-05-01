@@ -405,6 +405,16 @@ export function ConversationList({
             onTakeControl={() => handleBridgeTakeover(activeConversation)}
             onReactivate={() => handleReactivateConversation(activeConversation.sessionId)}
             onBack={() => setActiveConversation(null)}
+            onPauseConversation={(id, isEscalation, isReactivate) => {
+              if (isReactivate) {
+                  handleReactivateConversation(activeConversation.sessionId);
+              } else if (isEscalation) {
+                  setConversationToPause(activeConversation);
+              } else {
+                  handleSimplePause(activeConversation);
+              }
+            }}
+            onCloseConversation={() => setConversationToClose(activeConversation)}
           />
         ) : (
           <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-30">
