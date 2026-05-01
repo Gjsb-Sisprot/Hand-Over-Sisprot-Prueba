@@ -415,8 +415,10 @@ export function ConversationList({
         <ClientDetailPanel
           conversation={activeConversation}
           onCloseConversation={() => setConversationToClose(activeConversation)}
-          onPauseConversation={(id, isEscalation) => {
-            if (isEscalation) {
+          onPauseConversation={(id, isEscalation, isReactivate) => {
+            if (isReactivate) {
+                handleReactivateConversation(activeConversation.sessionId);
+            } else if (isEscalation) {
                 setConversationToPause(activeConversation);
             } else {
                 handleSimplePause(activeConversation);
