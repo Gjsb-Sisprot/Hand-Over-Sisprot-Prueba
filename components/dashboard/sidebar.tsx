@@ -32,16 +32,18 @@ export function Sidebar() {
   };
 
   const sidebarItems = [
-    // Dashboard y Conversaciones: Call Center (operador) y Supervisor
-    ...(role !== "agent" ? [
-      { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+    // Dashboard: Solo Supervisor
+    ...(role === "supervisor" ? [
+      { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" }
+    ] : []),
+    
+    // Conversaciones: Operador y Supervisor
+    ...((role === "operador" || role === "supervisor") ? [
       { icon: MessageSquare, label: "Conversaciones", href: "/dashboard/conversations" }
     ] : []),
     
-    // Soporte (Calendario): Soporte Técnico (agent) y Supervisor. Call Center (operador) NO lo ve.
-    ...(role !== "operador" ? [
-      { icon: WrenchEmoji, label: "Soporte", href: "/dashboard/calendar" }
-    ] : []),
+    // Gestión y Soporte (anteriormente Soporte): Todos (Agent, Operador, Supervisor)
+    { icon: WrenchEmoji, label: "Gestión y Soporte", href: "/dashboard/calendar" },
 
     // Guardias y Usuarios: Solo Supervisor
     ...(role === "supervisor" ? [
