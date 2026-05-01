@@ -29,9 +29,27 @@ interface ChatWindowProps {
   onTakeControl?: () => Promise<void>;
   onReactivate?: () => Promise<void>;
   onBack?: () => void;
+  onPauseConversation?: (id: string, isEscalation?: boolean, isReactivate?: boolean) => void;
+  onCloseConversation?: (id: string) => void;
 }
 
-export function ChatWindow({ conversation, onTakeControl, onReactivate, onBack }: ChatWindowProps) {
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { ClientDetailPanel } from "./client-detail-panel";
+
+export function ChatWindow({ 
+  conversation, 
+  onTakeControl, 
+  onReactivate, 
+  onBack,
+  onPauseConversation,
+  onCloseConversation
+}: ChatWindowProps) {
   const [newMessage, setNewMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [isTakingControl, setIsTakingControl] = useState(false);
@@ -98,76 +116,85 @@ export function ChatWindow({ conversation, onTakeControl, onReactivate, onBack }
 
   return (
     <div className="flex flex-col w-full h-full min-h-0 bg-background overflow-hidden animate-in fade-in duration-500">
-      {/* Header compactado */}
-      <header className="h-12 border-b border-border px-4 flex items-center justify-between shrink-0 bg-card/30 backdrop-blur-sm">
-        <div className="flex items-center gap-2 sm:gap-3 overflow-hidden">
-          {onBack && (
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={onBack}
-              className="md:hidden -ml-2 h-8 w-8 text-muted-foreground hover:text-primary shrink-0"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Button>
-          )}
-          <Avatar className="h-8 w-8 border-2 border-primary/20 shrink-0">
-            <AvatarFallback className="bg-primary/10 text-primary text-xs">
-              {conversation.client?.name?.[0] || <User className="h-4 w-4" />}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold truncate max-w-[150px] sm:max-w-[250px]" title={conversation.client?.name || "Cliente"}>
-                {conversation.client?.name || "Cliente"}
-              </h3>
-              <Badge variant="outline" className={cn(
-                "text-[10px] px-1.5 py-0 h-4 border-primary/20",
-                conversation.status === "handed_over" 
-                    ? "bg-primary/10 text-primary" 
-                    : conversation.status === "paused"
-                        ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
-                        : "bg-orange-500/10 text-orange-500 animate-pulse"
-              )}>
-                {statusLabel}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-2">
-              {(() => {
-                const lastSeen = conversation.timestamps?.updatedAt ? new Date(conversation.timestamps.updatedAt) : null;
-                const isOnline = lastSeen && (new Date().getTime() - lastSeen.getTime()) < 10 * 60 * 1000; // 10 mins
-                
-                return (
-                  <>
-                    <span className={cn(
-                      "h-2 w-2 rounded-full",
-                      isOnline ? "bg-green-500 animate-pulse" : "bg-gray-400"
-                    )} />
-                    <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
-                      {isOnline ? "En línea" : `Último msj: ${lastSeen ? lastSeen.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}`}
-                    </span>
-                  </>
-                );
-              })()}
-            </div>
+      {/* Header optimizado para móvil con Sheet de detalles */}
+      <Sheet>
+        <header className="h-14 md:h-16 border-b border-border px-3 md:px-4 flex items-center justify-between shrink-0 bg-card/30 backdrop-blur-sm">
+          <div className="flex items-center gap-2 md:gap-3 min-w-0 overflow-hidden flex-1">
+            {onBack && (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={onBack}
+                className="md:hidden -ml-1 h-9 w-9 text-muted-foreground hover:text-primary shrink-0"
+              >
+                <ChevronLeft className="h-6 w-6" />
+              </Button>
+            )}
+            
+            <SheetTrigger asChild>
+              <div className="flex items-center gap-2 md:gap-3 min-w-0 overflow-hidden flex-1 cursor-pointer hover:opacity-80 transition-opacity">
+                <Avatar className="h-8 w-8 md:h-10 md:w-10 border-2 border-primary/20 shrink-0">
+                  <AvatarFallback className="bg-primary/10 text-primary text-xs md:text-sm">
+                    {conversation.client?.name?.[0] || <User className="h-4 w-4" />}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-1.5 md:gap-2">
+                    <h3 className="text-xs md:text-sm font-bold truncate text-foreground uppercase tracking-tight" title={conversation.client?.name || "Cliente"}>
+                      {conversation.client?.name || "Cliente"}
+                    </h3>
+                    <Badge variant="outline" className={cn(
+                      "hidden sm:flex text-[9px] md:text-[10px] px-1.5 py-0 h-4 border-primary/20 shrink-0",
+                      conversation.status === "handed_over" 
+                          ? "bg-primary/10 text-primary" 
+                          : conversation.status === "paused"
+                              ? "bg-yellow-500/10 text-yellow-600 border-yellow-500/20"
+                              : "bg-orange-500/10 text-orange-500 animate-pulse"
+                    )}>
+                      {statusLabel}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-1.5 overflow-hidden">
+                    {(() => {
+                      const lastSeen = conversation.timestamps?.updatedAt ? new Date(conversation.timestamps.updatedAt) : null;
+                      const isOnline = lastSeen && (new Date().getTime() - lastSeen.getTime()) < 10 * 60 * 1000; // 10 mins
+                      
+                      return (
+                        <>
+                          <span className={cn(
+                            "h-1.5 w-1.5 md:h-2 md:w-2 rounded-full shrink-0",
+                            isOnline ? "bg-green-500 animate-pulse" : "bg-gray-400"
+                          )} />
+                          <span className="text-[9px] md:text-[10px] text-muted-foreground uppercase tracking-widest font-bold truncate">
+                            {isOnline ? "En línea" : `ÚLTIMA VEZ: ${lastSeen ? lastSeen.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "N/A"}`}
+                          </span>
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              </div>
+            </SheetTrigger>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary transition-colors">
-            <Phone className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary transition-colors">
-            <Video className="h-4 w-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary transition-colors">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
+
+          <div className="flex items-center gap-1 md:gap-2 shrink-0">
+            <Button variant="ghost" size="icon" className="hidden md:flex text-muted-foreground hover:text-primary transition-colors h-9 w-9">
+              <Phone className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="hidden md:flex text-muted-foreground hover:text-primary transition-colors h-9 w-9">
+              <Video className="h-4 w-4" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-primary transition-colors h-9 w-9">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+
           {conversation.status === "paused" && (
             <Button 
               onClick={handleReactivate}
-              className="ml-2 bg-green-600 hover:bg-green-500 text-white font-black px-5 h-9 rounded-xl shadow-[0_4px_14px_rgba(22,163,74,0.3)] hover:shadow-[0_6px_20px_rgba(22,163,74,0.4)] transition-all uppercase tracking-widest text-[10px] border-b-4 border-green-800 active:border-b-0 active:translate-y-1"
+              className="ml-1 md:ml-2 bg-green-600 hover:bg-green-500 text-white font-black px-3 md:px-5 h-8 md:h-9 rounded-xl shadow-[0_4px_14px_rgba(22,163,74,0.3)] transition-all uppercase tracking-widest text-[9px] md:text-[10px] border-b-4 border-green-800 active:border-b-0 active:translate-y-0.5"
             >
-              REACTIVAR IA 🤖
+              <span className="hidden sm:inline">REACTIVAR IA</span>
+              <span className="sm:hidden">IA 🤖</span>
             </Button>
           )}
 
@@ -175,13 +202,27 @@ export function ChatWindow({ conversation, onTakeControl, onReactivate, onBack }
             <Button 
               onClick={handleTakeControl}
               disabled={isTakingControl}
-              className="ml-2 bg-orange-600 hover:bg-orange-500 text-white font-black px-5 h-9 rounded-xl shadow-[0_4px_14px_rgba(234,88,12,0.3)] hover:shadow-[0_6px_20px_rgba(234,88,12,0.4)] transition-all uppercase tracking-widest text-[10px] border-b-4 border-orange-800 active:border-b-0 active:translate-y-1"
+              className="ml-1 md:ml-2 bg-orange-600 hover:bg-orange-500 text-white font-black px-3 md:px-5 h-8 md:h-9 rounded-xl shadow-[0_4px_14px_rgba(234,88,12,0.3)] transition-all uppercase tracking-widest text-[9px] md:text-[10px] border-b-4 border-orange-800 active:border-b-0 active:translate-y-0.5"
             >
-              {isTakingControl ? "Procesando..." : "TOMAR CONTROL"}
+              <span className="hidden sm:inline">{isTakingControl ? "Procesando..." : "TOMAR CONTROL"}</span>
+              <span className="sm:hidden">{isTakingControl ? "..." : "CONTROL"}</span>
             </Button>
           )}
         </div>
       </header>
+
+      <SheetContent side="right" className="p-0 w-full sm:max-w-[400px] border-l border-border bg-background">
+        <SheetHeader className="sr-only">
+          <SheetTitle>Detalles del Cliente</SheetTitle>
+        </SheetHeader>
+        <ClientDetailPanel 
+          conversation={conversation}
+          onCloseConversation={(id) => onCloseConversation?.(id)}
+          onPauseConversation={(id, esc, react) => onPauseConversation?.(id, esc, react)}
+          className="w-full border-none bg-transparent"
+        />
+      </SheetContent>
+      </Sheet>
 
       {/* Messages con scroll interno bloqueado */}
       <div className="flex-1 min-h-0 overflow-hidden relative bg-muted/5">
