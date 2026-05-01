@@ -123,14 +123,14 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[480px] bg-card border-border shadow-2xl rounded-3xl p-0 overflow-hidden">
-        <DialogHeader className="bg-primary/5 p-6 border-b border-border/50">
-          <DialogTitle className="text-xl font-bold flex items-center gap-2">
+      <DialogContent className="w-[95vw] sm:max-w-[480px] max-h-[90vh] bg-card border-border shadow-2xl rounded-3xl p-0 overflow-hidden flex flex-col">
+        <DialogHeader className="bg-primary/5 p-4 md:p-6 border-b border-border/50 shrink-0">
+          <DialogTitle className="text-lg md:text-xl font-bold flex items-center gap-2">
             {initialData ? "Editar Visita" : "Agendar Nueva Visita"}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-5">
+        <form onSubmit={handleSubmit} className="p-4 md:p-6 space-y-4 md:space-y-5 overflow-y-auto">
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-xs font-bold uppercase tracking-wider text-muted-foreground ml-1">Cliente</Label>
