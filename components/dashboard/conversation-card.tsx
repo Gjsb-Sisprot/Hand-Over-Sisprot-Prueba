@@ -82,7 +82,7 @@ export function ConversationCard({
   return (
     <div
       className={cn(
-        "cursor-pointer transition-all duration-300 group relative flex items-center gap-4 py-4 pl-4 pr-6 border-b border-border/40 hover:bg-muted/30",
+        "cursor-pointer transition-all duration-300 group relative flex items-center gap-4 py-4 pl-4 pr-8 border-b border-border/40 hover:bg-muted/30",
         isSelected && "bg-primary/[0.04] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1.5 before:bg-primary shadow-inner"
       )}
       onClick={onClick}
@@ -105,7 +105,7 @@ export function ConversationCard({
         )}
       </div>
 
-      <div className="flex-1 min-w-0 flex flex-col gap-1">
+      <div className="flex-1 min-w-0 flex flex-col gap-1.5">
         <div className="flex items-center justify-between gap-3">
           <h3 className={cn(
             "text-[13px] font-black uppercase tracking-tight truncate transition-colors duration-300 flex-1",
@@ -113,7 +113,7 @@ export function ConversationCard({
           )}>
             {client.name || "CLIENTE ANÓNIMO"}
           </h3>
-          <span className="text-[9px] font-bold text-muted-foreground/60 whitespace-nowrap shrink-0 uppercase tracking-widest">
+          <span className="text-[9px] font-black text-muted-foreground/50 whitespace-nowrap shrink-0 uppercase tracking-[0.15em] ml-2">
             {timestamps.escalatedAt
               ? formatDistanceToNow(new Date(timestamps.escalatedAt))
               : timestamps.createdAt 
@@ -122,12 +122,12 @@ export function ConversationCard({
           </span>
         </div>
 
-        <p className="text-[11px] text-muted-foreground line-clamp-1 italic leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity pr-2">
+        <p className="text-[10px] text-muted-foreground line-clamp-1 italic leading-tight opacity-70 group-hover:opacity-100 transition-opacity pr-4">
             {conversation.summary ? `"${conversation.summary}"` : "Sin resumen de conversación..."}
         </p>
 
-        <div className="flex items-center justify-between mt-1 gap-2">
-          <div className="flex items-center gap-1.5 overflow-hidden">
+        <div className="flex items-center justify-between mt-1 gap-4">
+          <div className="flex items-center gap-1.5 overflow-hidden shrink-0">
              {getStatusBadge(conversation.status)}
              {conversation.isUrgent && (
                <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 text-[8px] font-black uppercase px-1 h-3.5">
@@ -135,9 +135,9 @@ export function ConversationCard({
                </Badge>
              )}
           </div>
-          <div className="flex items-center gap-1 shrink-0 bg-muted/40 px-2 py-0.5 rounded-md border border-border/30 ml-auto">
-            <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest">Contrato:</span>
-            <span className="text-[9px] font-black text-foreground/70">{client.contract || "S/N"}</span>
+          <div className="flex items-center gap-1.5 shrink-0 bg-muted/40 px-2 py-0.5 rounded-md border border-border/30 ml-auto">
+            <span className="text-[8px] font-black text-muted-foreground/40 uppercase tracking-widest">Contrato:</span>
+            <span className="text-[10px] font-black text-foreground/80 tabular-nums">{client.contract || "S/N"}</span>
           </div>
         </div>
       </div>
