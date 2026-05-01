@@ -1,6 +1,6 @@
 "use client";
 
-import { MCPConversation } from "../../types/mcp"
+import { MCPConversation } from "../../types/mcp";
 import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader } from "../ui/card";
 import { Avatar, AvatarFallback } from "../ui/avatar";
