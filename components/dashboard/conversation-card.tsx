@@ -35,52 +35,35 @@ export function ConversationCard({
     switch (status) {
       case "active":
         return (
-          <Badge variant="default" className="bg-green-500 gap-1 text-[10px] h-5">
-            IA
+          <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-500/20 gap-1 text-[9px] font-black uppercase px-1.5 h-4">
+            Susana
           </Badge>
         );
       case "paused":
         return (
-          <Badge variant="secondary" className="gap-1 text-[10px] h-5">
-            Pausada
+          <Badge variant="outline" className="bg-yellow-500/10 text-yellow-600 border-yellow-500/20 gap-1 text-[9px] font-black uppercase px-1.5 h-4">
+            Pausa
           </Badge>
         );
       case "waiting_specialist":
         return (
-          <Badge variant="destructive" className="gap-1 text-[10px] h-5 animate-pulse">
-            <AlertCircle className="h-3 w-3" />
-            Esperando
+          <Badge variant="outline" className="bg-red-500/10 text-red-600 border-red-500/20 gap-1 text-[9px] font-black uppercase px-1.5 h-4 animate-pulse">
+            <AlertCircle className="h-2.5 w-2.5" />
+            Espera
           </Badge>
         );
       case "handed_over":
         return (
-          <Badge variant="default" className="bg-blue-500 gap-1 text-[10px] h-5">
-            <User className="h-3 w-3" />
+          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20 gap-1 text-[9px] font-black uppercase px-1.5 h-4">
+            <User className="h-2.5 w-2.5" />
             Agente
           </Badge>
         );
       case "closed":
-        if (conversation.closedBy === "system") {
-          return (
-            <Badge variant="secondary" className="gap-1 bg-orange-100 text-orange-700 border-orange-200 text-[10px] h-5">
-              <Timer className="h-3 w-3" />
-              Auto
-            </Badge>
-          );
-        }
-        return <Badge variant="secondary" className="text-[10px] h-5">Cerrada</Badge>;
+        return <Badge variant="outline" className="bg-muted text-muted-foreground border-transparent text-[9px] font-black uppercase px-1.5 h-4">Cerrada</Badge>;
       default:
-        return <Badge variant="outline" className="text-[10px] h-5">{status}</Badge>;
+        return <Badge variant="outline" className="text-[9px] font-black uppercase px-1.5 h-4">{status}</Badge>;
     }
-  };
-
-  const getUrgentBadge = (isUrgent?: boolean) => {
-    if (!isUrgent) return null;
-    return (
-      <Badge variant="outline" className="border-red-500 text-red-500 text-[10px] h-5">
-        Urgente
-      </Badge>
-    );
   };
 
   const getInitials = (name: string | null) => {
@@ -93,55 +76,77 @@ export function ConversationCard({
       .slice(0, 2);
   };
 
-  const metadata = conversation.metadata as { escalationReason?: string } | null;
-  const escalationReason = metadata?.escalationReason;
   const client = conversation.client ?? { name: null, identification: null, contract: null, email: null, phone: null };
   const timestamps = conversation.timestamps ?? { createdAt: null, updatedAt: null, escalatedAt: null, closedAt: null };
 
   return (
     <div
       className={cn(
-        "cursor-pointer transition-all hover:bg-muted/30 group relative flex items-center gap-3 py-3 px-4 border-b border-border/40",
-        isSelected && "bg-primary/[0.03] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1 before:bg-primary"
+        "cursor-pointer transition-all duration-300 group relative flex items-center gap-4 py-4 px-4 border-b border-border/40 hover:bg-muted/30",
+        isSelected && "bg-primary/[0.04] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1.5 before:bg-primary shadow-inner"
       )}
       onClick={onClick}
     >
-      <Avatar className="h-10 w-10 shrink-0 ring-offset-background transition-transform group-hover:scale-105">
-        <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
-          {getInitials(client.name)}
-        </AvatarFallback>
-      </Avatar>
+      {/* Avatar con indicador de estado */}
+      <div className="relative shrink-0">
+        <Avatar className={cn(
+            "h-12 w-12 ring-2 ring-offset-2 ring-offset-background transition-all duration-300 group-hover:scale-105 shadow-md",
+            isSelected ? "ring-primary/40" : "ring-transparent"
+        )}>
+          <AvatarFallback className={cn(
+              "text-xs font-black uppercase tracking-tighter",
+              isSelected ? "bg-primary text-white" : "bg-primary/10 text-primary"
+          )}>
+            {getInitials(client.name)}
+          </AvatarFallback>
+        </Avatar>
+        {conversation.status === "active" && (
+            <div className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 bg-green-500 rounded-full border-2 border-background animate-pulse" />
+        )}
+      </div>
 
-      <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+      <div className="flex-1 min-w-0 flex flex-col gap-1">
         <div className="flex items-center justify-between gap-2">
           <h3 className={cn(
-            "font-semibold text-sm truncate transition-colors",
-            isSelected ? "text-primary" : "text-foreground"
+            "text-[13px] font-black uppercase tracking-tight truncate transition-colors duration-300",
+            isSelected ? "text-primary" : "text-foreground group-hover:text-primary/80"
           )}>
-            {client.name || "Cliente Anónimo"}
+            {client.name || "CLIENTE ANÓNIMO"}
           </h3>
-          <span className="text-[10px] text-muted-foreground whitespace-nowrap shrink-0">
+          <span className="text-[9px] font-bold text-muted-foreground/60 whitespace-nowrap shrink-0 uppercase tracking-widest">
             {timestamps.escalatedAt
               ? formatDistanceToNow(new Date(timestamps.escalatedAt))
               : timestamps.createdAt 
                 ? formatDistanceToNow(new Date(timestamps.createdAt))
-                : "Ahora"}
+                : "Ahorita"}
           </span>
         </div>
 
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[11px] text-muted-foreground line-clamp-1 italic flex-1">
-            {conversation.summary ? `"${conversation.summary}"` : "Sin resumen"}
-          </p>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {getUrgentBadge(conversation.isUrgent)}
-            {getStatusBadge(conversation.status)}
-            <span className="text-[9px] font-bold text-muted-foreground/40 uppercase tracking-tighter">
-              {client.contract || "S/N"}
-            </span>
+        <p className="text-[11px] text-muted-foreground line-clamp-1 italic leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
+            {conversation.summary ? `"${conversation.summary}"` : "Sin resumen de conversación..."}
+        </p>
+
+        <div className="flex items-center justify-between mt-1 gap-2">
+          <div className="flex items-center gap-1.5 overflow-hidden">
+             {getStatusBadge(conversation.status)}
+             {conversation.isUrgent && (
+               <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 text-[8px] font-black uppercase px-1 h-3.5">
+                 Urgente
+               </Badge>
+             )}
+          </div>
+          <div className="flex items-center gap-1 shrink-0 bg-muted/40 px-1.5 py-0.5 rounded-md border border-border/30">
+            <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest">Contrato:</span>
+            <span className="text-[9px] font-black text-foreground/70">{client.contract || "S/N"}</span>
           </div>
         </div>
       </div>
+      
+      {isSelected && (
+          <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-20 transition-all group-hover:opacity-40 translate-x-2 group-hover:translate-x-0">
+              <ArrowRight className="h-5 w-5 text-primary" />
+          </div>
+      )}
     </div>
   );
 }
