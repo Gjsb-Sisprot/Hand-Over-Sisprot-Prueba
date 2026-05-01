@@ -699,7 +699,19 @@ export default function GuardiasPage() {
 
         {/* Detail View */}
         <section className="flex-1 bg-white overflow-y-auto">
-          {selectedWeek ? (
+          {selectedWeek ? (() => {
+               const monthStr = (currentMonth + 1).toString().padStart(2, '0');
+               let hasRegularWeekday = false;
+               const weekendDays = [];
+               for (let d = selectedWeek.startDay; d <= selectedWeek.endDay; d++) {
+                 const dayOfWeek = (new Date(currentYear, currentMonth, d).getDay() + 6) % 7;
+                 if (dayOfWeek < 4) hasRegularWeekday = true;
+                 if (dayOfWeek === 4 && !selectedWeek.isSpecial) hasRegularWeekday = true;
+                 if (dayOfWeek >= 5) weekendDays.push(d.toString().padStart(2, '0'));
+               }
+               const weekendDatesText = weekendDays.length > 0 ? `${weekendDays.join('/')}-${monthStr}` : "";
+
+               return (
               <div className="max-w-4xl mx-auto p-6 lg:p-12 pb-24 lg:pb-12">
                  <div className="flex flex-col md:flex-row justify-between items-start gap-6 mb-8 lg:mb-12">
                     <div>
@@ -789,27 +801,25 @@ export default function GuardiasPage() {
                              <h3 className="text-xl font-black uppercase tracking-tighter">Call Center</h3>
                           </div>
                           
-                          <div className="space-y-6">
-                             {/* Mostrar L-V solo si el rango incluye días Mon-Fri que no sean solo un viernes feriado */}
-                             {(!(selectedWeek.isSpecial && selectedWeek.startDay >= 5) && 
-                               (new Date(currentYear, currentMonth, selectedWeek.startDay).getDay() + 6) % 7 < 5) && (
-                               <div className="space-y-2">
-                                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">L-V (8:00 AM - 5:00 PM)</p>
-                                  <MultiSelect 
-                                    value={selectedWeek.weekCallCenterPerson} 
-                                    onChange={v => updateItem(selectedWeek.id, 'weekCallCenterPerson', v)} 
-                                    options={agents} placeholder="Sin asignar" 
-                                  />
-                               </div>
-                             )}
-                             <div className="space-y-2">
-                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">SÁB-DOM (8:00 AM - 8:00 PM)</p>
-                                <MultiSelect 
-                                  value={selectedWeek.weekendCallCenterPerson} 
-                                  onChange={v => updateItem(selectedWeek.id, 'weekendCallCenterPerson', v)} 
-                                  options={agents} placeholder="Sin asignar" 
-                                />
-                             </div>
+                           <div className="space-y-6">
+                              {hasRegularWeekday && (
+                                <div className="space-y-2">
+                                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">L-V (8:00 AM - 5:00 PM)</p>
+                                   <MultiSelect 
+                                     value={selectedWeek.weekCallCenterPerson} 
+                                     onChange={v => updateItem(selectedWeek.id, 'weekCallCenterPerson', v)} 
+                                     options={agents} placeholder="Sin asignar" 
+                                   />
+                                </div>
+                              )}
+                              <div className="space-y-2">
+                                 <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">SÁB-DOM {weekendDatesText} (8:00 AM - 8:00 PM)</p>
+                                 <MultiSelect 
+                                   value={selectedWeek.weekendCallCenterPerson} 
+                                   onChange={v => updateItem(selectedWeek.id, 'weekendCallCenterPerson', v)} 
+                                   options={agents} placeholder="Sin asignar" 
+                                 />
+                              </div>
                              {selectedWeek.isSpecial && (
                                <div className="space-y-2 p-4 bg-red-50 rounded-2xl border border-red-100">
                                   <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">Guardia Feriado</p>
@@ -830,27 +840,25 @@ export default function GuardiasPage() {
                              <h3 className="text-xl font-black uppercase tracking-tighter">Soporte Técnico</h3>
                           </div>
                           
-                          <div className="space-y-6">
-                             {/* Mostrar L-V solo si el rango incluye días Mon-Fri */}
-                             {(!(selectedWeek.isSpecial && selectedWeek.startDay >= 5) && 
-                               (new Date(currentYear, currentMonth, selectedWeek.startDay).getDay() + 6) % 7 < 5) && (
-                               <div className="space-y-2">
-                                  <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">L-V (8:00 AM - 8:00 PM)</p>
-                                  <MultiSelect 
-                                    value={selectedWeek.weekSoportePerson} 
-                                    onChange={v => updateItem(selectedWeek.id, 'weekSoportePerson', v)} 
-                                    options={agents} placeholder="Sin asignar" 
-                                  />
-                               </div>
-                             )}
-                             <div className="space-y-2">
-                                <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">SÁB-DOM (8:00 AM - 8:00 PM)</p>
-                                <MultiSelect 
-                                  value={selectedWeek.weekendSoportePerson} 
-                                  onChange={v => updateItem(selectedWeek.id, 'weekendSoportePerson', v)} 
-                                  options={agents} placeholder="Sin asignar" 
-                                />
-                             </div>
+                           <div className="space-y-6">
+                              {hasRegularWeekday && (
+                                <div className="space-y-2">
+                                   <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">L-V (8:00 AM - 8:00 PM)</p>
+                                   <MultiSelect 
+                                     value={selectedWeek.weekSoportePerson} 
+                                     onChange={v => updateItem(selectedWeek.id, 'weekSoportePerson', v)} 
+                                     options={agents} placeholder="Sin asignar" 
+                                   />
+                                </div>
+                              )}
+                              <div className="space-y-2">
+                                 <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest ml-1">SÁB-DOM {weekendDatesText} (8:00 AM - 8:00 PM)</p>
+                                 <MultiSelect 
+                                   value={selectedWeek.weekendSoportePerson} 
+                                   onChange={v => updateItem(selectedWeek.id, 'weekendSoportePerson', v)} 
+                                   options={agents} placeholder="Sin asignar" 
+                                 />
+                              </div>
                              {selectedWeek.isSpecial && (
                                <div className="space-y-2 p-4 bg-red-50 rounded-2xl border border-red-100">
                                   <p className="text-[10px] font-black text-red-600 uppercase tracking-widest">Soporte Feriado</p>
@@ -861,10 +869,7 @@ export default function GuardiasPage() {
                                   />
                                </div>
                              )}
-                          </div>
-                       </div>
-
-                       {/* Role Card 3 */}
+                                   {/* Role Card 3 */}
                        <div className="bg-[#fcfcfc] border border-border/40 rounded-[2rem] p-8 space-y-8 hover:shadow-xl hover:shadow-green-500/5 transition-all md:col-span-2">
                           <div className="flex flex-col items-center text-center gap-4">
                              <div className="p-3 bg-green-100 text-green-600 rounded-2xl w-fit"><MapPin className="w-6 h-6" /></div>
@@ -873,7 +878,7 @@ export default function GuardiasPage() {
                           
                           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                              <div className="space-y-2">
-                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Monitoreo (S-D)</p>
+                                <p className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Monitoreo (S-D) {weekendDatesText}</p>
                                 <MultiSelect 
                                   value={selectedWeek.weekendMonitoreoPerson} 
                                   onChange={v => updateItem(selectedWeek.id, 'weekendMonitoreoPerson', v)} 
@@ -881,7 +886,7 @@ export default function GuardiasPage() {
                                 />
                              </div>
                              <div className="space-y-2">
-                                <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">Agencia (S-D)</p>
+                                <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">Agencia (S-D) {weekendDatesText}</p>
                                 <MultiSelect 
                                   value={selectedWeek.weekendAgenciaPerson} 
                                   onChange={v => updateItem(selectedWeek.id, 'weekendAgenciaPerson', v)} 
@@ -903,7 +908,8 @@ export default function GuardiasPage() {
                     </div>
                  </div>
               </div>
-          ) : (
+              );
+          })() : (
             <div className="flex flex-col items-center justify-center h-full p-20 text-center bg-muted/5">
               <div className="w-32 h-32 bg-white rounded-full flex items-center justify-center mb-8 shadow-xl shadow-black/5">
                 <CalendarIcon className="w-16 h-16 text-muted-foreground/20" />
