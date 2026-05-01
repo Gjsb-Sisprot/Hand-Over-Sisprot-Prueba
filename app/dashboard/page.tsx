@@ -8,17 +8,25 @@ import {
 } from "@/lib/actions/conversations";
 import { DashboardHeader } from "@/components/dashboard/header";
 
+import { redirect } from "next/navigation";
+
 export default async function DashboardPage() {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: agent } = await supabase
+  const { data: agent } = (await supabase
     .from("agents")
     .select("*")
     .eq("id", user?.id || "")
-    .single();
+    .single()) as { data: any };
+    
+  if (agent?.role === "agent") {
+    redirect("/dashboard/calendar");
+  } else if (agent?.role === "operador") {
+    redirect("/dashboard/conversations");
+  }
 
   const [stats, conversations, agentStats] = await Promise.all([
     getConversationStats(),
