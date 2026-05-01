@@ -82,7 +82,7 @@ export function ConversationCard({
   return (
     <div
       className={cn(
-        "cursor-pointer transition-all duration-300 group relative flex items-center gap-4 py-4 px-4 border-b border-border/40 hover:bg-muted/30",
+        "cursor-pointer transition-all duration-300 group relative flex items-center gap-4 py-4 pl-4 pr-6 border-b border-border/40 hover:bg-muted/30",
         isSelected && "bg-primary/[0.04] before:absolute before:left-0 before:top-0 before:bottom-0 before:w-1.5 before:bg-primary shadow-inner"
       )}
       onClick={onClick}
@@ -106,9 +106,9 @@ export function ConversationCard({
       </div>
 
       <div className="flex-1 min-w-0 flex flex-col gap-1">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center justify-between gap-3">
           <h3 className={cn(
-            "text-[13px] font-black uppercase tracking-tight truncate transition-colors duration-300",
+            "text-[13px] font-black uppercase tracking-tight truncate transition-colors duration-300 flex-1",
             isSelected ? "text-primary" : "text-foreground group-hover:text-primary/80"
           )}>
             {client.name || "CLIENTE ANÓNIMO"}
@@ -122,7 +122,7 @@ export function ConversationCard({
           </span>
         </div>
 
-        <p className="text-[11px] text-muted-foreground line-clamp-1 italic leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity">
+        <p className="text-[11px] text-muted-foreground line-clamp-1 italic leading-relaxed opacity-80 group-hover:opacity-100 transition-opacity pr-2">
             {conversation.summary ? `"${conversation.summary}"` : "Sin resumen de conversación..."}
         </p>
 
@@ -135,7 +135,7 @@ export function ConversationCard({
                </Badge>
              )}
           </div>
-          <div className="flex items-center gap-1 shrink-0 bg-muted/40 px-1.5 py-0.5 rounded-md border border-border/30">
+          <div className="flex items-center gap-1 shrink-0 bg-muted/40 px-2 py-0.5 rounded-md border border-border/30 ml-auto">
             <span className="text-[8px] font-black text-muted-foreground/50 uppercase tracking-widest">Contrato:</span>
             <span className="text-[9px] font-black text-foreground/70">{client.contract || "S/N"}</span>
           </div>
@@ -143,8 +143,8 @@ export function ConversationCard({
       </div>
       
       {isSelected && (
-          <div className="absolute right-2 top-1/2 -translate-y-1/2 opacity-20 transition-all group-hover:opacity-40 translate-x-2 group-hover:translate-x-0">
-              <ArrowRight className="h-5 w-5 text-primary" />
+          <div className="absolute right-1 top-1/2 -translate-y-1/2 opacity-20 transition-all group-hover:opacity-40 translate-x-1 group-hover:translate-x-0">
+              <ArrowRight className="h-4 w-4 text-primary" />
           </div>
       )}
     </div>
