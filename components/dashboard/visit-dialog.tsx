@@ -43,8 +43,9 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
     status: "scheduled",
     category: defaultCategory,
     team: null,
+    glpi_ticket_id: "",
     metadata: {
-      glpi_ticket_id: ""
+      team: null
     }
   })
 
@@ -68,8 +69,9 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
         status: "scheduled",
         category: defaultCategory,
         team: null,
+        glpi_ticket_id: "",
         metadata: {
-          glpi_ticket_id: ""
+          team: null
         }
       })
     }
@@ -209,10 +211,10 @@ export function VisitDialog({ isOpen, onClose, onSuccess, technicians, initialDa
             <Input
               placeholder="Ej: 2605"
               className="bg-background/50 rounded-xl"
-              value={formData.metadata?.glpi_ticket_id || ""}
+              value={formData.glpi_ticket_id || ""}
               onChange={(e) => setFormData({ 
                 ...formData, 
-                metadata: { ...formData.metadata, glpi_ticket_id: e.target.value } 
+                glpi_ticket_id: e.target.value
               })}
             />
           </div>
