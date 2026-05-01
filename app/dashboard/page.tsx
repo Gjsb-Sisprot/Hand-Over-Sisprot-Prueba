@@ -35,9 +35,19 @@ export default async function DashboardPage() {
   ]);
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-y-auto">
-      <DashboardHeader agent={agent} />
-      <div className="container mx-auto p-6 space-y-6">
+    <div className="flex flex-col h-full bg-background overflow-y-auto relative">
+      {/* Watermark Logo sutil */}
+      <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-0 opacity-[0.04] overflow-hidden">
+        <img 
+          src="/logo.png" 
+          alt="Watermark" 
+          className="w-[500px] md:w-[800px] h-auto grayscale brightness-0 invert dark:invert-0" 
+        />
+      </div>
+
+      <div className="relative z-10 flex flex-col w-full">
+        <DashboardHeader agent={agent} />
+        <div className="container mx-auto p-6 space-y-6">
         {}
         {agentStats && (
           <div>
@@ -54,6 +64,7 @@ export default async function DashboardPage() {
         />
       </div>
     </div>
+  </div>
   );
 }
 
