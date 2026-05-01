@@ -113,9 +113,9 @@ export function CalendarView({ technicians }: CalendarViewProps) {
       const tableData = visits.map(v => [
         format(parseISO(v.visit_date), "dd/MM HH:mm"),
         v.client_name || "N/A",
-        v.visit_type || "N/A",
+        v.category === 'support' ? 'Soporte' : 'Admin',
         v.status || "N/A",
-        v.technician_name || "N/A"
+        v.technicians?.name || "Sin asignar"
       ]);
 
       autoTable(doc, {
@@ -275,7 +275,7 @@ export function CalendarView({ technicians }: CalendarViewProps) {
                 >
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-md uppercase">
-                      {visit.visit_type || 'Soporte'}
+                      {visit.category === 'support' ? 'Soporte' : 'Administración'}
                     </span>
                     <span className="text-[10px] font-bold text-muted-foreground">
                       {format(parseISO(visit.visit_date), "HH:mm")}
@@ -287,7 +287,7 @@ export function CalendarView({ technicians }: CalendarViewProps) {
                   <div className="flex items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
                     <User className="w-3 h-3" />
                     <p className="text-[10px] font-bold text-muted-foreground uppercase truncate">
-                      {visit.technician_name || 'Sin asignar'}
+                      {visit.technicians?.name || 'Sin asignar'}
                     </p>
                   </div>
                 </button>
