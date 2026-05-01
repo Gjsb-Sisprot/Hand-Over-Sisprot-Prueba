@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@/lib/supabase/server";
 import { DashboardStats } from "@/components/dashboard/stats";
 import { AgentStatsCard } from "@/components/dashboard/agent-stats-card";
 import {
