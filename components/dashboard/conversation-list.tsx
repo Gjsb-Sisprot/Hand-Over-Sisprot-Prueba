@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState } from "react";
 import { MCPConversation, MCPChatMessage } from "../../types/mcp";
 import { 
   getConversations, 
@@ -249,7 +249,7 @@ export function ConversationList({
     }
   };
 
-  const filteredConversations = useMemo(() => conversations.filter(c => {
+  const filteredConversations = conversations.filter(c => {
     const searchLower = searchQuery.toLowerCase();
     return (
       c.client?.name?.toLowerCase().includes(searchLower) ||
@@ -257,14 +257,12 @@ export function ConversationList({
       c.client?.contract?.toLowerCase().includes(searchLower) ||
       c.sessionId.toLowerCase().includes(searchLower)
     );
-  }), [conversations, searchQuery]);
+  });
 
-  const { waitingEscalation, activeIA, inAttendence, paused } = useMemo(() => ({
-    waitingEscalation: filteredConversations.filter(c => c.status === "waiting_specialist"),
-    activeIA: filteredConversations.filter(c => c.status === "active"),
-    inAttendence: filteredConversations.filter(c => c.status === "handed_over"),
-    paused: filteredConversations.filter(c => c.status === "paused")
-  }), [filteredConversations]);
+  const waitingEscalation = filteredConversations.filter(c => c.status === "waiting_specialist");
+  const activeIA = filteredConversations.filter(c => c.status === "active");
+  const inAttendence = filteredConversations.filter(c => c.status === "handed_over");
+  const paused = filteredConversations.filter(c => c.status === "paused");
 
   const renderTabTrigger = (id: TabType, label: string, icon: React.ReactNode, count: number) => (
     <button
@@ -297,9 +295,12 @@ export function ConversationList({
   );
 
   return (
-    <div className="flex w-full flex-1 min-h-0 overflow-hidden bg-background">
+    <div className="flex w-full flex-1 min-h-0 overflow-hidden bg-background relative">
       {/* Columna 1: Lista de Conversaciones (Sidebar Secundario) */}
-      <div className="w-[320px] flex flex-col border-r border-border shrink-0 bg-card/10">
+      <div className={cn(
+        "w-full md:w-[320px] flex flex-col border-r border-border shrink-0 bg-card/10 transition-all duration-300",
+        activeConversation ? "hidden md:flex" : "flex"
+      )}>
         <header className="p-4 border-b border-border space-y-3 shrink-0 bg-card/30 backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-bold uppercase tracking-wider">Conversaciones</h2>
@@ -327,71 +328,83 @@ export function ConversationList({
 
         <ScrollArea className="flex-1">
           <div className="p-0">
-            <div className={cn(activeTab !== "escalated" && "hidden")}>
-              {waitingEscalation.length === 0 
-                ? <EmptyState title="Cero esperas" icon={<Inbox className="h-8 w-8 text-muted-foreground/20" />} description="No hay casos escalados." /> 
-                : waitingEscalation.map(c => (
-                  <ConversationCard 
-                    key={c.sessionId} 
-                    conversation={c} 
-                    onClick={() => handleConversationClick(c)} 
-                    onTakeover={() => setConversationToTake(c)}
-                    isSelected={activeConversation?.sessionId === c.sessionId}
-                  />
-                ))}
-            </div>
+            {activeTab === "escalated" && (
+              <div>
+                {waitingEscalation.length === 0 
+                  ? <EmptyState title="Cero esperas" icon={<Inbox className="h-8 w-8 text-muted-foreground/20" />} description="No hay casos escalados." /> 
+                  : waitingEscalation.map(c => (
+                    <ConversationCard 
+                      key={c.sessionId} 
+                      conversation={c} 
+                      onClick={() => handleConversationClick(c)} 
+                      onTakeover={() => setConversationToTake(c)}
+                      isSelected={activeConversation?.sessionId === c.sessionId}
+                    />
+                  ))}
+              </div>
+            )}
 
-            <div className={cn(activeTab !== "active" && "hidden")}>
-              {activeIA.length === 0 
-                ? <EmptyState title="Inactividad" icon={<Bot className="h-8 w-8 text-muted-foreground/20" />} description="Susana no está atendiendo a nadie." /> 
-                : activeIA.map(c => (
-                  <ConversationCard 
-                    key={c.sessionId} 
-                    conversation={c} 
-                    onClick={() => handleConversationClick(c)} 
-                    onTakeover={() => setConversationToTake(c)}
-                    isSelected={activeConversation?.sessionId === c.sessionId}
-                  />
-                ))}
-            </div>
+            {activeTab === "active" && (
+              <div>
+                {activeIA.length === 0 
+                  ? <EmptyState title="Inactividad" icon={<Bot className="h-8 w-8 text-muted-foreground/20" />} description="Susana no está atendiendo a nadie." /> 
+                  : activeIA.map(c => (
+                    <ConversationCard 
+                      key={c.sessionId} 
+                      conversation={c} 
+                      onClick={() => handleConversationClick(c)} 
+                      onTakeover={() => setConversationToTake(c)}
+                      isSelected={activeConversation?.sessionId === c.sessionId}
+                    />
+                  ))}
+              </div>
+            )}
 
-            <div className={cn(activeTab !== "mine" && "hidden")}>
-              {inAttendence.length === 0 
-                ? <EmptyState title="Sin atenciones" icon={<User className="h-8 w-8 text-muted-foreground/20" />} description="Toma un caso para comenzar." /> 
-                : inAttendence.map(c => (
-                  <ConversationCard 
-                    key={c.sessionId} 
-                    conversation={c} 
-                    onClick={() => handleConversationClick(c)} 
-                    isSelected={activeConversation?.sessionId === c.sessionId}
-                  />
-                ))}
-            </div>
+            {activeTab === "mine" && (
+              <div>
+                {inAttendence.length === 0 
+                  ? <EmptyState title="Sin atenciones" icon={<User className="h-8 w-8 text-muted-foreground/20" />} description="Toma un caso para comenzar." /> 
+                  : inAttendence.map(c => (
+                    <ConversationCard 
+                      key={c.sessionId} 
+                      conversation={c} 
+                      onClick={() => handleConversationClick(c)} 
+                      isSelected={activeConversation?.sessionId === c.sessionId}
+                    />
+                  ))}
+              </div>
+            )}
 
-            <div className={cn(activeTab !== "paused" && "hidden")}>
-              {paused.length === 0 
-                ? <EmptyState title="Sin pendientes" icon={<MessageSquareX className="h-8 w-8 text-muted-foreground/20" />} description="No hay casos guardados." /> 
-                : paused.map(c => (
-                  <ConversationCard 
-                    key={c.sessionId} 
-                    conversation={c} 
-                    onClick={() => handleConversationClick(c)} 
-                    onTakeover={() => setConversationToTake(c)}
-                    isSelected={activeConversation?.sessionId === c.sessionId}
-                  />
-                ))}
-            </div>
+            {activeTab === "paused" && (
+              <div>
+                {paused.length === 0 
+                  ? <EmptyState title="Sin pendientes" icon={<MessageSquareX className="h-8 w-8 text-muted-foreground/20" />} description="No hay casos guardados." /> 
+                  : paused.map(c => (
+                    <ConversationCard 
+                      key={c.sessionId} 
+                      conversation={c} 
+                      onClick={() => handleConversationClick(c)} 
+                      onTakeover={() => setConversationToTake(c)}
+                      isSelected={activeConversation?.sessionId === c.sessionId}
+                    />
+                  ))}
+              </div>
+            )}
           </div>
         </ScrollArea>
       </div>
 
       {/* Columna 2: Área de Chat (Centro) */}
-      <div className="flex-1 min-w-0 flex flex-col min-h-0 overflow-hidden bg-background">
+      <div className={cn(
+        "flex-1 min-w-0 flex flex-col min-h-0 overflow-hidden bg-background transition-all duration-300",
+        !activeConversation ? "hidden md:flex" : "flex"
+      )}>
         {activeConversation ? (
           <ChatWindow 
             conversation={activeConversation} 
             onTakeControl={() => handleBridgeTakeover(activeConversation)}
             onReactivate={() => handleReactivateConversation(activeConversation.sessionId)}
+            onBack={() => setActiveConversation(null)}
           />
         ) : (
           <div className="h-full flex flex-col items-center justify-center space-y-4 opacity-30">
@@ -406,19 +419,21 @@ export function ConversationList({
 
       {/* Columna 3: Detalles del Cliente (Derecha) */}
       {activeConversation && (
-        <ClientDetailPanel
-          conversation={activeConversation}
-          onCloseConversation={() => setConversationToClose(activeConversation)}
-          onPauseConversation={(id, isEscalation, isReactivate) => {
-            if (isReactivate) {
-                handleReactivateConversation(activeConversation.sessionId);
-            } else if (isEscalation) {
-                setConversationToPause(activeConversation);
-            } else {
-                handleSimplePause(activeConversation);
-            }
-          }}
-        />
+        <div className="hidden xl:block">
+          <ClientDetailPanel
+            conversation={activeConversation}
+            onCloseConversation={() => setConversationToClose(activeConversation)}
+            onPauseConversation={(id, isEscalation, isReactivate) => {
+              if (isReactivate) {
+                  handleReactivateConversation(activeConversation.sessionId);
+              } else if (isEscalation) {
+                  setConversationToPause(activeConversation);
+              } else {
+                  handleSimplePause(activeConversation);
+              }
+            }}
+          />
+        </div>
       )}
 
 
