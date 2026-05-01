@@ -19,7 +19,19 @@ import { toast } from "sonner";
 import { useDashboardConversations } from "../../hooks";
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
-import { Loader2, Inbox, Clock, CheckCircle2, Search, MessageSquareX, Bot, User } from "lucide-react";
+import { Button } from "../ui/button";
+import { 
+  Loader2, 
+  Inbox, 
+  Clock, 
+  CheckCircle2, 
+  Search, 
+  MessageSquareX, 
+  Bot, 
+  User, 
+  ArrowRight, 
+  FileText 
+} from "lucide-react";
 import { Input } from "../ui/input";
 import { cn } from "../../lib/utils";
 
@@ -264,6 +276,58 @@ export function ConversationList({
   const inAttendence = filteredConversations.filter(c => c.status === "handed_over");
   const paused = filteredConversations.filter(c => c.status === "paused");
 
+  // Estado para la vista de historial
+  const [historyFolder, setHistoryFolder] = useState<"ia" | "agent" | null>(null);
+
+  const closedIA = conversations.filter(c => c.status === "closed" && c.closedBy === "system");
+  const closedAgent = conversations.filter(c => c.status === "closed" && c.closedBy !== "system");
+
+  const handleDrop = async (e: React.DragEvent, type: "ia" | "agent") => {
+    e.preventDefault();
+    const sessionId = e.dataTransfer.getData("sessionId");
+    if (!sessionId) return;
+
+    try {
+      toast.promise(closeConversation(sessionId, "Cierre rápido vía Historial", { 
+        closedBy: type === "ia" ? "system" : "agent" 
+      }), {
+        loading: `Archivando en Historial ${type === "ia" ? "IA" : "Agente"}...`,
+        success: "Conversación archivada correctamente",
+        error: "Error al archivar conversación"
+      });
+      refresh();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const renderHistoryFolder = (type: "ia" | "agent", label: string, count: number, icon: React.ReactNode, color: string) => (
+    <div 
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => handleDrop(e, type)}
+      onClick={() => setHistoryFolder(historyFolder === type ? null : type)}
+      className={cn(
+        "flex-1 flex flex-col items-center justify-center p-3 rounded-2xl border transition-all duration-300 cursor-pointer group relative overflow-hidden",
+        historyFolder === type 
+          ? `bg-${color}-500/10 border-${color}-500/30 ring-2 ring-${color}-500/20` 
+          : "bg-card/30 border-border/40 hover:bg-card/50 hover:border-border"
+      )}
+    >
+      <div className={cn(
+        "mb-2 p-2 rounded-xl transition-transform duration-300 group-hover:scale-110",
+        historyFolder === type ? `bg-${color}-500/20 text-${color}-500` : "bg-muted text-muted-foreground"
+      )}>
+        {icon}
+      </div>
+      <span className="text-[9px] font-black uppercase tracking-tighter text-center leading-tight">
+        {label}
+      </span>
+      <Badge variant="secondary" className="mt-1.5 font-mono text-[9px] px-1.5 h-4">
+        {count}
+      </Badge>
+    </div>
+  );
+
   const renderTabTrigger = (id: TabType, label: string, icon: React.ReactNode, count: number) => (
     <button
       onClick={() => setActiveTab(id)}
@@ -303,95 +367,139 @@ export function ConversationList({
       )}>
         <header className="p-4 border-b border-border space-y-3 shrink-0 bg-card/30 backdrop-blur-sm">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-wider">Conversaciones</h2>
+            <div className="flex items-center gap-2">
+               {historyFolder && (
+                 <Button 
+                   variant="ghost" 
+                   size="icon" 
+                   className="h-6 w-6 rounded-full"
+                   onClick={() => setHistoryFolder(null)}
+                 >
+                   <ArrowRight className="h-4 w-4 rotate-180" />
+                 </Button>
+               )}
+               <h2 className="text-sm font-bold uppercase tracking-wider">
+                 {historyFolder ? `Historial: ${historyFolder === "ia" ? "Susana" : "Agentes"}` : "Conversaciones"}
+               </h2>
+            </div>
             <Badge variant="secondary" className="font-mono text-[9px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
-              {conversations.length}
+              {historyFolder ? (historyFolder === "ia" ? closedIA.length : closedAgent.length) : conversations.length}
             </Badge>
           </div>
-          <div className="relative group">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
-            <Input
-              placeholder="Buscar por cliente o contrato..."
-              className="pl-9 h-10 text-xs bg-background/50 border-border/50 focus:border-primary/50 transition-all rounded-xl"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+          {!historyFolder && (
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground group-focus-within:text-primary transition-colors" />
+              <Input
+                placeholder="Buscar por cliente o contrato..."
+                className="pl-9 h-10 text-xs bg-background/50 border-border/50 focus:border-primary/50 transition-all rounded-xl"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+          )}
         </header>
 
-        <div className="flex border-b border-border bg-card/20 overflow-x-auto no-scrollbar shrink-0">
-          {renderTabTrigger("escalated", "Esperando", <Inbox className="h-3.5 w-3.5" />, waitingEscalation.length)}
-          {renderTabTrigger("mine", "En uso", <User className="h-3.5 w-3.5" />, inAttendence.length)}
-          {renderTabTrigger("active", "Susana", <Bot className="h-3.5 w-3.5" />, activeIA.length)}
-          {renderTabTrigger("paused", "Pausa", <MessageSquareX className="h-3.5 w-3.5" />, paused.length)}
-        </div>
+        {!historyFolder && (
+          <div className="flex border-b border-border bg-card/20 overflow-x-auto no-scrollbar shrink-0">
+            {renderTabTrigger("escalated", "Esperando", <Inbox className="h-3.5 w-3.5" />, waitingEscalation.length)}
+            {renderTabTrigger("mine", "En uso", <User className="h-3.5 w-3.5" />, inAttendence.length)}
+            {renderTabTrigger("active", "Susana", <Bot className="h-3.5 w-3.5" />, activeIA.length)}
+            {renderTabTrigger("paused", "Pausa", <MessageSquareX className="h-3.5 w-3.5" />, paused.length)}
+          </div>
+        )}
 
         <ScrollArea className="flex-1 min-h-0">
           <div className="p-0">
-            {activeTab === "escalated" && (
-              <div>
-                {waitingEscalation.length === 0 
-                  ? <EmptyState title="Cero esperas" icon={<Inbox className="h-8 w-8 text-muted-foreground/20" />} description="No hay casos escalados." /> 
-                  : waitingEscalation.map(c => (
-                    <ConversationCard 
-                      key={c.sessionId} 
-                      conversation={c} 
-                      onClick={() => handleConversationClick(c)} 
-                      onTakeover={() => setConversationToTake(c)}
-                      isSelected={activeConversation?.sessionId === c.sessionId}
-                    />
-                  ))}
-              </div>
-            )}
+            {historyFolder ? (
+               <div>
+                 {(historyFolder === "ia" ? closedIA : closedAgent).length === 0 
+                   ? <EmptyState title="Vacio" icon={<FileText className="h-8 w-8 text-muted-foreground/20" />} description="No hay registros históricos aún." />
+                   : (historyFolder === "ia" ? closedIA : closedAgent).map(c => (
+                     <ConversationCard 
+                       key={c.sessionId} 
+                       conversation={c} 
+                       onClick={() => handleConversationClick(c)} 
+                       isSelected={activeConversation?.sessionId === c.sessionId}
+                     />
+                   ))
+                 }
+               </div>
+            ) : (
+              <>
+                {activeTab === "escalated" && (
+                  <div>
+                    {waitingEscalation.length === 0 
+                      ? <EmptyState title="Cero esperas" icon={<Inbox className="h-8 w-8 text-muted-foreground/20" />} description="No hay casos escalados." /> 
+                      : waitingEscalation.map(c => (
+                        <ConversationCard 
+                          key={c.sessionId} 
+                          conversation={c} 
+                          onClick={() => handleConversationClick(c)} 
+                          onTakeover={() => setConversationToTake(c)}
+                          isSelected={activeConversation?.sessionId === c.sessionId}
+                        />
+                      ))}
+                  </div>
+                )}
 
-            {activeTab === "active" && (
-              <div>
-                {activeIA.length === 0 
-                  ? <EmptyState title="Inactividad" icon={<Bot className="h-8 w-8 text-muted-foreground/20" />} description="Susana no está atendiendo a nadie." /> 
-                  : activeIA.map(c => (
-                    <ConversationCard 
-                      key={c.sessionId} 
-                      conversation={c} 
-                      onClick={() => handleConversationClick(c)} 
-                      onTakeover={() => setConversationToTake(c)}
-                      isSelected={activeConversation?.sessionId === c.sessionId}
-                    />
-                  ))}
-              </div>
-            )}
+                {activeTab === "active" && (
+                  <div>
+                    {activeIA.length === 0 
+                      ? <EmptyState title="Inactividad" icon={<Bot className="h-8 w-8 text-muted-foreground/20" />} description="Susana no está atendiendo a nadie." /> 
+                      : activeIA.map(c => (
+                        <ConversationCard 
+                          key={c.sessionId} 
+                          conversation={c} 
+                          onClick={() => handleConversationClick(c)} 
+                          isSelected={activeConversation?.sessionId === c.sessionId}
+                        />
+                      ))}
+                  </div>
+                )}
 
-            {activeTab === "mine" && (
-              <div>
-                {inAttendence.length === 0 
-                  ? <EmptyState title="Sin atenciones" icon={<User className="h-8 w-8 text-muted-foreground/20" />} description="Toma un caso para comenzar." /> 
-                  : inAttendence.map(c => (
-                    <ConversationCard 
-                      key={c.sessionId} 
-                      conversation={c} 
-                      onClick={() => handleConversationClick(c)} 
-                      isSelected={activeConversation?.sessionId === c.sessionId}
-                    />
-                  ))}
-              </div>
-            )}
+                {activeTab === "mine" && (
+                  <div>
+                    {inAttendence.length === 0 
+                      ? <EmptyState title="Sin atenciones" icon={<User className="h-8 w-8 text-muted-foreground/20" />} description="Toma un caso para comenzar." /> 
+                      : inAttendence.map(c => (
+                        <ConversationCard 
+                          key={c.sessionId} 
+                          conversation={c} 
+                          onClick={() => handleConversationClick(c)} 
+                          isSelected={activeConversation?.sessionId === c.sessionId}
+                        />
+                      ))}
+                  </div>
+                )}
 
-            {activeTab === "paused" && (
-              <div>
-                {paused.length === 0 
-                  ? <EmptyState title="Sin pendientes" icon={<MessageSquareX className="h-8 w-8 text-muted-foreground/20" />} description="No hay casos guardados." /> 
-                  : paused.map(c => (
-                    <ConversationCard 
-                      key={c.sessionId} 
-                      conversation={c} 
-                      onClick={() => handleConversationClick(c)} 
-                      onTakeover={() => setConversationToTake(c)}
-                      isSelected={activeConversation?.sessionId === c.sessionId}
-                    />
-                  ))}
-              </div>
+                {activeTab === "paused" && (
+                  <div>
+                    {paused.length === 0 
+                      ? <EmptyState title="Sin pendientes" icon={<MessageSquareX className="h-8 w-8 text-muted-foreground/20" />} description="No hay casos guardados." /> 
+                      : paused.map(c => (
+                        <ConversationCard 
+                          key={c.sessionId} 
+                          conversation={c} 
+                          onClick={() => handleConversationClick(c)} 
+                          onTakeover={() => setConversationToTake(c)}
+                          isSelected={activeConversation?.sessionId === c.sessionId}
+                        />
+                      ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </ScrollArea>
+
+        {/* Sección de Historial (Innovación: Drop Zones) */}
+        <div className="p-4 border-t border-border bg-card/30 backdrop-blur-md shrink-0 space-y-3">
+           <h3 className="text-[10px] font-black uppercase tracking-widest text-muted-foreground/60 mb-1">Módulos de Historial</h3>
+           <div className="flex gap-3">
+              {renderHistoryFolder("ia", "Casos Susana", closedIA.length, <Bot className="h-4 w-4" />, "blue")}
+              {renderHistoryFolder("agent", "Casos Agentes", closedAgent.length, <User className="h-4 w-4" />, "purple")}
+           </div>
+        </div>
       </div>
 
       {/* Columna 2: Área de Chat (Centro) */}
