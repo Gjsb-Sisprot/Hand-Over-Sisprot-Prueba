@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { 
   ChevronLeft, 
   ChevronRight, 
@@ -9,7 +9,14 @@ import {
   Clock,
   User,
   Filter,
-  MoreVertical
+  MoreVertical,
+  Menu,
+  X,
+  Inbox,
+  AlertCircle,
+  FileText,
+  MapPin,
+  ChevronDown
 } from "lucide-react";
 import { 
   format, 
@@ -32,6 +39,9 @@ import { VisitDialog } from "./visit-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { createClient } from "@/lib/supabase/client";
+import { toast } from "sonner";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 interface CalendarViewProps {
   technicians: Technician[];
@@ -39,6 +49,7 @@ interface CalendarViewProps {
 
 export function CalendarView({ technicians }: CalendarViewProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDay, setSelectedDay] = useState(new Date());
   const [visits, setVisits] = useState<SupportVisit[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedTechnician, setSelectedTechnician] = useState<string>("all");
@@ -46,6 +57,7 @@ export function CalendarView({ technicians }: CalendarViewProps) {
   const [currentCategory, setCurrentCategory] = useState<'support' | 'administration'>('support');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedVisit, setSelectedVisit] = useState<SupportVisit | undefined>(undefined);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const fetchVisits = useCallback(async () => {
     setLoading(true);
@@ -84,86 +96,107 @@ export function CalendarView({ technicians }: CalendarViewProps) {
     };
   }, [fetchVisits]);
 
+  const selectedDayVisits = useMemo(() => {
+    return visits.filter(v => 
+      isSameDay(parseISO(v.visit_date), selectedDay) && 
+      (selectedTechnician === "all" || v.technician_id === selectedTechnician)
+    );
+  }, [visits, selectedDay, selectedTechnician]);
+
+  const handleDownloadPDF = () => {
+    const toastId = toast.loading('Generando reporte de visitas...');
+    try {
+      const doc = new jsPDF();
+      doc.setFontSize(20);
+      doc.text(`Reporte de Visitas - ${format(currentMonth, "MMMM yyyy", { locale: es }).toUpperCase()}`, 105, 15, { align: 'center' });
+      
+      const tableData = visits.map(v => [
+        format(parseISO(v.visit_date), "dd/MM HH:mm"),
+        v.client_name || "N/A",
+        v.visit_type || "N/A",
+        v.status || "N/A",
+        v.technician_name || "N/A"
+      ]);
+
+      autoTable(doc, {
+        head: [['Fecha', 'Cliente', 'Tipo', 'Estado', 'Técnico']],
+        body: tableData,
+        startY: 25,
+        theme: 'grid',
+        headStyles: { fillColor: [15, 23, 42] }
+      });
+
+      doc.save(`Reporte_Visitas_${format(currentMonth, "MMMM_yyyy")}.pdf`);
+      toast.success('PDF generado con éxito', { id: toastId });
+    } catch (e) {
+      toast.error('Error al generar PDF', { id: toastId });
+    }
+  };
+
   const renderHeader = () => {
     return (
-      <div className="flex items-center justify-between mb-6 bg-card/40 backdrop-blur-sm p-4 rounded-2xl border border-border/50">
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-border/40 px-4 py-3 flex flex-col md:flex-row items-center justify-between gap-4 shadow-sm rounded-t-3xl">
         <div className="flex items-center gap-4">
-          <h2 className="text-2xl font-bold capitalize">
-            {format(currentMonth, "MMMM yyyy", { locale: es })}
-          </h2>
-          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl">
-            <Button
-              variant="ghost"
-              size="icon"
+          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl border border-border/50">
+            <button 
               onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-              className="h-8 w-8 hover:bg-background rounded-lg"
+              className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all"
             >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCurrentMonth(new Date())}
-              className="h-8 px-3 hover:bg-background rounded-lg text-xs font-medium"
-            >
-              Hoy
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="px-4 text-xs font-black uppercase min-w-[140px] text-center">
+              {format(currentMonth, "MMMM yyyy", { locale: es })}
+            </span>
+            <button 
               onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-              className="h-8 w-8 hover:bg-background rounded-lg"
+              className="p-1.5 hover:bg-white hover:shadow-sm rounded-lg transition-all"
             >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl">
+            <button
+              onClick={() => setCurrentCategory('support')}
+              className={cn(
+                "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all",
+                currentCategory === 'support' ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Soporte
+            </button>
+            <button
+              onClick={() => setCurrentCategory('administration')}
+              className={cn(
+                "px-4 py-1.5 rounded-lg text-[10px] font-black uppercase transition-all",
+                currentCategory === 'administration' ? "bg-white shadow-sm text-primary" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Administración
+            </button>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 bg-muted/50 p-1 rounded-xl mr-2">
-            <Button
-              variant={currentCategory === 'support' ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setCurrentCategory('support')}
-              className={cn(
-                "h-8 px-4 rounded-lg text-xs font-bold transition-all",
-                currentCategory === 'support' ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
-              )}
-            >
-              Soporte
-            </Button>
-            <Button
-              variant={currentCategory === 'administration' ? "secondary" : "ghost"}
-              size="sm"
-              onClick={() => setCurrentCategory('administration')}
-              className={cn(
-                "h-8 px-4 rounded-lg text-xs font-bold transition-all",
-                currentCategory === 'administration' ? "bg-background shadow-sm text-primary" : "text-muted-foreground"
-              )}
-            >
-              Administración
-            </Button>
-          </div>
-
-          <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-xl border border-border/40">
-            <Filter className="h-4 w-4 ml-2 text-muted-foreground" />
+          <div className="hidden lg:flex items-center gap-2 bg-muted/30 p-1 rounded-xl border border-border/40">
+            <Filter className="h-3.5 w-3.5 ml-2 text-muted-foreground" />
             <select
               value={selectedTeam}
               onChange={(e) => setSelectedTeam(e.target.value)}
-              className="bg-transparent border-none text-sm focus:ring-0 pr-8 py-1 rounded-lg font-medium"
+              className="bg-transparent border-none text-[10px] font-black uppercase focus:ring-0 pr-8 py-1 rounded-lg"
             >
               <option value="all">Todos los equipos</option>
-              <option value="Equipo A">Equipo A (Intermitencia)</option>
-              <option value="Equipo B">Equipo B (ONU en Rojo)</option>
+              <option value="Equipo A">Equipo A</option>
+              <option value="Equipo B">Equipo B</option>
             </select>
           </div>
 
-          <div className="flex items-center gap-2 bg-muted/30 p-1 rounded-xl border border-border/40">
-            <User className="h-4 w-4 ml-2 text-muted-foreground" />
+          <div className="hidden lg:flex items-center gap-2 bg-muted/30 p-1 rounded-xl border border-border/40">
+            <User className="h-3.5 w-3.5 ml-2 text-muted-foreground" />
             <select
               value={selectedTechnician}
               onChange={(e) => setSelectedTechnician(e.target.value)}
-              className="bg-transparent border-none text-sm focus:ring-0 pr-8 py-1 rounded-lg"
+              className="bg-transparent border-none text-[10px] font-black uppercase focus:ring-0 pr-8 py-1 rounded-lg"
             >
               <option value="all">Todos los técnicos</option>
               {technicians.map((t) => (
@@ -172,135 +205,168 @@ export function CalendarView({ technicians }: CalendarViewProps) {
             </select>
           </div>
           
-          <Button 
+          <button 
+            onClick={handleDownloadPDF}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-900 text-white font-bold rounded-xl shadow-lg shadow-slate-900/10 hover:bg-slate-800 transition-all text-xs"
+          >
+            <FileText className="w-4 h-4" /> PDF
+          </button>
+
+          <button 
             onClick={() => {
               setSelectedVisit(undefined);
               setIsDialogOpen(true);
             }}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-xl shadow-lg shadow-primary/20"
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/20 hover:shadow-primary/30 transition-all text-xs"
           >
-            <Plus className="h-4 w-4 mr-2" />
-            {currentCategory === 'support' ? 'Agendar Soporte' : 'Nueva Tarea Admin'}
-          </Button>
+            <Plus className="w-4 h-4" /> {currentCategory === 'support' ? 'Agendar' : 'Nueva Tarea'}
+          </button>
         </div>
-      </div>
+      </header>
     );
   };
 
-  const renderDays = () => {
-    const days = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"];
-    return (
-      <div className="grid grid-cols-7 mb-2">
-        {days.map((day) => (
-          <div key={day} className="text-center text-xs font-bold text-muted-foreground uppercase tracking-wider py-2">
-            {day}
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const renderCells = () => {
-    const monthStart = startOfMonth(currentMonth);
-    const monthEnd = endOfMonth(monthStart);
-    const startDate = startOfWeek(monthStart);
-    const endDate = endOfWeek(monthEnd);
-
-    const calendarDays = eachDayOfInterval({
-      start: startDate,
-      end: endDate
-    });
-
-    return (
-      <div className="grid grid-cols-7 gap-[1px] bg-border/40 border border-border/40 rounded-2xl overflow-hidden shadow-2xl">
-        {calendarDays.map((d, i) => {
-          const dayVisits = visits.filter(v => 
-            isSameDay(parseISO(v.visit_date), d) && 
-            (selectedTechnician === "all" || v.technician_id === selectedTechnician)
-          );
-
-          return (
-            <div
-              key={i}
-              className={cn(
-                "min-h-[140px] p-2 transition-colors relative group bg-card/60 hover:bg-card/80 backdrop-blur-sm",
-                !isSameMonth(d, monthStart) && "bg-muted/10 text-muted-foreground/30",
-                isSameDay(d, new Date()) && "bg-primary/5"
-              )}
-            >
-              <div className="flex justify-between items-start mb-2">
-                <span className={cn(
-                  "text-sm font-semibold h-7 w-7 flex items-center justify-center rounded-lg transition-all",
-                  isSameDay(d, new Date()) ? "bg-primary text-primary-foreground shadow-md" : "text-foreground/70"
-                )}>
-                  {format(d, "d")}
-                </span>
-              </div>
-
-              <div className="space-y-1.5 overflow-y-auto max-h-[100px] scrollbar-hide">
-                {dayVisits.map((visit) => (
-                  <div
-                    key={visit.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedVisit(visit);
-                      setIsDialogOpen(true);
-                    }}
-                    className={cn(
-                      "text-[10px] p-1.5 rounded-lg border cursor-pointer border-l-4 transition-all hover:scale-[1.02] active:scale-95 shadow-sm",
-                      // Lógica de colores según estado y fecha (Finalizadas vs No atendidas)
-                      (() => {
-                        const visitDate = parseISO(visit.visit_date);
-                        const isPast = visitDate < new Date();
-                        
-                        if (visit.status === 'completed') {
-                          return "bg-green-500/20 border-green-500/50 text-green-700 dark:text-green-400 border-l-green-600";
-                        }
-                        
-                        if (isPast && (visit.status === 'scheduled' || visit.status === 'confirmed')) {
-                          return "bg-red-500/20 border-red-500/50 text-red-700 dark:text-red-400 border-l-red-600 font-bold";
-                        }
-
-                        if (visit.status === 'cancelled') return "bg-destructive/10 border-destructive/50 text-destructive border-l-destructive";
-                        if (visit.status === 'scheduled') return "bg-primary/10 border-primary/50 text-primary border-l-primary";
-                        if (visit.status === 'in_progress') return "bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-400 border-l-amber-500";
-                        if (visit.status === 'confirmed') return "bg-emerald-500/20 border-emerald-500/50 text-emerald-700 dark:text-emerald-400 border-l-emerald-500";
-                        if (visit.status === 'rescheduled') return "bg-violet-500/10 border-violet-500/50 text-violet-700 dark:text-violet-400 border-l-violet-500";
-                        
-                        return "bg-muted/50 border-border text-muted-foreground";
-                      })()
-                    )}
-                  >
-                    <div className="font-bold truncate">{visit.client_name}</div>
-                    <div className="flex items-center gap-1 opacity-80 truncate">
-                      <Clock className="h-2 w-2" />
-                      {format(parseISO(visit.visit_date), "HH:mm")}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(monthStart);
+  const startDate = startOfWeek(monthStart);
+  const endDate = endOfWeek(monthEnd);
+  const calendarDays = eachDayOfInterval({ start: startDate, end: endDate });
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 py-2">
+    <div className="flex-1 flex flex-col min-h-0 bg-[#fafafa] rounded-3xl shadow-xl border border-border/40 overflow-hidden">
       {renderHeader()}
-      <div className="flex-1 overflow-visible">
-        {renderDays()}
-        {loading ? (
-          <div className="h-full min-h-[400px] flex items-center justify-center bg-card/20 rounded-2xl border border-dashed border-border/50">
-            <div className="flex flex-col items-center gap-3">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <span className="text-sm text-muted-foreground font-medium">Cargando cronograma...</span>
+      
+      <div className="flex-1 flex overflow-hidden">
+        {/* Sidebar: Selected Day Visits */}
+        <aside className={cn(
+          "w-80 border-r border-border/40 bg-white flex flex-col transition-all duration-300",
+          !isSidebarOpen && "w-0 overflow-hidden border-none"
+        )}>
+          <div className="p-6 border-b border-border/40 bg-muted/20">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[10px] font-black text-muted-foreground uppercase tracking-widest">Planificación Diaria</h2>
+              <Badge variant="secondary" className="font-mono text-[10px] px-1.5 py-0 bg-primary/10 text-primary border-primary/20">
+                {selectedDayVisits.length}
+              </Badge>
+            </div>
+            <h3 className="text-2xl font-black text-foreground uppercase tracking-tighter">
+              {format(selectedDay, "EEEE d", { locale: es })}
+            </h3>
+            <p className="text-[10px] font-bold text-muted-foreground/60 uppercase tracking-widest mt-1">
+              {format(selectedDay, "MMMM yyyy", { locale: es })}
+            </p>
+          </div>
+
+          <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+            {selectedDayVisits.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-20 text-center px-6 opacity-40">
+                <Inbox className="w-12 h-12 text-muted-foreground mb-4" />
+                <p className="text-[10px] font-black text-muted-foreground uppercase">Sin citas para este día</p>
+              </div>
+            ) : (
+              selectedDayVisits.map((visit) => (
+                <button
+                  key={visit.id}
+                  onClick={() => {
+                    setSelectedVisit(visit);
+                    setIsDialogOpen(true);
+                  }}
+                  className="w-full text-left p-4 rounded-2xl bg-white border-2 border-transparent hover:border-primary/20 hover:bg-primary/5 transition-all group shadow-sm"
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-md uppercase">
+                      {visit.visit_type || 'Soporte'}
+                    </span>
+                    <span className="text-[10px] font-bold text-muted-foreground">
+                      {format(parseISO(visit.visit_date), "HH:mm")}
+                    </span>
+                  </div>
+                  <h4 className="text-sm font-black text-foreground uppercase truncate mb-1">
+                    {visit.client_name}
+                  </h4>
+                  <div className="flex items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                    <User className="w-3 h-3" />
+                    <p className="text-[10px] font-bold text-muted-foreground uppercase truncate">
+                      {visit.technician_name || 'Sin asignar'}
+                    </p>
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+        </aside>
+
+        {/* Main Grid */}
+        <div className="flex-1 flex flex-col bg-white/40 overflow-hidden">
+          {/* Weekday headers */}
+          <div className="grid grid-cols-7 border-b border-border/40 bg-white">
+            {["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sáb"].map((day) => (
+              <div key={day} className="py-3 text-center text-[10px] font-black text-muted-foreground/60 uppercase tracking-[0.2em]">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          {/* Calendar Grid */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            <div className="grid grid-cols-7 gap-px bg-border/40">
+              {calendarDays.map((day, i) => {
+                const dayVisits = visits.filter(v => 
+                  isSameDay(parseISO(v.visit_date), day) && 
+                  (selectedTechnician === "all" || v.technician_id === selectedTechnician)
+                );
+                const isSelected = isSameDay(day, selectedDay);
+                const isToday = isSameDay(day, new Date());
+                const isCurrentMonth = isSameMonth(day, monthStart);
+
+                return (
+                  <div
+                    key={i}
+                    onClick={() => setSelectedDay(day)}
+                    className={cn(
+                      "min-h-[120px] p-2 bg-white transition-all cursor-pointer relative group",
+                      !isCurrentMonth && "bg-muted/10 opacity-30",
+                      isSelected && "ring-2 ring-primary ring-inset z-10 bg-primary/5",
+                      isToday && !isSelected && "bg-blue-50/30"
+                    )}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <span className={cn(
+                        "text-xs font-black h-6 w-6 flex items-center justify-center rounded-lg transition-all",
+                        isToday ? "bg-primary text-white shadow-lg shadow-primary/20" : "text-muted-foreground/80 group-hover:text-primary"
+                      )}>
+                        {format(day, "d")}
+                      </span>
+                      {dayVisits.length > 0 && (
+                        <div className="flex -space-x-1 overflow-hidden">
+                          {dayVisits.slice(0, 3).map((_, idx) => (
+                            <div key={idx} className="w-1.5 h-1.5 rounded-full bg-primary ring-2 ring-white" />
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="space-y-1">
+                      {dayVisits.slice(0, 2).map((visit) => (
+                        <div
+                          key={visit.id}
+                          className="px-2 py-1 rounded-md bg-muted/50 border-l-2 border-primary text-[9px] font-bold text-muted-foreground truncate"
+                        >
+                          {visit.client_name}
+                        </div>
+                      ))}
+                      {dayVisits.length > 2 && (
+                        <div className="text-[8px] font-black text-primary uppercase ml-2">
+                          + {dayVisits.length - 2} más
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-        ) : (
-          renderCells()
-        )}
+        </div>
       </div>
 
       <VisitDialog
