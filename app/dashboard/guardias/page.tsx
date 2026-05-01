@@ -343,13 +343,13 @@ export default function GuardiasPage() {
         head: [['ITEM', 'LUNES A VIERNES', 'SÁBADO / DOMINGO', 'FECHA']],
         body: tableRows,
         theme: 'grid',
-        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 10, halign: 'center', fontStyle: 'bold' },
-        styles: { fontSize: 8, cellPadding: 4, textColor: [15, 23, 42], lineWidth: 0.1, lineColor: [80, 80, 80] },
+        headStyles: { fillColor: [30, 41, 59], textColor: 255, fontSize: 9, halign: 'center', fontStyle: 'bold' },
+        styles: { fontSize: 7.5, cellPadding: 2.5, textColor: [15, 23, 42], lineWidth: 0.1, lineColor: [80, 80, 80] },
         columnStyles: {
-          0: { cellWidth: 15, halign: 'center', valign: 'middle' },
-          1: { cellWidth: 100 },
-          2: { cellWidth: 100 },
-          3: { cellWidth: 35, halign: 'center', valign: 'middle', fontStyle: 'bold' }
+          0: { cellWidth: 10, halign: 'center', valign: 'middle' },
+          1: { cellWidth: 110 },
+          2: { cellWidth: 110 },
+          3: { cellWidth: 30, halign: 'center', valign: 'middle', fontStyle: 'bold' }
         },
         didParseCell: function(data: any) {
           if (data.section === 'body') {
