@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 import { createClient } from "@/lib/supabase/client";
 
 const MONTHS = [
@@ -127,18 +129,6 @@ export default function GuardiasPage() {
   const [deleteModal, setDeleteModal] = useState<{ isOpen: boolean, id: string | null }>({ isOpen: false, id: null });
 
   useEffect(() => {
-    // Cargar librerias para descarga de PDF
-    const loadScript = (src: string, id: string) => {
-      if (document.getElementById(id)) return;
-      const script = document.createElement("script");
-      script.id = id;
-      script.src = src;
-      script.async = true;
-      document.body.appendChild(script);
-    };
-    loadScript("https://unpkg.com/jspdf@2.5.1/dist/jspdf.umd.min.js", "jspdf-lib");
-    loadScript("https://unpkg.com/jspdf-autotable@3.5.28/dist/jspdf.plugin.autotable.min.js", "autotable-lib");
-
     const fetchData = async () => {
       try {
         const [resGuardias, resAgents] = await Promise.all([
@@ -203,14 +193,6 @@ export default function GuardiasPage() {
   }, [data, selectedWeekId]);
 
   const handleDownload = async () => {
-    const w = window as any;
-    const jsPDF = w.jspdf?.jsPDF || w.jsPDF;
-    
-    if (!jsPDF) {
-      toast.error("El generador de PDF aún no está listo. Por favor, espera 5 segundos.");
-      return;
-    }
-
     if (filteredData.length === 0) {
       toast.error("No hay datos en este mes. Pulsa 'Generar Mes' primero.");
       return;
@@ -281,7 +263,7 @@ export default function GuardiasPage() {
         ]);
       });
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: 30,
         head: [['ITEM', 'LUNES A VIERNES', 'SÁBADO / DOMINGO', 'FECHA']],
         body: tableRows,
@@ -296,20 +278,20 @@ export default function GuardiasPage() {
         },
         didParseCell: function(data: any) {
           if (data.section === 'body') {
-            if (data.column.index === 1 && data.cell.raw.includes('SEMANA')) {
+            if (data.column.index === 1 && data.cell.raw && String(data.cell.raw).includes('SEMANA')) {
                data.cell.styles.fillColor = [240, 250, 240];
             }
-            if (data.column.index === 2 && data.cell.raw.includes('FDS')) {
+            if (data.column.index === 2 && data.cell.raw && String(data.cell.raw).includes('FDS')) {
                data.cell.styles.fillColor = [255, 253, 240];
             }
-            if (data.column.index === 2 && data.cell.raw.includes('FERIADO')) {
+            if (data.column.index === 2 && data.cell.raw && String(data.cell.raw).includes('FERIADO')) {
                data.cell.styles.fillColor = [255, 240, 240];
             }
           }
         }
       });
 
-      const finalY = (doc as any).lastAutoTable.finalY + 15;
+      const finalY = (doc as any).lastAutoTable?.finalY || 30;
       doc.setFontSize(8);
       doc.setTextColor(100);
       doc.text(`Sistema de Control Sisprot - Generado por: ${currentUser} - ${new Date().toLocaleString()}`, 14, finalY);
@@ -336,7 +318,7 @@ export default function GuardiasPage() {
           startDay: d,
           endDay: d,
           isSpecial: true,
-          specialTitle: `VIERNES ${d}° DE MAYO: ${VENEZUELA_HOLIDAYS[key]}`,
+          specialTitle: `${WEEKDAYS[(new Date(currentYear, currentMonth, d).getDay() + 6) % 7].toUpperCase()} ${d}° DE ${MONTHS[currentMonth].toUpperCase()}: ${VENEZUELA_HOLIDAYS[key]}`,
           specialCallCenter: "GEORGINA BALADI",
           specialSoporte: "CARLOS OVALLES / ARNALDO ROJAS",
           specialAgencia: "CERRADA",
@@ -393,7 +375,7 @@ export default function GuardiasPage() {
     }
 
     setData([...newItems, ...data]);
-    toast.success(`Se han generado los bloques de Mayo 2026 correctamente`);
+    toast.success(`Se han generado los bloques de ${MONTHS[currentMonth]} ${currentYear} correctamente`);
   };
 
   const updateItem = (itemId: string, field: string, value: any) => {
