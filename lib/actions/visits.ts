@@ -252,14 +252,14 @@ export async function getVisitByTicketId(ticketId: string) {
   try {
     console.log(`[GET_VISIT] Buscando ticket: ${ticketId}`);
     
-    // 1. Intentar buscar por metadata->>glpi_ticket_id (Texto)
-    const { data: byMetadata, error: error1 } = await (supabaseAdmin as any)
+    // 1. Intentar buscar por columna glpi_ticket_id (Prioridad)
+    const { data: byColumn, error: error1 } = await (supabaseAdmin as any)
       .from("support_visits")
       .select("*, technicians(name)")
-      .filter("metadata->>glpi_ticket_id", "eq", ticketId)
+      .eq("glpi_ticket_id", ticketId)
       .maybeSingle();
 
-    if (byMetadata) return byMetadata as SupportVisit;
+    if (byColumn) return byColumn as SupportVisit;
 
     // 2. Intentar buscar por ID de Supabase (si es UUID)
     if (ticketId.length > 30) {
