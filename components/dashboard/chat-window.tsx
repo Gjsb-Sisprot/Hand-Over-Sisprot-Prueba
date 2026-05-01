@@ -41,6 +41,13 @@ export function ChatWindow({ conversation, onTakeControl, onReactivate }: ChatWi
     isActive: true 
   });
 
+  // Efecto para cambiar a modo Susana (Bridge) automáticamente al pausar
+  useEffect(() => {
+    if (conversation.status === "paused") {
+      setSendMode("bridge");
+    }
+  }, [conversation.status]);
+
   const handleTakeControl = async () => {
     if (!onTakeControl || isTakingControl) return;
     setIsTakingControl(true);
