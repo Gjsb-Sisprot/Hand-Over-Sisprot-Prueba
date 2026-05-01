@@ -295,10 +295,10 @@ export function ConversationList({
   );
 
   return (
-    <div className="flex w-full flex-1 min-h-0 overflow-hidden bg-background relative">
+    <div className="flex w-full h-full flex-1 min-h-0 overflow-hidden bg-background relative">
       {/* Columna 1: Lista de Conversaciones (Sidebar Secundario) */}
       <div className={cn(
-        "w-full md:w-[460px] md:min-w-[460px] flex flex-col border-r border-border shrink-0 bg-card/10 transition-all duration-300",
+        "w-full md:w-[460px] md:min-w-[460px] h-full flex flex-col border-r border-border shrink-0 bg-card/10 transition-all duration-300",
         activeConversation ? "hidden md:flex" : "flex"
       )}>
         <header className="p-4 border-b border-border space-y-3 shrink-0 bg-card/30 backdrop-blur-sm">
@@ -326,7 +326,7 @@ export function ConversationList({
           {renderTabTrigger("paused", "Pausa", <MessageSquareX className="h-3.5 w-3.5" />, paused.length)}
         </div>
 
-        <ScrollArea className="flex-1">
+        <ScrollArea className="flex-1 min-h-0">
           <div className="p-0">
             {activeTab === "escalated" && (
               <div>
